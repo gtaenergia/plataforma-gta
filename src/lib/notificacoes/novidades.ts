@@ -31,6 +31,12 @@ export const NOVIDADES: Novidade[] = [
     mensagem: "Agora dá pra filtrar as tarefas com prazo vencido direto no dropdown de status.",
     link: "/tarefas",
   },
+  {
+    slug: "tarefas-clique-linha-2026-07",
+    titulo: "Novidade: abrir a tarefa clicando na linha",
+    mensagem: "Não precisa mais acertar o nome da tarefa — clique em qualquer ponto da linha para expandir.",
+    link: "/tarefas",
+  },
 ];
 
 interface NovidadeStore {

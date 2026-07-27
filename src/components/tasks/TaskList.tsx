@@ -571,10 +571,16 @@ function TaskRow({
 
   return (
     <>
-      <tr className={concluida ? "opacity-50" : ""}>
+      {/* A linha inteira expande/recolhe — os controles próprios (status e
+          excluir) param a propagação para não disparar o toggle junto. */}
+      <tr
+        onClick={onToggle}
+        className={`cursor-pointer transition hover:bg-slate-50 dark:hover:bg-slate-700/40 ${concluida ? "opacity-50" : ""}`}
+      >
         <td className="px-3 py-2.5 align-top md:px-4 md:py-2 md:align-middle">
           <select
             value={t.status}
+            onClick={(e) => e.stopPropagation()}
             onChange={(e) => onStatus(e.target.value as StatusTarefa)}
             className={`rounded-full border px-2 py-1 text-xs font-medium ${STATUS_BADGE[t.status]}`}
           >
@@ -586,7 +592,15 @@ function TaskRow({
           </select>
         </td>
         <td className="px-3 py-2.5 md:px-4 md:py-2">
-          <button onClick={onToggle} className={`text-left font-medium text-gta-navy hover:text-gta-indigo dark:text-slate-100 ${concluida ? "line-through" : ""}`}>
+          {/* Continua sendo um botão: mantém o acesso por teclado à expansão. */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle();
+            }}
+            aria-expanded={aberta}
+            className={`text-left font-medium text-gta-navy hover:text-gta-indigo dark:text-slate-100 ${concluida ? "line-through" : ""}`}
+          >
             {t.titulo}
           </button>
           {t.comentarios.length > 0 && (
@@ -628,7 +642,7 @@ function TaskRow({
           {formatPrazoHora(prazoOp(t), t.horaOperacional)}
         </td>
         <td className="px-1 py-2 text-center align-top md:px-2 md:align-middle">
-          <button onClick={onExcluir} className="inline-flex h-9 w-9 items-center justify-center rounded text-slate-300 hover:bg-red-50 hover:text-red-600 dark:text-slate-600 dark:hover:bg-red-900/20 dark:hover:text-red-400" title="Excluir" aria-label="Excluir">
+          <button onClick={(e) => { e.stopPropagation(); onExcluir(); }} className="inline-flex h-9 w-9 items-center justify-center rounded text-slate-300 hover:bg-red-50 hover:text-red-600 dark:text-slate-600 dark:hover:bg-red-900/20 dark:hover:text-red-400" title="Excluir" aria-label="Excluir">
             <X className="h-4 w-4" aria-hidden />
           </button>
         </td>
