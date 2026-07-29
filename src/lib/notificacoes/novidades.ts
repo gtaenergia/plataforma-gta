@@ -43,6 +43,12 @@ export const NOVIDADES: Novidade[] = [
     mensagem: "Escolha o microinversor (W × módulos) e o configurador calcula a quantidade, a potência CA total, os ramais e a lista de materiais.",
     link: "/nova/solar",
   },
+  {
+    slug: "solar-lista-materiais-kits-2026-07",
+    titulo: "Novidade: lista de materiais do Solar mais enxuta",
+    mensagem: "Os itens miúdos viraram kits (fixação, cabeamento, proteção, aterramento, acabamento) — bem menos linhas para ajustar antes de cotar.",
+    link: "/nova/solar",
+  },
 ];
 
 interface NovidadeStore {
