@@ -82,9 +82,16 @@ export function CondicoesPagamento({ total, value, onChange }: { total: number; 
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <button type="button" className="btn-link" onClick={addParcela}>+ Adicionar parcela</button>
+            {/* Quando as parcelas somam 100% não há o que informar — só o total.
+                Fora disso o aviso fica, senão a proposta sai com parcelas que
+                não fecham o valor. */}
             <div className="text-xs">
-              <span className={pctOk ? "font-medium text-green-600 dark:text-green-400" : "font-semibold text-amber-600 dark:text-amber-400"}>Soma: {formatDecimal(somaPct, Number.isInteger(somaPct) ? 0 : 1)}%{pctOk ? " ✓" : " — deveria ser 100%"}</span>
-              <span className="ml-3 text-slate-500 dark:text-slate-400">Total: {formatBRL(total)}</span>
+              {!pctOk && (
+                <span className="font-semibold text-amber-600 dark:text-amber-400">
+                  Soma: {formatDecimal(somaPct, Number.isInteger(somaPct) ? 0 : 1)}% — deveria ser 100%
+                </span>
+              )}
+              <span className={`text-slate-500 dark:text-slate-400 ${pctOk ? "" : "ml-3"}`}>Total: {formatBRL(total)}</span>
             </div>
           </div>
         </>
