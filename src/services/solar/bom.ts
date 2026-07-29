@@ -14,8 +14,8 @@ export interface BomInput {
   potenciaInversor: number; // kW
   qtdInversores: number;
   tipoTelhado: string; // ex.: "Metálico", "Colonial", "Fibrocimento", "Laje"
-  /** Só no microinversor: potência CA de cada unidade (W) e nº de ramais de tronco. */
-  microPotenciaW?: number;
+  /** Só no microinversor: potência CA de cada unidade (kW) e nº de ramais de tronco. */
+  microPotenciaKw?: number;
   microRamais?: number;
 }
 
@@ -57,15 +57,17 @@ export function gerarBom(i: BomInput): BomItem[] {
   const caboTronco = round5(nMod * 1.5, 20);
   const paresMC4 = Math.max(4, Math.ceil(nMod / 10) * 2 + 2);
 
-  // No micro, o "inversor" é descrito em W por unidade (é isso que se compra).
-  const linhaInversor = micro && i.microPotenciaW
-    ? { qtde: String(i.qtdInversores), descricao: `${invLabel} ${i.microPotenciaW} W` }
+  // No micro a linha traz a potência de CADA unidade (é isso que se compra);
+  // no string, a do inversor central.
+  const linhaInversor = micro && i.microPotenciaKw
+    ? { qtde: String(i.qtdInversores), descricao: `${invLabel} ${formatDecimal(i.microPotenciaKw, 2)} kW` }
     : { qtde: String(i.qtdInversores), descricao: `${invLabel} ${formatDecimal(i.potenciaInversor, 2)} kW` };
 
   const itens: BomItem[] = [
     { qtde: String(nMod), descricao: `MÓDULO FOTOVOLTAICO ${i.potenciaPainel} Wp` },
     linhaInversor,
-    { qtde: "1", descricao: `KIT DE FIXAÇÃO PARA TELHADO ${i.tipoTelhado.toUpperCase()} — PARA ${nMod} MÓDULOS (perfis, grampos, ganchos e parafusos)` },
+    // "PARA TELHADO X" não serve para Laje/Solo — o tipo já se explica sozinho.
+    { qtde: "1", descricao: `KIT DE FIXAÇÃO ${i.tipoTelhado.toUpperCase()} — PARA ${nMod} MÓDULOS (perfis, grampos, ganchos e parafusos)` },
   ];
 
   // Lado CC: no micro é uma extensão curta módulo → micro (o micro já traz
@@ -77,7 +79,7 @@ export function gerarBom(i: BomInput): BomItem[] {
     });
     itens.push({
       qtde: "1",
-      descricao: `KIT DE TRONCO CA PARA MICROINVERSORES — CABO TRONCO + ${i.qtdInversores} DERIVAÇÕES + TERMINAÇÃO/VEDAÇÃO DE ${ramais} ${ramais > 1 ? "RAMAIS" : "RAMAL"} (≈ ${caboTronco} m)`,
+      descricao: `KIT DE CONEXÃO CA DOS MICROINVERSORES — CABO, CONECTORES E VEDAÇÃO PARA ${i.qtdInversores} ${i.qtdInversores > 1 ? "UNIDADES" : "UNIDADE"} (≈ ${caboTronco} m)`,
     });
   } else {
     itens.push({
@@ -91,7 +93,7 @@ export function gerarBom(i: BomInput): BomItem[] {
     {
       qtde: "1",
       descricao: micro
-        ? `KIT DE PROTEÇÃO CA — QUADRO + DISJUNTOR GERAL (potência CA total) + ${ramais} ${ramais > 1 ? "DISJUNTORES DE RAMAL" : "DISJUNTOR DE RAMAL"} + DPS CLASSE II (conforme projeto)`
+        ? `KIT DE PROTEÇÃO CA — QUADRO + DISJUNTOR GERAL (potência CA total) + ${ramais} ${ramais > 1 ? "DISJUNTORES DE CIRCUITO" : "DISJUNTOR DE CIRCUITO"} + DPS CLASSE II (conforme projeto)`
         : "KIT DE PROTEÇÃO CA — QUADRO + DISJUNTOR GERAL (dimensionado para o inversor) + DPS CLASSE II (conforme projeto)",
     },
     {

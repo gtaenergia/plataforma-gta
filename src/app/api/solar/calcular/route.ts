@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/session";
 import { getMunicipio } from "@/services/solar/municipios";
 import { dimensionar, kwpTotal, overloadReal } from "@/services/solar/sizing";
 import { sugerirInversorComercial } from "@/services/solar/commercial";
-import { dimensionarMicro, getMicroinversor, sugerirMicroinversor } from "@/services/solar/micro";
+import { dimensionarMicro, normalizarPotenciaMicro, sugerirMicroinversor } from "@/services/solar/micro";
 import { simularGeracao } from "@/services/solar/generation";
 import { gerarBom } from "@/services/solar/bom";
 import { precificar } from "@/services/solar/pricing";
@@ -30,8 +30,8 @@ const schema = z.object({
   potenciaInversor: z.coerce.number().min(0).default(0),
   qtdInversores: z.coerce.number().int().positive().default(1),
   tipoInversor: z.enum(["string", "micro"]).default("string"),
-  /** Microinversor escolhido (id do catálogo). Vazio = usa a sugestão. */
-  microId: z.string().default(""),
+  /** Potência de cada microinversor (kW). 0 = usa a sugestão. */
+  microPotenciaKw: z.coerce.number().min(0).default(0),
   tipoTelhado: z.string().default("Metálico"),
   // precificação (opcional; defaults vêm dos parâmetros salvos)
   kit: z.union([z.string(), z.number()]).optional(),
@@ -90,11 +90,16 @@ export async function POST(req: Request) {
   // QUANTIDADE é derivada do nº de painéis (não se digita). O overload passa a
   // ser o de cada unidade, e a potência CA total é qtd × potência do micro.
   const ehMicro = i.tipoInversor === "micro";
-  const microEscolhido = ehMicro
-    ? getMicroinversor(i.microId) ?? sugerirMicroinversor(i.potenciaPainel, overloadDesejado)
-    : null;
-  const micro = microEscolhido
-    ? dimensionarMicro({ nPaineis, potenciaPainelW: i.potenciaPainel, micro: microEscolhido })
+  const microPotenciaKw = ehMicro
+    ? normalizarPotenciaMicro(i.microPotenciaKw) || sugerirMicroinversor(kwp, overloadDesejado)
+    : 0;
+  const micro = ehMicro
+    ? dimensionarMicro({
+        nPaineis,
+        potenciaPainelW: i.potenciaPainel,
+        potenciaKw: microPotenciaKw,
+        overloadDesejado,
+      })
     : null;
 
   const potenciaInversor = micro
@@ -113,7 +118,7 @@ export async function POST(req: Request) {
     potenciaInversor,
     qtdInversores,
     tipoTelhado: i.tipoTelhado,
-    microPotenciaW: micro?.micro.potenciaW,
+    microPotenciaKw: micro?.potenciaKw,
     microRamais: micro?.ramais,
   });
 

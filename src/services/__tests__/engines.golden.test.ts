@@ -16,7 +16,7 @@ import { dimensionar, kwpTotal } from "../solar/sizing";
 import { simularGeracao } from "../solar/generation";
 import { precificar, PRICING_DEFAULTS } from "../solar/pricing";
 import { simularEconomia } from "../solar/economia";
-import { dimensionarMicro, getMicroinversor, overloadMicro, sugerirMicroinversor } from "../solar/micro";
+import { dimensionarMicro, normalizarPotenciaMicro, sugerirMicroinversor } from "../solar/micro";
 
 /**
  * GOLDEN TESTS dos engines de preço — congelam os números que os configuradores
@@ -398,86 +398,65 @@ describe("Solar — cadeia completa: sizing → geração → preço → economi
 });
 
 describe("Solar — dimensionamento com microinversores", () => {
-  it("sugestão segue o painel: 700 Wp com overload alvo 15%", () => {
-    const m = sugerirMicroinversor(700, 0.15);
-    expect({ ...m, overload: r4(overloadMicro(m, 700)) }).toMatchInlineSnapshot(`
-      {
-        "id": "1200-2",
-        "modulos": 2,
-        "overload": 0.1667,
-        "potenciaW": 1200,
-      }
-    `);
+  it("sugestão para 7,00 kWp com overload alvo 15%", () => {
+    expect(sugerirMicroinversor(7, 0.15)).toMatchInlineSnapshot(`6`);
   });
 
-  it("painel pequeno (450 Wp) cai num micro menor", () => {
-    const m = sugerirMicroinversor(450, 0.15);
-    expect({ ...m, overload: r4(overloadMicro(m, 450)) }).toMatchInlineSnapshot(`
-      {
-        "id": "1600-4",
-        "modulos": 4,
-        "overload": 0.125,
-        "potenciaW": 1600,
-      }
-    `);
+  it("sugestão para sistema grande (35 kWp) cai na maior unidade", () => {
+    expect(sugerirMicroinversor(35, 0.15)).toMatchInlineSnapshot(`25`);
   });
 
-  it("arranjo de 12 painéis de 700 Wp em micro 2-em-1 de 800 W", () => {
-    const r = dimensionarMicro({
-      nPaineis: 12,
-      potenciaPainelW: 700,
-      micro: getMicroinversor("800-2")!,
-    });
-    expect({ ...digest(r), micro: r.micro.id }).toMatchInlineSnapshot(`
-      {
-        "micro": "800-2",
-        "microsPorRamal": 4,
-        "modulosNoUltimo": 2,
-        "overload": 0.75,
-        "potenciaCaTotalKw": 4.8,
-        "qtdMicros": 6,
-        "ramais": 2,
-        "ultimoParcial": false,
-      }
-    `);
+  it("normaliza uma potência fora do catálogo para a mais próxima", () => {
+    expect(normalizarPotenciaMicro(6.4)).toMatchInlineSnapshot(`6.6`);
   });
 
-  it("nº ímpar de painéis deixa o último micro parcial", () => {
-    const r = dimensionarMicro({
-      nPaineis: 11,
-      potenciaPainelW: 700,
-      micro: getMicroinversor("800-2")!,
-    });
-    expect({ ...digest(r), micro: r.micro.id }).toMatchInlineSnapshot(`
+  it("10 painéis de 700 Wp com micro de 3 kW", () => {
+    const r = dimensionarMicro({ nPaineis: 10, potenciaPainelW: 700, potenciaKw: 3, overloadDesejado: 0.15 });
+    expect(digest(r)).toMatchInlineSnapshot(`
       {
-        "micro": "800-2",
-        "microsPorRamal": 4,
-        "modulosNoUltimo": 1,
-        "overload": 0.75,
-        "potenciaCaTotalKw": 4.8,
-        "qtdMicros": 6,
-        "ramais": 2,
-        "ultimoParcial": true,
-      }
-    `);
-  });
-
-  it("sistema grande divide em vários ramais de tronco CA", () => {
-    const r = dimensionarMicro({
-      nPaineis: 40,
-      potenciaPainelW: 700,
-      micro: getMicroinversor("2000-4")!,
-    });
-    expect({ ...digest(r), micro: r.micro.id }).toMatchInlineSnapshot(`
-      {
-        "micro": "2000-4",
+        "divisaoDesigual": false,
+        "microsComModuloExtra": 0,
         "microsPorRamal": 1,
-        "modulosNoUltimo": 4,
-        "overload": 0.4,
-        "potenciaCaTotalKw": 20,
-        "qtdMicros": 10,
-        "ramais": 10,
-        "ultimoParcial": false,
+        "modulosPorMicro": 5,
+        "overload": 0.1667,
+        "potenciaCaTotalKw": 6,
+        "potenciaKw": 3,
+        "qtdMicros": 2,
+        "ramais": 2,
+      }
+    `);
+  });
+
+  it("divisão desigual dos painéis entre as unidades", () => {
+    const r = dimensionarMicro({ nPaineis: 11, potenciaPainelW: 700, potenciaKw: 3, overloadDesejado: 0.15 });
+    expect(digest(r)).toMatchInlineSnapshot(`
+      {
+        "divisaoDesigual": true,
+        "microsComModuloExtra": 1,
+        "microsPorRamal": 1,
+        "modulosPorMicro": 5,
+        "overload": 0.2833,
+        "potenciaCaTotalKw": 6,
+        "potenciaKw": 3,
+        "qtdMicros": 2,
+        "ramais": 2,
+      }
+    `);
+  });
+
+  it("unidade grande (25 kW) num sistema de 40 painéis", () => {
+    const r = dimensionarMicro({ nPaineis: 40, potenciaPainelW: 700, potenciaKw: 25, overloadDesejado: 0.15 });
+    expect(digest(r)).toMatchInlineSnapshot(`
+      {
+        "divisaoDesigual": false,
+        "microsComModuloExtra": 0,
+        "microsPorRamal": 1,
+        "modulosPorMicro": 40,
+        "overload": 0.12,
+        "potenciaCaTotalKw": 25,
+        "potenciaKw": 25,
+        "qtdMicros": 1,
+        "ramais": 1,
       }
     `);
   });

@@ -49,6 +49,12 @@ export const NOVIDADES: Novidade[] = [
     mensagem: "Os itens miúdos viraram kits (fixação, cabeamento, proteção, aterramento, acabamento) — bem menos linhas para ajustar antes de cotar.",
     link: "/nova/solar",
   },
+  {
+    slug: "solar-micro-kw-telhados-2026-07",
+    titulo: "Novidade: microinversor em kW e novas estruturas",
+    mensagem: "O microinversor agora é escolhido em kW (3 a 25) e a sugestão já mostra quantas unidades. Estruturas de fixação atualizadas (shingle, telha, colonial, laje, solo e mais).",
+    link: "/nova/solar",
+  },
 ];
 
 interface NovidadeStore {

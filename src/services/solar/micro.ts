@@ -2,145 +2,117 @@
  * Dimensionamento com MICROINVERSORES.
  *
  * O paradigma é diferente do inversor string e por isso vive num módulo à
- * parte: no string existe UM inversor central em kW, escolhido pelo instalador;
- * no micro a potência é por módulo (W), e a QUANTIDADE é derivada do nº de
- * painéis — não se digita. O que se escolhe é o modelo (potência CA + quantos
- * módulos ele atende).
+ * parte: no string existe UM inversor central, escolhido pelo instalador; no
+ * micro escolhe-se a POTÊNCIA da unidade (kW) e a QUANTIDADE é derivada do
+ * sistema — não se digita. Quantos módulos cada unidade atende também sai do
+ * cálculo (nº de painéis ÷ nº de unidades).
  *
- * Catálogo genérico de propósito (sem marca), igual à lista de materiais: cobre
- * as faixas que de fato existem no mercado (Hoymiles, Deye, APsystems...) sem
- * travar a proposta num fabricante — a GTA cota o kit depois.
+ * Catálogo genérico de propósito (sem marca), igual à lista de materiais: são
+ * as potências que a GTA de fato cota, sem travar a proposta num fabricante.
  *
  * Módulo leve e sem dependências: é importado também no cliente (configurador).
  */
 
-/** Módulos atendidos por um microinversor (1-em-1, 2-em-1, 4-em-1). */
-export type ModulosPorMicro = 1 | 2 | 4;
-
-export interface Microinversor {
-  /** Identificador estável usado no formulário (`${potenciaW}-${modulos}`). */
-  id: string;
-  /** Potência CA de saída (W). */
-  potenciaW: number;
-  modulos: ModulosPorMicro;
-}
+/** Potências comerciais de microinversores (kW). */
+export const MICROINVERSORES_COMERCIAIS = [3, 4, 5, 6, 6.6, 7.5, 8, 10, 15, 20, 25];
 
 /**
- * Potência máxima por ramal (tronco) CA. Os microinversores são ligados em
- * cascata num cabo tronco protegido por um disjuntor, e a soma do ramal não
- * pode estourar esse limite.
+ * Potência máxima por ramal (circuito) CA. Os microinversores são ligados a um
+ * tronco CA protegido por um disjuntor, e a soma do ramal não pode estourá-lo.
  *
  * Base: ramal de 20 A em 220 V, aplicando os 80% que a NBR 5410 exige para
  * carga contínua (geração roda horas seguidas) → 20 × 0,8 × 220 ≈ 3520 W.
- * É uma premissa CONSERVADORA: troncos de 32 A comportam mais micros por
- * ramal. Como todo o resto da lista de materiais, serve de estimativa e o
- * projeto executivo ajusta.
+ * É uma premissa CONSERVADORA: troncos maiores comportam mais por ramal. Como
+ * todo o resto da lista de materiais, serve de estimativa e o projeto
+ * executivo ajusta.
  */
-export const POTENCIA_MAX_POR_RAMAL_W = 3500;
+export const POTENCIA_MAX_POR_RAMAL_KW = 3.5;
 
-/** Catálogo comercial genérico (potência CA × módulos atendidos). */
-export const MICROINVERSORES_COMERCIAIS: Microinversor[] = [
-  { id: "300-1", potenciaW: 300, modulos: 1 },
-  { id: "400-1", potenciaW: 400, modulos: 1 },
-  { id: "500-1", potenciaW: 500, modulos: 1 },
-  { id: "600-1", potenciaW: 600, modulos: 1 },
-  { id: "600-2", potenciaW: 600, modulos: 2 },
-  { id: "700-2", potenciaW: 700, modulos: 2 },
-  { id: "800-2", potenciaW: 800, modulos: 2 },
-  { id: "1000-2", potenciaW: 1000, modulos: 2 },
-  { id: "1200-2", potenciaW: 1200, modulos: 2 },
-  { id: "1200-4", potenciaW: 1200, modulos: 4 },
-  { id: "1600-4", potenciaW: 1600, modulos: 4 },
-  { id: "2000-4", potenciaW: 2000, modulos: 4 },
-  { id: "2250-4", potenciaW: 2250, modulos: 4 },
-];
-
-export function getMicroinversor(id: string): Microinversor | undefined {
-  return MICROINVERSORES_COMERCIAIS.find((m) => m.id === id);
+/** Rótulo de exibição: "6,6 kW". */
+export function microLabel(potenciaKw: number): string {
+  return `${potenciaKw.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} kW`;
 }
 
-/** Rótulo de exibição: "800 W · 2 módulos". */
-export function microLabel(m: Microinversor): string {
-  return `${m.potenciaW} W · ${m.modulos} ${m.modulos === 1 ? "módulo" : "módulos"}`;
-}
-
-/**
- * Overload (sobredimensionamento CC/CA) de UM microinversor:
- * (módulos × Wp do painel) / potência CA − 1.
- * Em micro é normal e desejável ser mais alto que no string (o micro é
- * dimensionado para a geração real do módulo, não para o pico de placa).
- */
-export function overloadMicro(m: Microinversor, potenciaPainelW: number): number {
-  return m.potenciaW > 0 ? (m.modulos * potenciaPainelW) / m.potenciaW - 1 : 0;
-}
-
-/**
- * Escolhe o microinversor com overload mais próximo do desejado. Descarta os
- * subdimensionados a ponto de estrangular o módulo (overload acima do teto) e,
- * em empate, prefere o que atende MAIS módulos — menos unidades, kit mais
- * barato e menos pontos de falha.
- */
-export function sugerirMicroinversor(potenciaPainelW: number, overloadDesejado: number): Microinversor {
-  const TETO_OVERLOAD = 0.6; // acima disso o micro vira gargalo na geração
-  const candidatos = MICROINVERSORES_COMERCIAIS.filter(
-    (m) => overloadMicro(m, potenciaPainelW) <= TETO_OVERLOAD,
+/** A potência do catálogo mais próxima do valor pedido (0/ausente = sugere). */
+export function normalizarPotenciaMicro(potenciaKw: number): number {
+  if (!potenciaKw) return 0;
+  return MICROINVERSORES_COMERCIAIS.reduce((melhor, p) =>
+    Math.abs(p - potenciaKw) < Math.abs(melhor - potenciaKw) ? p : melhor,
   );
-  const lista = candidatos.length > 0 ? candidatos : MICROINVERSORES_COMERCIAIS;
+}
 
-  return lista.reduce((melhor, atual) => {
-    const dAtual = Math.abs(overloadMicro(atual, potenciaPainelW) - overloadDesejado);
-    const dMelhor = Math.abs(overloadMicro(melhor, potenciaPainelW) - overloadDesejado);
-    if (Math.abs(dAtual - dMelhor) < 1e-9) return atual.modulos > melhor.modulos ? atual : melhor;
-    return dAtual < dMelhor ? atual : melhor;
-  }, lista[0]);
+/**
+ * Sugere a potência de microinversor que melhor cobre o sistema com UMA
+ * unidade próxima do overload desejado. Sistemas maiores que a maior unidade
+ * do catálogo caem na maior potência — a quantidade é que cresce.
+ */
+export function sugerirMicroinversor(kwpTotal: number, overloadDesejado: number): number {
+  const alvo = kwpTotal / (1 + overloadDesejado);
+  return MICROINVERSORES_COMERCIAIS.reduce((melhor, p) =>
+    Math.abs(p - alvo) < Math.abs(melhor - alvo) ? p : melhor,
+  );
 }
 
 export interface MicroSizingInput {
   nPaineis: number;
   potenciaPainelW: number;
-  micro: Microinversor;
+  /** Potência de CADA microinversor (kW). */
+  potenciaKw: number;
+  overloadDesejado: number;
 }
 
 export interface MicroSizingResult {
-  micro: Microinversor;
-  /** Quantidade de microinversores — DERIVADA do nº de painéis. */
+  /** Potência de cada unidade (kW). */
+  potenciaKw: number;
+  /** Quantidade de microinversores — DERIVADA do sistema. */
   qtdMicros: number;
-  /** Potência CA instalada total (kW) = qtd × potência do micro. */
+  /** Potência CA instalada total (kW) = qtd × potência da unidade. */
   potenciaCaTotalKw: number;
-  /** Overload de cada microinversor cheio. */
+  /** Overload real do conjunto: kWp / potência CA total − 1. */
   overload: number;
-  /** Módulos ligados no último micro (< modulos = micro parcialmente ocupado). */
-  modulosNoUltimo: number;
-  /** true quando o último micro fica com folga (sobra de entrada). */
-  ultimoParcial: boolean;
-  /** Ramais (circuitos de tronco CA) necessários pelo limite de corrente. */
+  /** Módulos por unidade (piso) — quando não divide exato, alguns levam +1. */
+  modulosPorMicro: number;
+  /** Quantas unidades ficam com um módulo a mais (0 = divisão exata). */
+  microsComModuloExtra: number;
+  /** true quando os painéis não se dividem igualmente entre as unidades. */
+  divisaoDesigual: boolean;
+  /** Circuitos CA necessários pelo limite de corrente do ramal. */
   ramais: number;
-  /** Micros por ramal (o último ramal pode ter menos). */
+  /** Unidades por circuito (nestas potências, tipicamente 1). */
   microsPorRamal: number;
 }
 
 /** Dimensiona o conjunto de microinversores para um nº de painéis. */
 export function dimensionarMicro(i: MicroSizingInput): MicroSizingResult {
   const nPaineis = Math.max(1, Math.floor(i.nPaineis));
-  const { micro } = i;
+  const potenciaKw = i.potenciaKw > 0 ? i.potenciaKw : MICROINVERSORES_COMERCIAIS[0];
+  const kwpTotal = (nPaineis * i.potenciaPainelW) / 1000;
 
-  const qtdMicros = Math.ceil(nPaineis / micro.modulos);
-  const potenciaCaTotalKw = (qtdMicros * micro.potenciaW) / 1000;
+  // Quantidade que deixa o conjunto mais perto do overload desejado — mesma
+  // lógica do inversor string, só que aqui o resultado é a QUANTIDADE.
+  const alvoCa = kwpTotal / (1 + i.overloadDesejado);
+  const qtdMicros = Math.max(1, Math.round(alvoCa / potenciaKw));
 
-  const resto = nPaineis % micro.modulos;
-  const modulosNoUltimo = resto === 0 ? micro.modulos : resto;
+  const potenciaCaTotalKw = qtdMicros * potenciaKw;
+  const overload = potenciaCaTotalKw > 0 ? kwpTotal / potenciaCaTotalKw - 1 : 0;
 
-  // Quantos micros cabem num ramal sem estourar o disjuntor do tronco.
-  const microsPorRamal = Math.max(1, Math.floor(POTENCIA_MAX_POR_RAMAL_W / micro.potenciaW));
+  // Distribuição dos painéis entre as unidades.
+  const modulosPorMicro = Math.floor(nPaineis / qtdMicros);
+  const microsComModuloExtra = nPaineis % qtdMicros;
+
+  // Quantas unidades cabem num circuito sem estourar o disjuntor do ramal.
+  // Nestas potências (≥ 3 kW) dá 1: cada unidade sai em circuito próprio.
+  const microsPorRamal = Math.max(1, Math.floor(POTENCIA_MAX_POR_RAMAL_KW / potenciaKw));
   const ramais = Math.ceil(qtdMicros / microsPorRamal);
 
   return {
-    micro,
+    potenciaKw,
     qtdMicros,
     potenciaCaTotalKw,
-    overload: overloadMicro(micro, i.potenciaPainelW),
-    modulosNoUltimo,
-    ultimoParcial: modulosNoUltimo < micro.modulos,
+    overload,
+    modulosPorMicro,
+    microsComModuloExtra,
+    divisaoDesigual: microsComModuloExtra > 0,
     ramais,
     microsPorRamal,
   };
