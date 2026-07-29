@@ -16,6 +16,7 @@ import { dimensionar, kwpTotal } from "../solar/sizing";
 import { simularGeracao } from "../solar/generation";
 import { precificar, PRICING_DEFAULTS } from "../solar/pricing";
 import { simularEconomia } from "../solar/economia";
+import { dimensionarMicro, getMicroinversor, overloadMicro, sugerirMicroinversor } from "../solar/micro";
 
 /**
  * GOLDEN TESTS dos engines de preço — congelam os números que os configuradores
@@ -391,6 +392,92 @@ describe("Solar — cadeia completa: sizing → geração → preço → economi
         "paybackAnos": 3.359,
         "paybackMeses": 40,
         "saldoFinal": 786354.1463,
+      }
+    `);
+  });
+});
+
+describe("Solar — dimensionamento com microinversores", () => {
+  it("sugestão segue o painel: 700 Wp com overload alvo 15%", () => {
+    const m = sugerirMicroinversor(700, 0.15);
+    expect({ ...m, overload: r4(overloadMicro(m, 700)) }).toMatchInlineSnapshot(`
+      {
+        "id": "1200-2",
+        "modulos": 2,
+        "overload": 0.1667,
+        "potenciaW": 1200,
+      }
+    `);
+  });
+
+  it("painel pequeno (450 Wp) cai num micro menor", () => {
+    const m = sugerirMicroinversor(450, 0.15);
+    expect({ ...m, overload: r4(overloadMicro(m, 450)) }).toMatchInlineSnapshot(`
+      {
+        "id": "1600-4",
+        "modulos": 4,
+        "overload": 0.125,
+        "potenciaW": 1600,
+      }
+    `);
+  });
+
+  it("arranjo de 12 painéis de 700 Wp em micro 2-em-1 de 800 W", () => {
+    const r = dimensionarMicro({
+      nPaineis: 12,
+      potenciaPainelW: 700,
+      micro: getMicroinversor("800-2")!,
+    });
+    expect({ ...digest(r), micro: r.micro.id }).toMatchInlineSnapshot(`
+      {
+        "micro": "800-2",
+        "microsPorRamal": 4,
+        "modulosNoUltimo": 2,
+        "overload": 0.75,
+        "potenciaCaTotalKw": 4.8,
+        "qtdMicros": 6,
+        "ramais": 2,
+        "ultimoParcial": false,
+      }
+    `);
+  });
+
+  it("nº ímpar de painéis deixa o último micro parcial", () => {
+    const r = dimensionarMicro({
+      nPaineis: 11,
+      potenciaPainelW: 700,
+      micro: getMicroinversor("800-2")!,
+    });
+    expect({ ...digest(r), micro: r.micro.id }).toMatchInlineSnapshot(`
+      {
+        "micro": "800-2",
+        "microsPorRamal": 4,
+        "modulosNoUltimo": 1,
+        "overload": 0.75,
+        "potenciaCaTotalKw": 4.8,
+        "qtdMicros": 6,
+        "ramais": 2,
+        "ultimoParcial": true,
+      }
+    `);
+  });
+
+  it("sistema grande divide em vários ramais de tronco CA", () => {
+    const r = dimensionarMicro({
+      nPaineis: 40,
+      potenciaPainelW: 700,
+      micro: getMicroinversor("2000-4")!,
+    });
+    expect({ ...digest(r), micro: r.micro.id }).toMatchInlineSnapshot(`
+      {
+        "micro": "2000-4",
+        "microsPorRamal": 1,
+        "modulosNoUltimo": 4,
+        "overload": 0.4,
+        "potenciaCaTotalKw": 20,
+        "qtdMicros": 10,
+        "ramais": 10,
+        "ultimoParcial": false,
       }
     `);
   });

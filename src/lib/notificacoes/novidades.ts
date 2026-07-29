@@ -37,6 +37,12 @@ export const NOVIDADES: Novidade[] = [
     mensagem: "Não precisa mais acertar o nome da tarefa — clique em qualquer ponto da linha para expandir.",
     link: "/tarefas",
   },
+  {
+    slug: "solar-microinversor-2026-07",
+    titulo: "Novidade: Solar agora monta sistema com microinversor",
+    mensagem: "Escolha o microinversor (W × módulos) e o configurador calcula a quantidade, a potência CA total, os ramais e a lista de materiais.",
+    link: "/nova/solar",
+  },
 ];
 
 interface NovidadeStore {

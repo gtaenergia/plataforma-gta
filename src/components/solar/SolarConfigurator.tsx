@@ -9,6 +9,7 @@ import {
   INVERSORES_COMERCIAIS,
   sugerirInversorComercial,
 } from "@/services/solar/commercial";
+import { MICROINVERSORES_COMERCIAIS, microLabel } from "@/services/solar/micro";
 import { SolarParamsForm } from "@/components/admin/SolarParamsForm";
 import { CopyButton } from "@/components/CopyButton";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
@@ -54,6 +55,8 @@ interface Form {
   potenciaInversor: number; // 0 = automático
   qtdInversores: number;
   tipoInversor: "string" | "micro";
+  /** Microinversor escolhido (id do catálogo). "" = usa a sugestão do servidor. */
+  microId: string;
   tipoTelhado: string;
   distribuidor: string;
   distribuidorNome: string;
@@ -94,6 +97,7 @@ const FORM_INICIAL: Form = {
   potenciaInversor: 0,
   qtdInversores: 1,
   tipoInversor: "string",
+  microId: "",
   tipoTelhado: "Metálico",
   distribuidor: "weg",
   distribuidorNome: "",
@@ -115,10 +119,21 @@ const FORM_INICIAL: Form = {
 
 interface Calc {
   sizing: { consumoMedio: number; hspMedia: number; disponibilidade: number; kwpNecessaria: number; nPlacasSugerido: number; inversorSugerido: number };
-  aplicado: { nPaineis: number; potenciaInversor: number; eficiencia: number; overloadDesejado: number };
+  aplicado: { nPaineis: number; potenciaInversor: number; qtdInversores: number; eficiencia: number; overloadDesejado: number };
   inversorSugerido: number;
   kwpTotal: number;
   overload: number;
+  /** Só quando tipoInversor === "micro". */
+  micro: null | {
+    micro: { id: string; potenciaW: number; modulos: number };
+    qtdMicros: number;
+    potenciaCaTotalKw: number;
+    overload: number;
+    modulosNoUltimo: number;
+    ultimoParcial: boolean;
+    ramais: number;
+    microsPorRamal: number;
+  };
   geracao: { linhas: { mes: string; insolacao: number; energia: number; consumo: number }[]; totalEnergia: number; totalConsumo: number };
   bom: { qtde: string; descricao: string }[];
   pricing: null | {
@@ -214,7 +229,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
   const calcKey = JSON.stringify([
     form.municipio, form.consumo, form.margemSeguranca, form.tipoConexao, form.potenciaPainel, form.eficiencia,
     form.overloadDesejado, form.nPaineis, form.potenciaInversor, form.qtdInversores,
-    form.tipoInversor, form.tipoTelhado, form.kit, form.fator, form.viagens, form.execucaoCivil,
+    form.tipoInversor, form.microId, form.tipoTelhado, form.kit, form.fator, form.viagens, form.execucaoCivil,
     form.distribuidora, form.subgrupo, form.tarifaEnergia,
   ]);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -241,6 +256,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
             potenciaInversor: form.potenciaInversor,
             qtdInversores: form.qtdInversores,
             tipoInversor: form.tipoInversor,
+            microId: form.microId,
             tipoTelhado: form.tipoTelhado,
             kit: form.kit,
             fator: form.fator,
@@ -294,7 +310,8 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
     const inv = sugerirInversorComercial((nP * form.potenciaPainel) / 1000, form.overloadDesejado);
     touched.current = { nPaineis: false, inversor: false };
     setInvCustom(false);
-    setForm((f) => ({ ...f, nPaineis: nP, potenciaInversor: inv, qtdInversores: 1 }));
+    // microId "" volta a seguir a sugestão automática do servidor
+    setForm((f) => ({ ...f, nPaineis: nP, potenciaInversor: inv, qtdInversores: 1, microId: "" }));
   }
 
   const nivelMargem = useMemo(() => {
@@ -305,7 +322,10 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
     return { cls: "bg-red-100 text-red-700", label: "baixa" };
   }, [calc?.pricing]);
 
-  const overloadOk = calc ? calc.overload >= 0 && calc.overload <= 0.35 : true;
+  const ehMicro = form.tipoInversor === "micro";
+  // O microinversor é dimensionado para a geração real do módulo, então tolera
+  // (e costuma trabalhar com) um sobredimensionamento maior que o inversor string.
+  const overloadOk = calc ? calc.overload >= 0 && calc.overload <= (ehMicro ? 0.6 : 0.35) : true;
 
   // datalist filtrado: só busca com 2+ letras (5.508 opções travam o navegador)
   const sugestoesMunicipio = useMemo(() => {
@@ -340,9 +360,12 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
       potenciaPainel: `${form.potenciaPainel} W`,
       qtdPaineis: `${calc.aplicado.nPaineis} unidades`,
       potenciaTotal: `${nf(calc.kwpTotal, 2)} kWp`,
-      potenciaInversor: `${kw(calc.aplicado.potenciaInversor)} kWp`,
+      // No micro o que vale é a potência CA total do conjunto e a unidade em W.
+      potenciaInversor: calc.micro
+        ? `${nf(calc.micro.potenciaCaTotalKw, 2)} kW (${calc.micro.qtdMicros} × ${calc.micro.micro.potenciaW} W)`
+        : `${kw(calc.aplicado.potenciaInversor)} kWp`,
       overload: pct(calc.overload),
-      qtdInversores: `${form.qtdInversores} ${form.qtdInversores > 1 ? "unidades" : "unidade"}`,
+      qtdInversores: `${calc.aplicado.qtdInversores} ${calc.aplicado.qtdInversores > 1 ? "unidades" : "unidade"}`,
       tipoInversor: form.tipoInversor === "micro" ? "microinversor" : "inversor",
       simulacao: calc.geracao.linhas.map((l) => ({
         mes: l.mes,
@@ -616,47 +639,81 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="field-label">Inversor (kW)</label>
-            <div className="flex gap-2">
-              <select
-                className={inputCls}
-                value={invSelect}
-                onChange={(e) => {
-                  touched.current.inversor = true;
-                  if (e.target.value === "outro") setInvCustom(true);
-                  else { setInvCustom(false); set("potenciaInversor", Number(e.target.value)); }
-                }}
-              >
-                {!INVERSORES_COMERCIAIS.includes(form.potenciaInversor) && !invCustom && (
-                  <option value={String(form.potenciaInversor)}>
-                    {form.potenciaInversor === 0 ? "Automático" : `${kw(form.potenciaInversor)} kW`}
-                  </option>
-                )}
-                {INVERSORES_COMERCIAIS.map((p) => <option key={p} value={p}>{kw(p)} kW</option>)}
-                <option value="outro">Outro...</option>
-              </select>
-              {invCustom && (
-                <input
-                  type="number"
-                  step="0.5"
-                  className={inputCls}
-                  value={form.potenciaInversor}
-                  onChange={(e) => { touched.current.inversor = true; set("potenciaInversor", Number(e.target.value)); }}
-                />
-              )}
-            </div>
-          </div>
-          <div className="sm:col-span-1">
-            <label className="field-label">Qtd. inversores</label>
-            <input type="number" className={inputCls} value={form.qtdInversores} onChange={(e) => set("qtdInversores", Number(e.target.value))} />
-          </div>
-          <div className="sm:col-span-2">
             <label className="field-label">Tipo de inversor</label>
             <select className={inputCls} value={form.tipoInversor} onChange={(e) => set("tipoInversor", e.target.value as Form["tipoInversor"])}>
               <option value="string">Inversor (string)</option>
               <option value="micro">Microinversor</option>
             </select>
           </div>
+
+          {/* String: escolhe a potência do inversor central e quantos são.
+              Micro: escolhe o MODELO (W × módulos) — a quantidade é derivada. */}
+          {ehMicro ? (
+            <>
+              <div className="sm:col-span-2">
+                <label className="field-label">Microinversor</label>
+                <select
+                  className={inputCls}
+                  value={form.microId || calc?.micro?.micro.id || ""}
+                  onChange={(e) => { touched.current.inversor = true; set("microId", e.target.value); }}
+                >
+                  {!form.microId && <option value="">Automático (sugerido)</option>}
+                  {MICROINVERSORES_COMERCIAIS.map((m) => (
+                    <option key={m.id} value={m.id}>{microLabel(m)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-1">
+                <label className="field-label">Qtd. microinversores</label>
+                <input
+                  type="number"
+                  className={`${inputCls} bg-slate-50 dark:bg-slate-900/50`}
+                  value={calc?.micro?.qtdMicros ?? ""}
+                  placeholder="auto"
+                  readOnly
+                  title="Calculado a partir do nº de painéis e dos módulos por microinversor."
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="sm:col-span-2">
+                <label className="field-label">Inversor (kW)</label>
+                <div className="flex gap-2">
+                  <select
+                    className={inputCls}
+                    value={invSelect}
+                    onChange={(e) => {
+                      touched.current.inversor = true;
+                      if (e.target.value === "outro") setInvCustom(true);
+                      else { setInvCustom(false); set("potenciaInversor", Number(e.target.value)); }
+                    }}
+                  >
+                    {!INVERSORES_COMERCIAIS.includes(form.potenciaInversor) && !invCustom && (
+                      <option value={String(form.potenciaInversor)}>
+                        {form.potenciaInversor === 0 ? "Automático" : `${kw(form.potenciaInversor)} kW`}
+                      </option>
+                    )}
+                    {INVERSORES_COMERCIAIS.map((p) => <option key={p} value={p}>{kw(p)} kW</option>)}
+                    <option value="outro">Outro...</option>
+                  </select>
+                  {invCustom && (
+                    <input
+                      type="number"
+                      step="0.5"
+                      className={inputCls}
+                      value={form.potenciaInversor}
+                      onChange={(e) => { touched.current.inversor = true; set("potenciaInversor", Number(e.target.value)); }}
+                    />
+                  )}
+                </div>
+              </div>
+              <div className="sm:col-span-1">
+                <label className="field-label">Qtd. inversores</label>
+                <input type="number" className={inputCls} value={form.qtdInversores} onChange={(e) => set("qtdInversores", Number(e.target.value))} />
+              </div>
+            </>
+          )}
           <div className="sm:col-span-2">
             <label className="field-label">Tipo de telhado</label>
             <select className={inputCls} value={form.tipoTelhado} onChange={(e) => set("tipoTelhado", e.target.value)}>
@@ -671,11 +728,30 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
             <Kpi label="Consumo médio" value={`${nf(calc.sizing.consumoMedio, 0)} kWh/mês`} />
             <Kpi label="HSP média (local)" value={nf(calc.sizing.hspMedia, 2)} />
             <div className={`rounded-md p-2 shadow-sm ${overloadOk ? "bg-white dark:bg-slate-800" : "bg-amber-50 dark:bg-amber-900/30"}`}>
-              <div className="text-xs text-slate-500 dark:text-slate-400">Overload do inversor</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                {calc.micro ? "Overload por micro" : "Overload do inversor"}
+              </div>
               <div className={`mt-0.5 font-semibold ${overloadOk ? "text-gta-navy dark:text-slate-100" : "text-amber-700 dark:text-amber-300"}`}>
                 {pct(calc.overload)} {overloadOk ? "" : "· verificar"}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Resumo específico do arranjo com microinversores */}
+        {calc?.micro && (
+          <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg border border-gta-indigo/20 bg-indigo-50/50 p-3 text-sm sm:grid-cols-4 dark:border-indigo-500/30 dark:bg-indigo-900/20">
+            <Kpi label="Microinversores" value={`${calc.micro.qtdMicros} × ${calc.micro.micro.potenciaW} W`} />
+            <Kpi label="Módulos por micro" value={String(calc.micro.micro.modulos)} />
+            <Kpi label="Potência CA total" value={`${nf(calc.micro.potenciaCaTotalKw, 2)} kW`} />
+            <Kpi label="Ramais de tronco CA" value={`${calc.micro.ramais} (até ${calc.micro.microsPorRamal}/ramal)`} />
+            {calc.micro.ultimoParcial && (
+              <p className="col-span-2 text-xs text-amber-700 sm:col-span-4 dark:text-amber-300">
+                O último microinversor fica com {calc.micro.modulosNoUltimo} de {calc.micro.micro.modulos} entradas
+                ocupadas — sobra capacidade. Ajuste o nº de painéis para um múltiplo de {calc.micro.micro.modulos},
+                ou mantenha assim se a expansão já estiver prevista.
+              </p>
+            )}
           </div>
         )}
 

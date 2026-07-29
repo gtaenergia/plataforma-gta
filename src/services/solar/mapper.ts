@@ -38,10 +38,11 @@ export function mapSolar(form: SolarFormData): MapResult {
   const valorGtaNum = parseNumber(form.valorGta);
   const valorTotalNum = valorKitNum + valorGtaNum;
 
-  const labelQtdInversores =
-    form.tipoInversor === "microinversor"
-      ? "Quantidade de Microinversores"
-      : "Quantidade de Inversores";
+  const ehMicro = form.tipoInversor === "microinversor";
+  const labelQtdInversores = ehMicro ? "Quantidade de Microinversores" : "Quantidade de Inversores";
+  // No micro a linha traz a potência CA TOTAL do conjunto (não a de uma unidade),
+  // que é o número que a distribuidora usa no parecer de acesso.
+  const labelPotInversor = ehMicro ? "Potência Total dos Microinversores (kW)" : "Potência do Inversor (kWp)";
 
   const data = {
     // cabeçalho
@@ -64,7 +65,7 @@ export function mapSolar(form: SolarFormData): MapResult {
     potenciaInversor: form.potenciaInversor,
     overload: form.overload,
     qtdInversores: form.qtdInversores,
-    labelPotInversor: "Potência do Inversor (kWp)",
+    labelPotInversor,
     labelQtdInversores,
 
     // simulação (loop) + totais
