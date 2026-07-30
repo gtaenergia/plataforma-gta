@@ -215,7 +215,7 @@ class JsonOrcamentoStore implements OrcamentoStore {
 
 // --------------------------------------------------------- Postgres (prod)
 
-interface Row {
+export interface Row {
   id: string;
   referencia: string;
   cliente: string;
@@ -225,7 +225,8 @@ interface Row {
   proposta_id: string | null;
   descricao: string;
   meta: OrcamentoMeta | null;
-  valor: number | null;
+  /** `numeric` chega como STRING do Postgres — ver a conversão em `rowTo`. */
+  valor: number | string | null;
   ficha: FichaExterna | null;
   comentarios: ComentarioOrcamento[];
   historico: RegistroValidacao[];
@@ -240,7 +241,12 @@ interface Row {
   criado_em: string;
   atualizado_em: string;
 }
-const rowTo = (r: Row): Orcamento => ({
+/**
+ * Converte a linha do Postgres no modelo da aplicação. Exportado porque é a
+ * FRONTEIRA onde produção diverge do dev: aqui os tipos crus do driver
+ * (numeric como string, timestamptz como Date) viram os tipos que o app espera.
+ */
+export const rowTo = (r: Row): Orcamento => ({
   id: r.id,
   referencia: r.referencia,
   cliente: r.cliente,
@@ -250,7 +256,11 @@ const rowTo = (r: Row): Orcamento => ({
   propostaId: r.proposta_id ?? undefined,
   descricao: r.descricao ?? "",
   meta: r.meta ?? undefined,
-  valor: r.valor ?? undefined,
+  // O driver devolve `numeric` como string (o pg-types não registra parser
+  // para o OID 1700, para não perder precisão). Sem converter aqui, o valor
+  // sairia como "R$ 1500.00" em vez de "R$ 1.500,00": String.toLocaleString
+  // ignora as opções de formatação de número.
+  valor: r.valor == null ? undefined : Number(r.valor),
   ficha: r.ficha ?? undefined,
   comentarios: r.comentarios ?? [],
   historico: r.historico ?? [],
