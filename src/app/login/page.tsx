@@ -18,6 +18,9 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Marcado por padrão: o uso normal é o próprio celular/computador de trabalho.
+  // Quem estiver num equipamento compartilhado desmarca e a sessão dura 12h.
+  const [lembrar, setLembrar] = useState(true);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,7 +30,7 @@ function LoginForm() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, lembrar }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -76,6 +79,15 @@ function LoginForm() {
               required
             />
           </div>
+          <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300 text-gta-indigo focus:ring-gta-indigo dark:border-slate-600 dark:bg-slate-700"
+              checked={lembrar}
+              onChange={(e) => setLembrar(e.target.checked)}
+            />
+            Continuar conectado
+          </label>
           {error && <p className="field-error">{error}</p>}
           <button type="submit" className="btn-primary w-full" disabled={loading}>
             {loading ? "Entrando..." : "Entrar"}

@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, verifySession } from "@/lib/auth";
+import {
+  SESSION_COOKIE,
+  verifySession,
+  renewSession,
+  precisaRenovar,
+  maxAgeRestante,
+} from "@/lib/auth";
 
 /**
  * Protege todas as rotas: sem sessão válida, redireciona para /login.
@@ -24,7 +30,20 @@ export async function middleware(req: NextRequest) {
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
-  return NextResponse.next();
+
+  const res = NextResponse.next();
+  // Sessão deslizante: com o usuário ativo, empurra a validade para frente —
+  // sem nunca passar do teto absoluto gravado no próprio token.
+  if (precisaRenovar(session)) {
+    res.cookies.set(SESSION_COOKIE, await renewSession(session), {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: maxAgeRestante(session),
+    });
+  }
+  return res;
 }
 
 export const config = {

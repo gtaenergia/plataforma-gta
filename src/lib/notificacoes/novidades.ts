@@ -50,6 +50,12 @@ export const NOVIDADES: Novidade[] = [
     link: "/nova/solar",
   },
   {
+    slug: "login-continuar-conectado-2026-07",
+    titulo: "Novidade: continuar conectado",
+    mensagem: "A plataforma agora mantém você logado por até 30 dias. Em computador compartilhado, desmarque \"Continuar conectado\" ao entrar.",
+    link: "/conta",
+  },
+  {
     slug: "solar-micro-kw-telhados-2026-07",
     titulo: "Novidade: microinversor em kW e novas estruturas",
     mensagem: "O microinversor agora é escolhido em kW (3 a 25) e a sugestão já mostra quantas unidades. Estruturas de fixação atualizadas (shingle, telha, colonial, laje, solo e mais).",

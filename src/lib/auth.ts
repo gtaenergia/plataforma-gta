@@ -8,7 +8,23 @@
  */
 
 export const SESSION_COOKIE = "gta_session";
+
+/**
+ * Vida do COOKIE em si (janela deslizante). A cada acesso, se já passou da
+ * metade, o middleware emite um cookie novo — quem usa a plataforma não é
+ * deslogado no meio do trabalho.
+ */
 const SESSION_TTL_SECONDS = 60 * 60 * 12; // 12h
+
+/**
+ * Teto ABSOLUTO da sessão com "continuar conectado". A renovação deslizante
+ * nunca passa daqui: mesmo um cookie roubado morre em 30 dias, e o usuário
+ * relogar de tempos em tempos é o que limita o estrago.
+ */
+export const REMEMBER_MAX_SECONDS = 60 * 60 * 24 * 30; // 30 dias
+
+/** Renova o cookie quando resta menos da metade da janela. */
+const RENOVAR_QUANDO_RESTAR = SESSION_TTL_SECONDS / 2;
 
 const IS_PROD = process.env.NODE_ENV === "production";
 
@@ -66,18 +82,64 @@ async function hmac(data: string): Promise<Uint8Array> {
 export interface SessionPayload {
   email: string;
   name?: string;
+  /** Expiração DESTA cópia do cookie (janela deslizante). */
   exp: number;
+  /** Teto absoluto: a renovação nunca passa daqui. */
+  mx: number;
+  /**
+   * "Password version": impressão digital do hash da senha. Se a senha muda,
+   * o hash muda, a impressão não bate e TODAS as sessões antigas caem — é o
+   * que torna seguro manter o usuário logado por semanas.
+   */
+  pv: string;
 }
 
-export async function signSession(user: { email: string; name?: string }): Promise<string> {
+/**
+ * Impressão digital curta do hash da senha (edge-safe). Não é segredo: já é
+ * derivada de um hash, e serve só para detectar que a senha mudou.
+ */
+export async function passwordFingerprint(passwordHash: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(passwordHash));
+  return b64url(new Uint8Array(buf)).slice(0, 16);
+}
+
+export async function signSession(
+  user: { email: string; name?: string; passwordHash: string },
+  opts: { lembrar?: boolean; mx?: number } = {},
+): Promise<string> {
+  const agora = Math.floor(Date.now() / 1000);
+  // Sem "continuar conectado", o teto é a própria janela: some em 12h.
+  const mx = opts.mx ?? agora + (opts.lembrar ? REMEMBER_MAX_SECONDS : SESSION_TTL_SECONDS);
   const payload: SessionPayload = {
     email: user.email,
     name: user.name,
-    exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
+    exp: Math.min(agora + SESSION_TTL_SECONDS, mx),
+    mx,
+    pv: await passwordFingerprint(user.passwordHash),
   };
   const body = b64url(new TextEncoder().encode(JSON.stringify(payload)));
   const sig = b64url(await hmac(body));
   return `${body}.${sig}`;
+}
+
+/** Reassina o mesmo payload com a janela empurrada para frente (sem tocar no teto). */
+export async function renewSession(p: SessionPayload): Promise<string> {
+  const agora = Math.floor(Date.now() / 1000);
+  const payload: SessionPayload = { ...p, exp: Math.min(agora + SESSION_TTL_SECONDS, p.mx) };
+  const body = b64url(new TextEncoder().encode(JSON.stringify(payload)));
+  const sig = b64url(await hmac(body));
+  return `${body}.${sig}`;
+}
+
+/** true quando vale a pena reemitir o cookie (passou da metade e ainda há teto). */
+export function precisaRenovar(p: SessionPayload): boolean {
+  const agora = Math.floor(Date.now() / 1000);
+  return p.exp - agora < RENOVAR_QUANDO_RESTAR && agora < p.mx;
+}
+
+/** Segundos restantes até o teto absoluto — vira o maxAge do cookie. */
+export function maxAgeRestante(p: SessionPayload): number {
+  return Math.max(0, p.mx - Math.floor(Date.now() / 1000));
 }
 
 export async function verifySession(token: string | undefined): Promise<SessionPayload | null> {
@@ -88,7 +150,13 @@ export async function verifySession(token: string | undefined): Promise<SessionP
   if (!timingSafeEqual(expected, sig)) return null;
   try {
     const payload = JSON.parse(new TextDecoder().decode(b64urlDecode(body))) as SessionPayload;
-    if (payload.exp < Math.floor(Date.now() / 1000)) return null;
+    const agora = Math.floor(Date.now() / 1000);
+    if (payload.exp < agora) return null;
+    // Teto absoluto e impressão da senha são obrigatórios: um cookie do formato
+    // antigo (sem eles) sobreviveria a uma troca de senha, então é recusado —
+    // custa um relogin único na virada.
+    if (typeof payload.mx !== "number" || payload.mx < agora) return null;
+    if (typeof payload.pv !== "string" || !payload.pv) return null;
     return payload;
   } catch {
     return null;

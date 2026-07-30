@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { SESSION_COOKIE, verifySession, type SessionPayload } from "./auth";
+import { SESSION_COOKIE, verifySession, passwordFingerprint, type SessionPayload } from "./auth";
 import { users } from "./users/store";
 import type { User } from "./users/types";
 import { temPermissao } from "./rbac/resolve";
@@ -23,6 +23,10 @@ export async function getCurrentUser(): Promise<User | null> {
   const store = await users();
   const u = await store.getByEmail(session.email);
   if (!u || !u.active) return null;
+  // A senha mudou desde que a sessão foi emitida? Então ela não vale mais.
+  // O middleware (Edge, sem banco) não consegue checar isso — é aqui que a
+  // revogação de fato acontece, em toda página e rota protegida.
+  if (session.pv !== (await passwordFingerprint(u.passwordHash))) return null;
   return u;
 }
 
