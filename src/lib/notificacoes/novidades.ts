@@ -50,6 +50,12 @@ export const NOVIDADES: Novidade[] = [
     link: "/nova/solar",
   },
   {
+    slug: "lista-materiais-nao-reseta-2026-07",
+    titulo: "Corrigido: a lista de materiais não apaga mais o que você escreve",
+    mensagem: "Depois de editar a lista, mexer em qualquer campo apagava suas alterações. Agora a lista editada é preservada — e avisa se o dimensionamento mudou depois.",
+    link: "/nova/solar",
+  },
+  {
     slug: "aprovacoes-reabrir-2026-07",
     titulo: "Novidade: dá para desfazer uma aprovação",
     mensagem: "Aprovou ou cancelou por engano? O botão \"Reabrir para revisão\" devolve o orçamento, com o motivo registrado no histórico.",

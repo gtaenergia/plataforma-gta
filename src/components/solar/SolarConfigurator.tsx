@@ -191,15 +191,40 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
   // Lista de materiais EDITÁVEL (composição do sistema) — semeada pela sugestão
   // do servidor (calc.bom) até o usuário editar/salvar.
   const [materiais, setMateriais] = useState<{ qtde: string; descricao: string }[]>([]);
-  const pularReseed = useRef(false);
+  /**
+   * A lista segue a sugestão do servidor ATÉ o usuário mexer nela. A partir
+   * daí ela é dele: nenhum recálculo sobrescreve o que foi digitado (e quase
+   * todo campo do formulário dispara recálculo). "Restaurar sugestão" é a
+   * forma explícita de voltar a seguir.
+   */
+  const matTocado = useRef(false);
+  /** A sugestão vigente quando a edição começou — base para detectar que o
+   *  dimensionamento mudou DEPOIS disso (e só então avisar). */
+  const bomNaEdicao = useRef("");
   // campos que o usuário já editou de propósito (a sugestão não sobrescreve)
   const touched = useRef({ nPaineis: false, inversor: false });
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
-  const setMat = (i: number, k: "qtde" | "descricao", v: string) => setMateriais((ms) => ms.map((m, j) => (j === i ? { ...m, [k]: v } : m)));
-  const addMat = () => setMateriais((ms) => [...ms, { qtde: "1", descricao: "" }]);
-  const removeMat = (i: number) => setMateriais((ms) => ms.filter((_, j) => j !== i));
-  const restaurarMat = () => { if (calc?.bom) setMateriais(calc.bom.map((b) => ({ qtde: b.qtde, descricao: b.descricao }))); };
+  const serializarBom = (itens: { qtde: string; descricao: string }[]) =>
+    itens.map((b) => `${b.qtde}|${b.descricao}`).join("\n");
+
+  /** Primeira edição: a lista passa a ser do usuário e guarda a sugestão da hora. */
+  const marcarTocado = () => {
+    if (matTocado.current) return;
+    matTocado.current = true;
+    bomNaEdicao.current = serializarBom(calc?.bom ?? []);
+  };
+
+  const setMat = (i: number, k: "qtde" | "descricao", v: string) => { marcarTocado(); setMateriais((ms) => ms.map((m, j) => (j === i ? { ...m, [k]: v } : m))); };
+  const addMat = () => { marcarTocado(); setMateriais((ms) => [...ms, { qtde: "1", descricao: "" }]); };
+  const removeMat = (i: number) => { marcarTocado(); setMateriais((ms) => ms.filter((_, j) => j !== i)); };
+  /** Volta a lista para a sugestão atual — e a religa ao cálculo. */
+  const restaurarMat = () => {
+    if (!calc?.bom) return;
+    matTocado.current = false;
+    bomNaEdicao.current = "";
+    setMateriais(calc.bom.map((b) => ({ qtde: b.qtde, descricao: b.descricao })));
+  };
 
   // carrega municípios, parâmetros padrão e (se reabrindo) a proposta salva
   useEffect(() => {
@@ -211,7 +236,9 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
           const dados = d.proposta.dados as Partial<Form> & { cond?: CondPag; materiais?: { qtde: string; descricao: string }[] };
           setForm({ ...FORM_INICIAL, ...dados });
           if (dados.cond) setCond(dados.cond as CondPag);
-          if (Array.isArray(dados.materiais) && dados.materiais.length) { setMateriais(dados.materiais); pularReseed.current = true; }
+          // A lista salva é uma escolha do usuário: entra já "tocada", para que
+          // nenhum recálculo posterior a substitua pela sugestão.
+          if (Array.isArray(dados.materiais) && dados.materiais.length) { setMateriais(dados.materiais); matTocado.current = true; }
           // valores salvos são escolhas do usuário — não sobrescrever com sugestões
           touched.current = { nPaineis: (dados.nPaineis ?? 0) > 0, inversor: (dados.potenciaInversor ?? 0) > 0 };
           if (dados.potenciaPainel && !PAINEIS_COMERCIAIS.includes(dados.potenciaPainel)) setPainelCustom(true);
@@ -291,10 +318,15 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
         if (res.ok) {
           const data = await res.json();
           setCalc(data);
-          // semeia a lista editável com a sugestão — exceto logo após carregar
-          // uma proposta salva (preserva o que o usuário editou).
-          if (pularReseed.current) pularReseed.current = false;
-          else if (data.bom) setMateriais(data.bom.map((b: { qtde: string; descricao: string }) => ({ qtde: b.qtde, descricao: b.descricao })));
+          // Semeia a lista com a sugestão SÓ enquanto o usuário não mexeu nela.
+          // Depois disso a lista é dele — sobrescrever apagaria o que digitou.
+          if (!matTocado.current && data.bom) {
+            setMateriais(data.bom.map((b: { qtde: string; descricao: string }) => ({ qtde: b.qtde, descricao: b.descricao })));
+          } else if (matTocado.current && !bomNaEdicao.current && data.bom) {
+            // Proposta salva reaberta: o 1º cálculo vira a base de comparação,
+            // para que mudanças a partir daqui acendam o aviso.
+            bomNaEdicao.current = serializarBom(data.bom);
+          }
         }
       } catch {
         /* ignora erro de cálculo transitório */
@@ -342,6 +374,20 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
     if (m >= 0.15) return { cls: "bg-amber-100 text-amber-800", label: "atenção" };
     return { cls: "bg-red-100 text-red-700", label: "baixa" };
   }, [calc?.pricing]);
+
+  /**
+   * O dimensionamento mudou DEPOIS que o usuário começou a editar a lista?
+   * Compara a sugestão atual com a de quando a edição começou — não com a
+   * lista digitada, senão qualquer edição já acenderia o aviso.
+   */
+  const listaDesatualizada = useMemo(() => {
+    if (!matTocado.current || !calc?.bom?.length || !bomNaEdicao.current) return false;
+    return serializarBom(calc.bom) !== bomNaEdicao.current;
+    // `materiais` entra nas dependências de propósito: as refs acima mudam
+    // sempre junto com ela (editar, restaurar), e sem isso o aviso ficaria
+    // preso no valor antigo — continuava aceso logo após "Restaurar sugestão".
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calc?.bom, materiais]);
 
   const ehMicro = form.tipoInversor === "micro";
 
@@ -907,6 +953,19 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
             </div>
           </div>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Lista genérica (sem marca) para enviar ao distribuidor. Edite a qtde/descrição, adicione ou remova itens — vai assim para a proposta.</p>
+          {/* A lista editada para de acompanhar o cálculo (senão apagaria o que
+              foi digitado). Se o dimensionamento mudou depois disso, avisa —
+              sem isso a proposta sairia com uma lista de outro sistema. */}
+          {listaDesatualizada && (
+            <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+              O dimensionamento mudou depois que você editou esta lista — ela não acompanha mais o cálculo.
+              Confira os itens ou{" "}
+              <button type="button" className="toque font-semibold underline" onClick={restaurarMat}>
+                restaure a sugestão
+              </button>
+              {" "}(isso descarta suas edições).
+            </p>
+          )}
           <div className="mt-3 space-y-2">
             {materiais.map((m, i) => (
               <div key={i} className="flex items-center gap-2">

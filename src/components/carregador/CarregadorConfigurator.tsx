@@ -1,7 +1,7 @@
 "use client";
 
 import { ClienteInput } from "@/components/clientes/ClienteInput";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { CarregadorParamsForm } from "./CarregadorParamsForm";
@@ -78,6 +78,7 @@ const seedRow = (it: BomItem): MatRow => ({
   qtd: String(it.qtd), precoUnit: nf(it.precoUnit, 2),
 });
 const rowTotal = (m: MatRow) => parseBR(m.qtd) * parseBR(m.precoUnit);
+const serializarBom = (itens: MatRow[]) => itens.map((m) => `${m.qtd}|${m.descricao}|${m.precoUnit}`).join("\n");
 
 export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) {
   const router = useRouter();
@@ -94,7 +95,15 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
   const [savedId, setSavedId] = useState<string | undefined>(propostaId);
   const [cond, setCond] = useState<CondPag>(COND_PADRAO);
   const precoTocado = useRef(false);
-  const pularReseed = useRef(false); // preserva os materiais salvos ao carregar uma proposta
+  /**
+   * A lista segue a sugestão do cálculo ATÉ o usuário mexer nela; a partir daí
+   * é dele e nenhum recálculo sobrescreve o que foi digitado. Vale ainda mais
+   * aqui, onde o PREÇO sai da lista editada.
+   */
+  const matTocado = useRef(false);
+  /** Sugestão vigente quando a edição começou — base para avisar que o
+   *  dimensionamento mudou depois disso. */
+  const bomNaEdicao = useRef("");
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
   const aplicarParams = () => { precoTocado.current = false; setRecalcNonce((n) => n + 1); };
@@ -107,7 +116,8 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
           setForm({ ...FORM_INICIAL, ...dados });
           precoTocado.current = true;
           if (dados.cond) setCond(dados.cond as CondPag);
-          if (Array.isArray(dados.materiais) && dados.materiais.length) { setMateriais(dados.materiais); pularReseed.current = true; }
+          // Lista salva é escolha do usuário: entra já "tocada".
+          if (Array.isArray(dados.materiais) && dados.materiais.length) { setMateriais(dados.materiais); matTocado.current = true; }
         }
       }).catch(() => {});
     } else {
@@ -131,10 +141,10 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
         if (res.ok) {
           const d = await res.json();
           setSizing(d.sizing); setBom(d.bom); setParams(d.params);
-          // Re-semeia a lista com a nova sugestão quando a configuração muda —
-          // exceto logo após carregar uma proposta salva (mantém os materiais salvos).
-          if (pularReseed.current) pularReseed.current = false;
-          else setMateriais(d.bom.itens.map(seedRow));
+          // Re-semeia a lista SÓ enquanto o usuário não mexeu nela; depois
+          // disso sobrescrever apagaria o que ele digitou.
+          if (!matTocado.current) setMateriais(d.bom.itens.map(seedRow));
+          else if (!bomNaEdicao.current) bomNaEdicao.current = serializarBom(d.bom.itens.map(seedRow));
         }
       } catch { /* ignora */ }
     }, 300);
@@ -165,10 +175,29 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
   const totalCliente = parseBR(form.valorServico) + parseBR(form.valorEquipamento);
 
   // edição da lista de materiais
-  const setMat = (i: number, k: keyof MatRow, v: string) => setMateriais((ms) => ms.map((m, j) => (j === i ? { ...m, [k]: v } : m)));
-  const addMat = () => setMateriais((ms) => [...ms, { categoria: "Diversos", descricao: "", unidade: "un", qtd: "1", precoUnit: "0" }]);
-  const removeMat = (i: number) => setMateriais((ms) => ms.filter((_, j) => j !== i));
-  const restaurarSugestao = () => { if (bom) setMateriais(bom.itens.map(seedRow)); };
+  /** Primeira edição: a lista passa a ser do usuário e guarda a sugestão da hora. */
+  const marcarTocado = () => {
+    if (matTocado.current) return;
+    matTocado.current = true;
+    bomNaEdicao.current = serializarBom(bom ? bom.itens.map(seedRow) : []);
+  };
+  const setMat = (i: number, k: keyof MatRow, v: string) => { marcarTocado(); setMateriais((ms) => ms.map((m, j) => (j === i ? { ...m, [k]: v } : m))); };
+  const addMat = () => { marcarTocado(); setMateriais((ms) => [...ms, { categoria: "Diversos", descricao: "", unidade: "un", qtd: "1", precoUnit: "0" }]); };
+  const removeMat = (i: number) => { marcarTocado(); setMateriais((ms) => ms.filter((_, j) => j !== i)); };
+  const restaurarSugestao = () => {
+    if (!bom) return;
+    matTocado.current = false;
+    bomNaEdicao.current = "";
+    setMateriais(bom.itens.map(seedRow));
+  };
+  /** O dimensionamento mudou depois que a edição começou? */
+  const listaDesatualizada = useMemo(() => {
+    if (!matTocado.current || !bom?.itens?.length || !bomNaEdicao.current) return false;
+    return serializarBom(bom.itens.map(seedRow)) !== bomNaEdicao.current;
+    // `materiais` entra de propósito: as refs mudam junto com ela, e sem isso
+    // o aviso ficaria preso no valor antigo após "Restaurar sugestão".
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bom, materiais]);
 
   function montarMateriais() {
     return materiais
@@ -310,6 +339,18 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Sugestão a partir dos orçamentos da GTA — <strong>edite quantidades e preços</strong> (mudam com frequência). Custo total: <strong>{brl(custoMateriais)}</strong>.
           </p>
+          {/* Editada, a lista para de acompanhar o cálculo (senão apagaria o que
+              foi digitado). Aqui o PREÇO sai dela, então avisar é essencial. */}
+          {listaDesatualizada && (
+            <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+              O dimensionamento mudou depois que você editou esta lista — ela não acompanha mais o cálculo, e o custo
+              acima vem dela. Confira os itens ou{" "}
+              <button type="button" className="toque font-semibold underline" onClick={restaurarSugestao}>
+                restaure a sugestão
+              </button>
+              {" "}(isso descarta suas edições).
+            </p>
+          )}
           <div className="mt-3 overflow-x-auto">
             <table className="w-full min-w-[560px] text-sm">
               <thead className="text-left text-xs text-slate-500 dark:text-slate-400">
