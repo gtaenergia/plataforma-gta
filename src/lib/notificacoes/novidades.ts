@@ -50,6 +50,12 @@ export const NOVIDADES: Novidade[] = [
     link: "/nova/solar",
   },
   {
+    slug: "solar-micro-livre-2026-07",
+    titulo: "Novidade: microinversor com entrada livre",
+    mensagem: "Agora dá para digitar a potência do microinversor (opção \"Outra...\") e fixar a quantidade à mão — o cálculo vira sugestão, não trava.",
+    link: "/nova/solar",
+  },
+  {
     slug: "mobile-area-de-toque-2026-07",
     titulo: "Novidade: plataforma mais confortável no celular",
     mensagem: "Botões, filtros e seletores ganharam área de toque maior no celular — menos toque errado. No computador nada mudou.",

@@ -2,13 +2,16 @@
  * Dimensionamento com MICROINVERSORES.
  *
  * O paradigma é diferente do inversor string e por isso vive num módulo à
- * parte: no string existe UM inversor central, escolhido pelo instalador; no
- * micro escolhe-se a POTÊNCIA da unidade (kW) e a QUANTIDADE é derivada do
- * sistema — não se digita. Quantos módulos cada unidade atende também sai do
- * cálculo (nº de painéis ÷ nº de unidades).
+ * parte: no string existe UM inversor central; no micro há N unidades de uma
+ * mesma potência, e quantos módulos cada uma atende sai do cálculo
+ * (nº de painéis ÷ nº de unidades).
  *
- * Catálogo genérico de propósito (sem marca), igual à lista de materiais: são
- * as potências que a GTA de fato cota, sem travar a proposta num fabricante.
+ * Tudo aqui é SUGESTÃO, nunca trava: a potência aceita qualquer valor (o
+ * catálogo é só atalho para as que a GTA costuma cotar) e a quantidade pode
+ * ser fixada à mão. O projeto real foge da conta com frequência — expansão
+ * prevista, arranjo do telhado, o que já existe em estoque.
+ *
+ * Catálogo genérico de propósito (sem marca), igual à lista de materiais.
  *
  * Módulo leve e sem dependências: é importado também no cliente (configurador).
  */
@@ -33,14 +36,6 @@ export function microLabel(potenciaKw: number): string {
   return `${potenciaKw.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} kW`;
 }
 
-/** A potência do catálogo mais próxima do valor pedido (0/ausente = sugere). */
-export function normalizarPotenciaMicro(potenciaKw: number): number {
-  if (!potenciaKw) return 0;
-  return MICROINVERSORES_COMERCIAIS.reduce((melhor, p) =>
-    Math.abs(p - potenciaKw) < Math.abs(melhor - potenciaKw) ? p : melhor,
-  );
-}
-
 /**
  * Sugere a potência de microinversor que melhor cobre o sistema com UMA
  * unidade próxima do overload desejado. Sistemas maiores que a maior unidade
@@ -56,16 +51,26 @@ export function sugerirMicroinversor(kwpTotal: number, overloadDesejado: number)
 export interface MicroSizingInput {
   nPaineis: number;
   potenciaPainelW: number;
-  /** Potência de CADA microinversor (kW). */
+  /** Potência de CADA microinversor (kW). Livre — não precisa ser do catálogo. */
   potenciaKw: number;
   overloadDesejado: number;
+  /**
+   * Quantidade definida à mão. 0/ausente = derivada do overload alvo.
+   * Existe porque o projetista às vezes precisa fugir da conta (expansão
+   * prevista, arranjo do telhado, o que já tem em estoque).
+   */
+  qtdForcada?: number;
 }
 
 export interface MicroSizingResult {
   /** Potência de cada unidade (kW). */
   potenciaKw: number;
-  /** Quantidade de microinversores — DERIVADA do sistema. */
+  /** Quantidade de microinversores (derivada, ou a que o usuário fixou). */
   qtdMicros: number;
+  /** Quantidade que a conta sugeriria — para comparar com a escolhida à mão. */
+  qtdSugerida: number;
+  /** true quando a quantidade veio do usuário, não do cálculo. */
+  qtdManual: boolean;
   /** Potência CA instalada total (kW) = qtd × potência da unidade. */
   potenciaCaTotalKw: number;
   /** Overload real do conjunto: kWp / potência CA total − 1. */
@@ -90,8 +95,11 @@ export function dimensionarMicro(i: MicroSizingInput): MicroSizingResult {
 
   // Quantidade que deixa o conjunto mais perto do overload desejado — mesma
   // lógica do inversor string, só que aqui o resultado é a QUANTIDADE.
+  // O usuário pode sobrepor: a sugestão vira só referência.
   const alvoCa = kwpTotal / (1 + i.overloadDesejado);
-  const qtdMicros = Math.max(1, Math.round(alvoCa / potenciaKw));
+  const qtdSugerida = Math.max(1, Math.round(alvoCa / potenciaKw));
+  const qtdManual = Boolean(i.qtdForcada && i.qtdForcada > 0);
+  const qtdMicros = qtdManual ? Math.max(1, Math.floor(i.qtdForcada!)) : qtdSugerida;
 
   const potenciaCaTotalKw = qtdMicros * potenciaKw;
   const overload = potenciaCaTotalKw > 0 ? kwpTotal / potenciaCaTotalKw - 1 : 0;
@@ -108,6 +116,8 @@ export function dimensionarMicro(i: MicroSizingInput): MicroSizingResult {
   return {
     potenciaKw,
     qtdMicros,
+    qtdSugerida,
+    qtdManual,
     potenciaCaTotalKw,
     overload,
     modulosPorMicro,

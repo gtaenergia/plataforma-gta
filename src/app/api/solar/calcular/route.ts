@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/session";
 import { getMunicipio } from "@/services/solar/municipios";
 import { dimensionar, kwpTotal, overloadReal } from "@/services/solar/sizing";
 import { sugerirInversorComercial } from "@/services/solar/commercial";
-import { dimensionarMicro, normalizarPotenciaMicro, sugerirMicroinversor } from "@/services/solar/micro";
+import { dimensionarMicro, sugerirMicroinversor } from "@/services/solar/micro";
 import { simularGeracao } from "@/services/solar/generation";
 import { gerarBom } from "@/services/solar/bom";
 import { precificar } from "@/services/solar/pricing";
@@ -30,8 +30,10 @@ const schema = z.object({
   potenciaInversor: z.coerce.number().min(0).default(0),
   qtdInversores: z.coerce.number().int().positive().default(1),
   tipoInversor: z.enum(["string", "micro"]).default("string"),
-  /** Potência de cada microinversor (kW). 0 = usa a sugestão. */
-  microPotenciaKw: z.coerce.number().min(0).default(0),
+  /** Potência de cada microinversor (kW), livre. 0 = usa a sugestão. */
+  microPotenciaKw: z.coerce.number().min(0).max(1000).default(0),
+  /** Quantidade de microinversores fixada à mão. 0 = derivada do cálculo. */
+  microQtd: z.coerce.number().int().min(0).max(500).default(0),
   tipoTelhado: z.string().default("Metálico"),
   // precificação (opcional; defaults vêm dos parâmetros salvos)
   kit: z.union([z.string(), z.number()]).optional(),
@@ -86,12 +88,13 @@ export async function POST(req: Request) {
   const kwp = kwpTotal(nPaineis, i.potenciaPainel);
   const inversorSugerido = sugerirInversorComercial(kwp, overloadDesejado);
 
-  // Microinversor tem um dimensionamento próprio: a potência é por módulo e a
-  // QUANTIDADE é derivada do nº de painéis (não se digita). O overload passa a
-  // ser o de cada unidade, e a potência CA total é qtd × potência do micro.
+  // Microinversor tem um dimensionamento próprio: a potência é por unidade e a
+  // quantidade sai do overload alvo. Ambos são apenas SUGESTÃO — a potência
+  // aceita qualquer valor digitado (não é encaixada no catálogo) e a
+  // quantidade pode ser fixada à mão.
   const ehMicro = i.tipoInversor === "micro";
   const microPotenciaKw = ehMicro
-    ? normalizarPotenciaMicro(i.microPotenciaKw) || sugerirMicroinversor(kwp, overloadDesejado)
+    ? i.microPotenciaKw || sugerirMicroinversor(kwp, overloadDesejado)
     : 0;
   const micro = ehMicro
     ? dimensionarMicro({
@@ -99,6 +102,7 @@ export async function POST(req: Request) {
         potenciaPainelW: i.potenciaPainel,
         potenciaKw: microPotenciaKw,
         overloadDesejado,
+        qtdForcada: i.microQtd,
       })
     : null;
 

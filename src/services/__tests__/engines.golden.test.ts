@@ -16,7 +16,7 @@ import { dimensionar, kwpTotal } from "../solar/sizing";
 import { simularGeracao } from "../solar/generation";
 import { precificar, PRICING_DEFAULTS } from "../solar/pricing";
 import { simularEconomia } from "../solar/economia";
-import { dimensionarMicro, normalizarPotenciaMicro, sugerirMicroinversor } from "../solar/micro";
+import { dimensionarMicro, sugerirMicroinversor } from "../solar/micro";
 
 /**
  * GOLDEN TESTS dos engines de preço — congelam os números que os configuradores
@@ -406,10 +406,6 @@ describe("Solar — dimensionamento com microinversores", () => {
     expect(sugerirMicroinversor(35, 0.15)).toMatchInlineSnapshot(`25`);
   });
 
-  it("normaliza uma potência fora do catálogo para a mais próxima", () => {
-    expect(normalizarPotenciaMicro(6.4)).toMatchInlineSnapshot(`6.6`);
-  });
-
   it("10 painéis de 700 Wp com micro de 3 kW", () => {
     const r = dimensionarMicro({ nPaineis: 10, potenciaPainelW: 700, potenciaKw: 3, overloadDesejado: 0.15 });
     expect(digest(r)).toMatchInlineSnapshot(`
@@ -421,7 +417,9 @@ describe("Solar — dimensionamento com microinversores", () => {
         "overload": 0.1667,
         "potenciaCaTotalKw": 6,
         "potenciaKw": 3,
+        "qtdManual": false,
         "qtdMicros": 2,
+        "qtdSugerida": 2,
         "ramais": 2,
       }
     `);
@@ -438,8 +436,46 @@ describe("Solar — dimensionamento com microinversores", () => {
         "overload": 0.2833,
         "potenciaCaTotalKw": 6,
         "potenciaKw": 3,
+        "qtdManual": false,
         "qtdMicros": 2,
+        "qtdSugerida": 2,
         "ramais": 2,
+      }
+    `);
+  });
+
+  it("quantidade fixada à mão sobrepõe a sugestão", () => {
+    const auto = dimensionarMicro({ nPaineis: 10, potenciaPainelW: 700, potenciaKw: 3, overloadDesejado: 0.15 });
+    const manual = dimensionarMicro({ nPaineis: 10, potenciaPainelW: 700, potenciaKw: 3, overloadDesejado: 0.15, qtdForcada: 4 });
+    expect({ auto: auto.qtdMicros, manual: manual.qtdMicros, sugeridaNoManual: manual.qtdSugerida,
+             marcadoComoManual: manual.qtdManual, caTotal: manual.potenciaCaTotalKw,
+             overload: r4(manual.overload) }).toMatchInlineSnapshot(`
+               {
+                 "auto": 2,
+                 "caTotal": 12,
+                 "manual": 4,
+                 "marcadoComoManual": true,
+                 "overload": -0.4167,
+                 "sugeridaNoManual": 2,
+               }
+             `);
+  });
+
+  it("potência fora do catálogo é respeitada (entrada livre)", () => {
+    const r = dimensionarMicro({ nPaineis: 12, potenciaPainelW: 700, potenciaKw: 2.2, overloadDesejado: 0.15 });
+    expect(digest(r)).toMatchInlineSnapshot(`
+      {
+        "divisaoDesigual": false,
+        "microsComModuloExtra": 0,
+        "microsPorRamal": 1,
+        "modulosPorMicro": 4,
+        "overload": 0.2727,
+        "potenciaCaTotalKw": 6.6,
+        "potenciaKw": 2.2,
+        "qtdManual": false,
+        "qtdMicros": 3,
+        "qtdSugerida": 3,
+        "ramais": 3,
       }
     `);
   });
@@ -455,7 +491,9 @@ describe("Solar — dimensionamento com microinversores", () => {
         "overload": 0.12,
         "potenciaCaTotalKw": 25,
         "potenciaKw": 25,
+        "qtdManual": false,
         "qtdMicros": 1,
+        "qtdSugerida": 1,
         "ramais": 1,
       }
     `);
