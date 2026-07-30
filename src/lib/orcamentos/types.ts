@@ -16,7 +16,7 @@ export function estacaoLabel(e: Estacao): string {
 
 export type FonteOrcamento = "interno" | "externo";
 export type NivelValidacao = "ok" | "alerta" | "bloqueio"; // ✅ ⚠️ ❌
-export type AcaoTransicao = "enviar" | "aprovar" | "rejeitar" | "cancelar";
+export type AcaoTransicao = "enviar" | "aprovar" | "rejeitar" | "cancelar" | "reabrir";
 
 /** Comentário de revisão (rastro "Fulano comentou que precisa editar X"). */
 export interface ComentarioOrcamento {
@@ -216,10 +216,12 @@ export const anexoRevisaoSchema = z.coerce.number().int().min(0).max(99);
 
 export const transicaoSchema = z
   .object({
-    acao: z.enum(["enviar", "aprovar", "rejeitar", "cancelar"]),
+    acao: z.enum(["enviar", "aprovar", "rejeitar", "cancelar", "reabrir"]),
     parecer: z.string().trim().max(2000).optional(),
   })
-  .refine((d) => (d.acao !== "aprovar" && d.acao !== "rejeitar") || !!d.parecer?.trim(), {
+  // Reabrir desfaz uma decisão já tomada: exigir o motivo é o que mantém o
+  // histórico auditável ("por que este orçamento aprovado voltou?").
+  .refine((d) => !["aprovar", "rejeitar", "reabrir"].includes(d.acao) || !!d.parecer?.trim(), {
     message: "Informe o parecer da revisão.",
     path: ["parecer"],
   });

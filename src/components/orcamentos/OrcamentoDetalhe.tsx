@@ -24,10 +24,24 @@ const HIST: Record<RegistroValidacao["tipo"], { label: string; tone: Tone }> = {
   aprovar: { label: "Aprovado", tone: "green" },
   rejeitar: { label: "Devolvido para ajustes", tone: "red" },
   cancelar: { label: "Cancelado", tone: "slate" },
+  reabrir: { label: "Reaberto para revisão", tone: "amber" },
   auto: { label: "Validação automática", tone: "amber" },
 };
 
-const PRECISA_PARECER: AcaoTransicao[] = ["aprovar", "rejeitar", "cancelar"];
+const PRECISA_PARECER: AcaoTransicao[] = ["aprovar", "rejeitar", "cancelar", "reabrir"];
+
+/**
+ * Rótulo do botão de confirmação. Separado do HIST porque lá os textos são
+ * particípios para o histórico ("Aprovado", "Reaberto para revisão") e viravam
+ * frases estranhas no botão ("Confirmar reaberto para revisão").
+ */
+const CONFIRMAR: Record<AcaoTransicao, string> = {
+  enviar: "Confirmar envio",
+  aprovar: "Confirmar aprovação",
+  rejeitar: "Confirmar devolução",
+  cancelar: "Confirmar cancelamento",
+  reabrir: "Confirmar reabertura",
+};
 
 function fmt(iso: string) {
   try {
@@ -108,7 +122,10 @@ export function OrcamentoDetalhe({
   const podeEnviar = orc.estacao === "rascunho" && pode("orcamentos.criar");
   const podeDecidir = orc.estacao === "em_revisao" && pode("orcamentos.aprovar");
   const podeCancelar = naoFinalizado && pode("orcamentos.cancelar");
-  const semAcoes = !podeEnviar && !podeDecidir && !podeCancelar;
+  // Desfazer uma decisão já tomada (aprovou por engano, cancelou errado):
+  // volta para em_revisao, de onde as decisões normais valem de novo.
+  const podeReabrir = !naoFinalizado && pode("orcamentos.aprovar");
+  const semAcoes = !podeEnviar && !podeDecidir && !podeCancelar && !podeReabrir;
 
   const revisoes = [...orc.anexos].sort((a, b) => a.revisao - b.revisao);
   const temRev0 = orc.anexos.some((a) => a.revisao === 0);
@@ -494,7 +511,13 @@ export function OrcamentoDetalhe({
                 className="field-input min-h-20"
                 value={parecer}
                 onChange={(e) => setParecer(e.target.value)}
-                placeholder={acaoAberta === "rejeitar" ? "O que precisa ser ajustado?" : "Registre o parecer da revisão"}
+                placeholder={
+                  acaoAberta === "rejeitar"
+                    ? "O que precisa ser ajustado?"
+                    : acaoAberta === "reabrir"
+                      ? "Por que a decisão está sendo desfeita?"
+                      : "Registre o parecer da revisão"
+                }
               />
               <div className="flex gap-2">
                 <button
@@ -502,7 +525,7 @@ export function OrcamentoDetalhe({
                   disabled={processando || (acaoAberta !== "cancelar" && !parecer.trim())}
                   onClick={() => transicionar(acaoAberta, parecer.trim() || undefined)}
                 >
-                  {processando ? "Processando..." : `Confirmar ${HIST[acaoAberta].label.toLowerCase()}`}
+                  {processando ? "Processando..." : CONFIRMAR[acaoAberta]}
                 </button>
                 <button className="btn-secondary" onClick={() => setAcaoAberta(null)} disabled={processando}>
                   Voltar
@@ -530,6 +553,17 @@ export function OrcamentoDetalhe({
                 <button className="btn-secondary" onClick={() => acionar("cancelar")} disabled={processando}>
                   Cancelar orçamento
                 </button>
+              )}
+              {podeReabrir && (
+                <div className="w-full">
+                  <button className="btn-secondary" onClick={() => acionar("reabrir")} disabled={processando}>
+                    Reabrir para revisão
+                  </button>
+                  <p className="mt-2 hint">
+                    Desfaz a decisão e devolve o orçamento para revisão — use se
+                    {orc.estacao === "aprovado" ? " aprovou" : " cancelou"} por engano. Fica registrado no histórico.
+                  </p>
+                </div>
               )}
             </div>
           )}

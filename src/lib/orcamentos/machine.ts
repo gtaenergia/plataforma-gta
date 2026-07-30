@@ -10,13 +10,19 @@ import type { PermissaoKey } from "@/lib/rbac/permissoes";
  * em_revisao --aprovar--->  aprovado    (gate humano final, exige parecer)
  * em_revisao --rejeitar-->  rascunho    (devolve ao criador, exige parecer)
  * em_revisao --cancelar-->  cancelado
+ * aprovado   --reabrir-->   em_revisao  (desfaz a decisão, exige justificativa)
+ * cancelado  --reabrir-->   em_revisao
+ *
+ * `reabrir` existe porque aprovar/cancelar são cliques irreversíveis num
+ * fluxo humano: quem decidiu errado precisa de caminho de volta. Não pula
+ * etapa — devolve para em_revisao, de onde as decisões normais valem de novo.
  */
 
 const TRANSICOES: Record<Estacao, Partial<Record<AcaoTransicao, Estacao>>> = {
   rascunho: { enviar: "em_revisao", cancelar: "cancelado" },
   em_revisao: { aprovar: "aprovado", rejeitar: "rascunho", cancelar: "cancelado" },
-  aprovado: {},
-  cancelado: {},
+  aprovado: { reabrir: "em_revisao" },
+  cancelado: { reabrir: "em_revisao" },
 };
 
 /** Permissão exigida para cada ação do fluxo de aprovação. */
@@ -26,6 +32,8 @@ export function permissaoDaAcao(acao: AcaoTransicao): PermissaoKey {
       return "orcamentos.criar";
     case "aprovar":
     case "rejeitar":
+    // Desfazer uma decisão exige o mesmo poder de decidir.
+    case "reabrir":
       return "orcamentos.aprovar";
     case "cancelar":
       return "orcamentos.cancelar";

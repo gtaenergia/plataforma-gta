@@ -17,6 +17,7 @@ const MENSAGEM_PADRAO: Record<AcaoTransicao, string> = {
   aprovar: "Aprovado",
   rejeitar: "Devolvido para ajustes",
   cancelar: "Orçamento cancelado",
+  reabrir: "Reaberto para revisão",
 };
 
 /** Avança/decide um orçamento no fluxo de aprovação. */
@@ -56,9 +57,12 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const agora = new Date();
 
   // Retenção do anexo (Fase 2): aprovado 7 dias, cancelado 3 dias.
+  // Reabrir CANCELA a contagem: o orçamento voltou a ser trabalhado e o cron
+  // de limpeza apagaria os anexos dele no prazo da decisão desfeita.
   let expiraEm = orc.expiraEm ?? null;
   if (acao === "aprovar") expiraEm = addDays(agora, 7).toISOString();
   else if (acao === "cancelar") expiraEm = addDays(agora, 3).toISOString();
+  else if (acao === "reabrir") expiraEm = null;
 
   // Patch + registro de histórico numa única operação atômica (um UPDATE no
   // Postgres): falha no meio não deixa histórico e estação inconsistentes.
@@ -67,8 +71,10 @@ export async function PATCH(req: Request, ctx: Ctx) {
     {
       estacao: t.destino,
       parecer: parecer?.trim() || undefined,
-      decididoPor: decisaoHumana ? autor : undefined,
-      decididoEm: decisaoHumana ? agora.toISOString() : undefined,
+      // Ao reabrir, a decisão anterior deixa de valer: limpa quem/quando
+      // decidiu (o histórico guarda o rastro completo).
+      decididoPor: acao === "reabrir" ? "" : decisaoHumana ? autor : undefined,
+      decididoEm: acao === "reabrir" ? "" : decisaoHumana ? agora.toISOString() : undefined,
       expiraEm,
     },
     {
@@ -93,18 +99,23 @@ export async function PATCH(req: Request, ctx: Ctx) {
     final = (await store.update(id, { oneDrive: resultado })) ?? atualizado;
   }
 
-  // Notifica o criador (in-app) quando o orçamento é aprovado ou devolvido —
-  // exceto se ele mesmo tomou a decisão. Best-effort: nunca quebra a resposta.
+  // Notifica o criador (in-app) quando o orçamento é aprovado, devolvido ou
+  // reaberto — exceto se ele mesmo tomou a decisão. Reabrir avisa porque muda
+  // um resultado que o criador já considerava fechado.
+  // Best-effort: nunca quebra a resposta.
   const decidiuOProprio = me.email.trim().toLowerCase() === orc.criadoPor.trim().toLowerCase();
-  if (atualizado && !decidiuOProprio && (acao === "aprovar" || acao === "rejeitar")) {
-    const aprovado = acao === "aprovar";
+  const AVISOS: Partial<Record<AcaoTransicao, { tipo: string; titulo: string; padrao: string }>> = {
+    aprovar: { tipo: "orcamento_aprovado", titulo: `Orçamento ${orc.referencia} aprovado`, padrao: `Aprovado por ${autor}.` },
+    rejeitar: { tipo: "orcamento_rejeitado", titulo: `Orçamento ${orc.referencia} devolvido para ajustes`, padrao: `Devolvido por ${autor}.` },
+    reabrir: { tipo: "orcamento_reaberto", titulo: `Orçamento ${orc.referencia} voltou para revisão`, padrao: `Reaberto por ${autor}.` },
+  };
+  const aviso = AVISOS[acao];
+  if (atualizado && !decidiuOProprio && aviso) {
     await notificar({
       paraEmail: orc.criadoPor,
-      tipo: aprovado ? "orcamento_aprovado" : "orcamento_rejeitado",
-      titulo: aprovado
-        ? `Orçamento ${orc.referencia} aprovado`
-        : `Orçamento ${orc.referencia} devolvido para ajustes`,
-      mensagem: parecer?.trim() || `${aprovado ? "Aprovado" : "Devolvido"} por ${autor}.`,
+      tipo: aviso.tipo,
+      titulo: aviso.titulo,
+      mensagem: parecer?.trim() || aviso.padrao,
       link: `/aprovacoes/${id}`,
     });
   }

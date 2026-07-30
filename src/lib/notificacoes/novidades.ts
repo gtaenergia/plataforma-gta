@@ -50,6 +50,12 @@ export const NOVIDADES: Novidade[] = [
     link: "/nova/solar",
   },
   {
+    slug: "aprovacoes-reabrir-2026-07",
+    titulo: "Novidade: dá para desfazer uma aprovação",
+    mensagem: "Aprovou ou cancelou por engano? O botão \"Reabrir para revisão\" devolve o orçamento, com o motivo registrado no histórico.",
+    link: "/aprovacoes",
+  },
+  {
     slug: "solar-micro-livre-2026-07",
     titulo: "Novidade: microinversor com entrada livre",
     mensagem: "Agora dá para digitar a potência do microinversor (opção \"Outra...\") e fixar a quantidade à mão — o cálculo vira sugestão, não trava.",
