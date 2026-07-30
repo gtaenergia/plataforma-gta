@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApi } from "@/lib/rbac/guards";
 import { temPermissao } from "@/lib/rbac/resolve";
-import { getOrcamentoStore, redigirOrcamento } from "@/lib/orcamentos/store";
+import { getOrcamentoStore, redigirOrcamento, LIMPAR } from "@/lib/orcamentos/store";
 import { transicaoSchema, type AcaoTransicao, type OrcamentoOneDrive } from "@/lib/orcamentos/types";
 import { permissaoDaAcao, podeTransicionar } from "@/lib/orcamentos/machine";
 import { oneDriveConfigurado, enviarOrcamentoParaOneDrive } from "@/lib/onedrive/orcamento";
@@ -59,10 +59,11 @@ export async function PATCH(req: Request, ctx: Ctx) {
   // Retenção do anexo (Fase 2): aprovado 7 dias, cancelado 3 dias.
   // Reabrir CANCELA a contagem: o orçamento voltou a ser trabalhado e o cron
   // de limpeza apagaria os anexos dele no prazo da decisão desfeita.
-  let expiraEm = orc.expiraEm ?? null;
+  // `undefined` = não mexe · `LIMPAR` ("") = zera (ver contrato no store).
+  let expiraEm: string | undefined;
   if (acao === "aprovar") expiraEm = addDays(agora, 7).toISOString();
   else if (acao === "cancelar") expiraEm = addDays(agora, 3).toISOString();
-  else if (acao === "reabrir") expiraEm = null;
+  else if (acao === "reabrir") expiraEm = LIMPAR;
 
   // Patch + registro de histórico numa única operação atômica (um UPDATE no
   // Postgres): falha no meio não deixa histórico e estação inconsistentes.
@@ -73,8 +74,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
       parecer: parecer?.trim() || undefined,
       // Ao reabrir, a decisão anterior deixa de valer: limpa quem/quando
       // decidiu (o histórico guarda o rastro completo).
-      decididoPor: acao === "reabrir" ? "" : decisaoHumana ? autor : undefined,
-      decididoEm: acao === "reabrir" ? "" : decisaoHumana ? agora.toISOString() : undefined,
+      decididoPor: acao === "reabrir" ? LIMPAR : decisaoHumana ? autor : undefined,
+      decididoEm: acao === "reabrir" ? LIMPAR : decisaoHumana ? agora.toISOString() : undefined,
       expiraEm,
     },
     {

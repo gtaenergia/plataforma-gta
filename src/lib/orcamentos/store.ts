@@ -27,6 +27,28 @@ function maiorSeq(items: Orcamento[], year: number): number {
 type CreateInput = Omit<Orcamento, "id" | "referencia" | "comentarios" | "historico" | "anexos" | "criadoEm" | "atualizadoEm">;
 type UpdatePatch = Partial<Omit<Orcamento, "id" | "comentarios" | "historico" | "anexos" | "criadoEm" | "criadoPor">>;
 
+/**
+ * Contrato do patch — vale IGUAL nos dois backends:
+ *   campo ausente (undefined) → não mexe
+ *   ""                        → LIMPA o campo
+ *   qualquer outro valor      → grava
+ *
+ * O sentinela `""` existe porque no Postgres o idioma `COALESCE(x, coluna)`
+ * trata NULL como "não mexer" — sem ele não havia como APAGAR uma decisão
+ * (o que a reabertura de um orçamento exige). Aplica-se a decididoPor,
+ * decididoEm e expiraEm.
+ */
+export const LIMPAR = "";
+
+/** Traduz o sentinela para o formato do store JSON (o Postgres trata no SQL). */
+export function limparSentinelas(patch: UpdatePatch): UpdatePatch {
+  const out: UpdatePatch = { ...patch };
+  if (out.decididoPor === LIMPAR) out.decididoPor = undefined;
+  if (out.decididoEm === LIMPAR) out.decididoEm = undefined;
+  if (out.expiraEm === LIMPAR) out.expiraEm = null;
+  return out;
+}
+
 export interface OrcamentoStore {
   list(): Promise<Orcamento[]>;
   get(id: string): Promise<Orcamento | null>;
@@ -117,7 +139,7 @@ class JsonOrcamentoStore implements OrcamentoStore {
     return this.mutate((items) => {
       const i = items.findIndex((o) => o.id === id);
       if (i < 0) return { items, result: null };
-      const updated: Orcamento = { ...items[i], ...patch, id, atualizadoEm: new Date().toISOString() };
+      const updated: Orcamento = { ...items[i], ...limparSentinelas(patch), id, atualizadoEm: new Date().toISOString() };
       const next = [...items];
       next[i] = updated;
       return { items: next, result: updated };
@@ -128,7 +150,7 @@ class JsonOrcamentoStore implements OrcamentoStore {
     return this.mutate((items) => {
       const i = items.findIndex((o) => o.id === id);
       if (i < 0) return { items, result: null };
-      const updated: Orcamento = { ...items[i], ...patch, id, historico: [...items[i].historico, novo], atualizadoEm: novo.em };
+      const updated: Orcamento = { ...items[i], ...limparSentinelas(patch), id, historico: [...items[i].historico, novo], atualizadoEm: novo.em };
       const next = [...items];
       next[i] = updated;
       return { items: next, result: updated };
@@ -369,6 +391,11 @@ class PostgresOrcamentoStore implements OrcamentoStore {
     const metaJson = patch.meta === undefined ? null : JSON.stringify(patch.meta);
     const oneDriveJson = patch.oneDrive === undefined ? null : JSON.stringify(patch.oneDrive);
     const historicoJson = novoHistorico ? JSON.stringify([novoHistorico]) : null;
+    // Campos "limpáveis": NULL = não mexe, "" = limpa (ver LIMPAR). O NULLIF
+    // roda ANTES do cast — ''::timestamptz seria erro de sintaxe no Postgres.
+    const dPor = patch.decididoPor ?? null;
+    const dEm = patch.decididoEm ?? null;
+    const exp = patch.expiraEm ?? null;
     const { rows } = await this.pool.sql<Row>`
       UPDATE orcamentos SET
         cliente = COALESCE(${patch.cliente ?? null}::text, cliente),
@@ -378,9 +405,9 @@ class PostgresOrcamentoStore implements OrcamentoStore {
         valor = COALESCE(${patch.valor ?? null}::numeric, valor),
         ficha = COALESCE(${fichaJson}::jsonb, ficha),
         parecer = COALESCE(${patch.parecer ?? null}::text, parecer),
-        decidido_por = COALESCE(${patch.decididoPor ?? null}::text, decidido_por),
-        decidido_em = COALESCE(${patch.decididoEm ?? null}::timestamptz, decidido_em),
-        expira_em = COALESCE(${patch.expiraEm ?? null}::timestamptz, expira_em),
+        decidido_por = CASE WHEN ${dPor}::text IS NULL THEN decidido_por ELSE NULLIF(${dPor}::text, '') END,
+        decidido_em = CASE WHEN ${dEm}::text IS NULL THEN decidido_em ELSE NULLIF(${dEm}::text, '')::timestamptz END,
+        expira_em = CASE WHEN ${exp}::text IS NULL THEN expira_em ELSE NULLIF(${exp}::text, '')::timestamptz END,
         one_drive = COALESCE(${oneDriveJson}::jsonb, one_drive),
         historico = COALESCE(historico || ${historicoJson}::jsonb, historico),
         atualizado_em = ${atualizadoEm}
