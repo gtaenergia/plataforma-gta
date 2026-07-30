@@ -359,7 +359,7 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
             <div className="flex items-center justify-between">
               <label className="field-label">Objeto <span className="font-normal text-slate-400">(gerado a partir das disciplinas)</span></label>
               {objetoTocado.current && (
-                <button type="button" className="text-xs text-gta-indigo hover:underline" onClick={() => { objetoTocado.current = false; setForm((f) => ({ ...f, objeto: montarObjeto(idsSelecionados ? idsSelecionados.split(",") : []) })); }}>Recompor automático</button>
+                <button type="button" className="toque text-xs text-gta-indigo hover:underline" onClick={() => { objetoTocado.current = false; setForm((f) => ({ ...f, objeto: montarObjeto(idsSelecionados ? idsSelecionados.split(",") : []) })); }}>Recompor automático</button>
               )}
             </div>
             <textarea className={`${inputCls} min-h-[70px]`} value={form.objeto} onChange={(e) => { objetoTocado.current = true; set("objeto", e.target.value); }} />
@@ -392,7 +392,7 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
             piso: params[`piso${cap(d.id)}`] ?? d.piso,
           })),
         })} />
-        <button className="text-sm text-gta-indigo hover:underline" onClick={() => router.push("/propostas")}>Ver propostas</button>
+        <button className="toque text-sm text-gta-indigo hover:underline" onClick={() => router.push("/propostas")}>Ver propostas</button>
         {statusMsg && <span className="text-sm text-green-600 dark:text-green-400">{statusMsg}</span>}
       </div>
     </div>

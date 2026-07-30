@@ -582,7 +582,7 @@ function TaskRow({
             value={t.status}
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => onStatus(e.target.value as StatusTarefa)}
-            className={`rounded-full border px-2 py-1 text-xs font-medium ${STATUS_BADGE[t.status]}`}
+            className={`toque rounded-full border px-2 py-1 text-xs font-medium ${STATUS_BADGE[t.status]}`}
           >
             {STATUS_TAREFA.map((s) => (
               <option key={s.value} value={s.value}>

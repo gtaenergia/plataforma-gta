@@ -181,7 +181,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
       <div className="space-y-3 md:hidden">
         {usuarios.map((u) => {
           const eu = u.id === currentUserId;
-          const acaoCls = "rounded-md border border-slate-200 px-2.5 py-1.5 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-600 dark:hover:bg-slate-700";
+          const acaoCls = "toque justify-center rounded-md border border-slate-200 px-2.5 py-1.5 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-600 dark:hover:bg-slate-700";
           return (
             <div key={u.id} className={`card p-3 ${!u.active ? "opacity-60" : ""}`}>
               <div className="flex items-start justify-between gap-2">

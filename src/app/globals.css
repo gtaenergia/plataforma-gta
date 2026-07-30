@@ -119,6 +119,39 @@ select.field-input {
          hover:underline focus-visible:outline-none focus-visible:underline
          disabled:cursor-not-allowed disabled:opacity-60 dark:text-indigo-300;
 }
+/* Botão só-ícone (remover linha, fechar…). Compacto no mouse — o tamanho que
+   o desktop já tinha; cresce para 44px no toque (ver media query abaixo). */
+.icon-btn {
+  @apply inline-flex shrink-0 items-center justify-center rounded p-1 text-slate-400 transition
+         hover:bg-red-50 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2
+         focus-visible:ring-red-400/40 dark:hover:bg-red-900/20;
+}
+
+/* ---- Área de toque -------------------------------------------------------
+   O dedo não tem a precisão do mouse: a diretriz de acessibilidade pede ~44px.
+   Vale abaixo do breakpoint `md` (a virada mobile do projeto) OU em qualquer
+   tela de toque — assim pega também tablet/celular deitado, acima de 768px.
+   No desktop com mouse a ≥ 768px nada muda de tamanho.                      */
+@media (max-width: 767px), (pointer: coarse) {
+  .icon-btn { @apply h-11 w-11; }
+  /* Links de ação e botões compactos ganham altura mínima sem mudar a fonte. */
+  .btn-link,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger { @apply min-h-[44px]; }
+  /* Anula os !py-1/!py-1.5 usados para compactar botões no desktop. */
+  .btn-primary.\!py-1, .btn-secondary.\!py-1,
+  .btn-primary.\!py-1\.5, .btn-secondary.\!py-1\.5 { @apply !py-2; }
+  /*
+   * `.toque` existe SÓ aqui: marque com ela qualquer ação pequena (link de
+   * texto, alternador compacto) para garantir o alvo no dedo. Como a regra
+   * não existe fora desta media query, o desktop fica intocado.
+   */
+  .toque { @apply inline-flex min-h-[44px] items-center; }
+  /* Campos e seletores também são alvo de toque (inclusive os compactados
+     com !py-1 no desktop, como o "por página" e o status na lista). */
+  .field-input { @apply min-h-[44px] !py-2; }
+}
 
 /* ---- Badges (pílulas de status) ------------------------------------------ */
 .badge        { @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium; }

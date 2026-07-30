@@ -452,7 +452,7 @@ export function SubestacaoConfigurator({ propostaId }: { propostaId?: string }) 
         <div className="flex items-center justify-between">
           <h2 className={h2}>Preço</h2>
           {preco && !precoTocado.current && (
-            <button type="button" className="text-xs text-gta-indigo hover:underline" onClick={() => { precoTocado.current = false; setForm((f) => ({ ...f, valorProjeto: nf(preco.precoTotal, 2) })); }}>
+            <button type="button" className="toque text-xs text-gta-indigo hover:underline" onClick={() => { precoTocado.current = false; setForm((f) => ({ ...f, valorProjeto: nf(preco.precoTotal, 2) })); }}>
               Usar sugerido {brl(preco.precoTotal)}
             </button>
           )}
@@ -534,7 +534,7 @@ export function SubestacaoConfigurator({ propostaId }: { propostaId?: string }) 
             kVA: sizing?.trafoKva ?? 0,
           })}
         />
-        <button className="text-sm text-gta-indigo hover:underline" onClick={() => router.push("/propostas")}>Ver propostas</button>
+        <button className="toque text-sm text-gta-indigo hover:underline" onClick={() => router.push("/propostas")}>Ver propostas</button>
         {status && <span className="text-sm text-green-600 dark:text-green-400">{status}</span>}
       </div>
     </div>

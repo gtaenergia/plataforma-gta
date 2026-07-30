@@ -89,7 +89,7 @@ export function AprovacoesBoard() {
             <button
               key={f.value}
               onClick={() => setFiltro(f.value)}
-              className={`rounded-md px-2.5 py-1 text-xs transition ${
+              className={`toque justify-center rounded-md px-2.5 py-1 text-xs transition ${
                 filtro === f.value
                   ? "bg-gta-navy text-white"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"

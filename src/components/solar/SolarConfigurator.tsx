@@ -861,7 +861,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className={h2}>Lista de materiais (para cotar)</h2>
             <div className="flex items-center gap-3">
-              {calc?.bom && <button type="button" className="text-xs text-gta-indigo hover:underline" onClick={restaurarMat}>Restaurar sugestão</button>}
+              {calc?.bom && <button type="button" className="toque text-xs text-gta-indigo hover:underline" onClick={restaurarMat}>Restaurar sugestão</button>}
               <CopyButton label="Copiar lista" text={() => materiais.filter((m) => m.descricao.trim()).map((m) => `${m.qtde}\t${m.descricao}`).join("\n")} />
             </div>
           </div>
@@ -871,11 +871,11 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
               <div key={i} className="flex items-center gap-2">
                 <input className={`${inputCls} shrink-0 grow-0 basis-20 text-center`} value={m.qtde} onChange={(e) => setMat(i, "qtde", e.target.value)} placeholder="Qtde" />
                 <input className={`${inputCls} min-w-0 flex-1`} value={m.descricao} onChange={(e) => setMat(i, "descricao", e.target.value)} placeholder="Descrição do item" />
-                <button type="button" className="shrink-0 rounded p-1 text-slate-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20" onClick={() => removeMat(i)} aria-label="Remover item"><X className="h-4 w-4" /></button>
+                <button type="button" className="icon-btn" onClick={() => removeMat(i)} aria-label="Remover item"><X className="h-4 w-4" /></button>
               </div>
             ))}
           </div>
-          <button type="button" className="mt-3 text-sm font-medium text-gta-indigo hover:underline" onClick={addMat}>+ Adicionar material</button>
+          <button type="button" className="toque mt-3 text-sm font-medium text-gta-indigo hover:underline" onClick={addMat}>+ Adicionar material</button>
         </section>
       )}
 
@@ -1092,7 +1092,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
               : undefined,
           })}
         />
-        <button className="text-sm text-gta-indigo hover:underline" onClick={() => router.push("/propostas")}>
+        <button className="toque text-sm text-gta-indigo hover:underline" onClick={() => router.push("/propostas")}>
           Ver propostas
         </button>
         {!calc?.pricing && <span className="text-xs text-slate-400 dark:text-slate-500">Informe o valor do kit para habilitar a geração.</span>}

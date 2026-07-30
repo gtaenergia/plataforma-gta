@@ -249,7 +249,7 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
               <input className={`${inputCls} text-right sm:w-14`} inputMode="decimal" value={r.qtd} onChange={(e) => setRow(i, { qtd: e.target.value })} placeholder="1" />
               <input className={`${inputCls} text-right sm:w-28`} inputMode="decimal" value={r.valorUnit} onChange={(e) => setRow(i, { valorUnit: e.target.value })} placeholder="0,00" />
               <div className="text-right text-sm font-medium text-slate-600 sm:w-28 dark:text-slate-300">{brl(rowTotal(r))}</div>
-              <button type="button" className="shrink-0 rounded p-1 text-slate-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20" onClick={() => removeRow(i)} aria-label="Remover"><X className="h-4 w-4" /></button>
+              <button type="button" className="icon-btn" onClick={() => removeRow(i)} aria-label="Remover"><X className="h-4 w-4" /></button>
             </div>
           ))}
         </div>
@@ -273,7 +273,7 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
         <div className="flex items-center justify-between">
           <h2 className={h2}>Preço</h2>
           {preco && precoTocado.current && preco.faturamentoTotal > 0 && (
-            <button type="button" className="text-xs text-gta-indigo hover:underline" onClick={() => { precoTocado.current = false; setForm((f) => ({ ...f, valorProjeto: nf(preco.faturamentoProjeto, 2), valorExecucao: nf(preco.faturamentoExecucao, 2) })); }}>Usar sugerido {brl(preco.faturamentoTotal)}</button>
+            <button type="button" className="toque text-xs text-gta-indigo hover:underline" onClick={() => { precoTocado.current = false; setForm((f) => ({ ...f, valorProjeto: nf(preco.faturamentoProjeto, 2), valorExecucao: nf(preco.faturamentoExecucao, 2) })); }}>Usar sugerido {brl(preco.faturamentoTotal)}</button>
           )}
         </div>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
@@ -345,7 +345,7 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
           fatorKExecucao: params?.fatorKExecucao ?? preco?.fatorKExecucao ?? 1.7,
           nfExecucao: params?.nfExecucao ?? 0.06,
         })} />
-        <button className="text-sm text-gta-indigo hover:underline" onClick={() => router.push("/propostas")}>Ver propostas</button>
+        <button className="toque text-sm text-gta-indigo hover:underline" onClick={() => router.push("/propostas")}>Ver propostas</button>
         {status && <span className="text-sm text-green-600 dark:text-green-400">{status}</span>}
       </div>
     </div>

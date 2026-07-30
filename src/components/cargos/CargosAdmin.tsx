@@ -25,8 +25,10 @@ function PermissoesEditor({
           <div className="space-y-1.5">
             {grupo.chaves.map((chave) => {
               const id = `${idPrefix}-${chave}`;
+              // `toque`: no celular a linha inteira vira alvo de 44px — o
+              // quadradinho de 16px é pequeno demais para o dedo.
               return (
-                <label key={chave} htmlFor={id} className="flex items-start gap-2 text-sm">
+                <label key={chave} htmlFor={id} className="toque flex items-start gap-2 text-sm">
                   <input
                     id={id}
                     type="checkbox"

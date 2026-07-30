@@ -55,8 +55,8 @@ export function CondicoesPagamento({ total, value, onChange }: { total: number; 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="section-title">Condições de pagamento</h2>
         <div className="inline-flex rounded-lg border border-slate-200 p-0.5 text-xs dark:border-slate-700">
-          <button type="button" onClick={() => setModo("parcelas")} className={`rounded-md px-2.5 py-1 font-medium transition ${modo === "parcelas" ? "bg-gta-indigo text-white" : "text-slate-500 hover:text-gta-indigo dark:text-slate-400"}`}>Parcelado</button>
-          <button type="button" onClick={() => setModo("combinar")} className={`rounded-md px-2.5 py-1 font-medium transition ${modo === "combinar" ? "bg-gta-indigo text-white" : "text-slate-500 hover:text-gta-indigo dark:text-slate-400"}`}>A combinar</button>
+          <button type="button" onClick={() => setModo("parcelas")} className={`toque justify-center rounded-md px-2.5 py-1 font-medium transition ${modo ==="parcelas" ? "bg-gta-indigo text-white" : "text-slate-500 hover:text-gta-indigo dark:text-slate-400"}`}>Parcelado</button>
+          <button type="button" onClick={() => setModo("combinar")} className={`toque justify-center rounded-md px-2.5 py-1 font-medium transition ${modo ==="combinar" ? "bg-gta-indigo text-white" : "text-slate-500 hover:text-gta-indigo dark:text-slate-400"}`}>A combinar</button>
         </div>
       </div>
 
@@ -76,7 +76,7 @@ export function CondicoesPagamento({ total, value, onChange }: { total: number; 
                 </div>
                 <input className={`${inputCls} flex-1`} value={p.texto} onChange={(e) => setParcela(i, "texto", e.target.value)} placeholder="Ex.: na assinatura do contrato" />
                 <div className="w-28 shrink-0 text-right text-sm font-medium text-slate-600 dark:text-slate-300">{formatBRL((parseNumber(p.pct) / 100) * total)}</div>
-                <button type="button" className="shrink-0 rounded p-1 text-slate-400 transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20" onClick={() => removeParcela(i)} aria-label="Remover parcela"><X className="h-4 w-4" /></button>
+                <button type="button" className="icon-btn" onClick={() => removeParcela(i)} aria-label="Remover parcela"><X className="h-4 w-4" /></button>
               </div>
             ))}
           </div>
