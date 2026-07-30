@@ -101,10 +101,17 @@ export function NotificacoesSino() {
         )}
       </button>
 
+      {/*
+        No celular o sino não fica na borda da tela (o menu do usuário vem
+        depois), então ancorar por `right-0` jogava os 320px do painel para
+        fora pela ESQUERDA. Abaixo de `sm` ele passa a ser fixo, ocupando a
+        largura da tela com margem. De `sm` para cima volta a ser o dropdown
+        ancorado no sino, como no desktop.
+      */}
       {aberto && (
         <div
           role="menu"
-          className="absolute right-0 z-20 mt-2 w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-lg border border-slate-200 bg-white text-slate-700 shadow-lg dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          className="fixed inset-x-3 top-[70px] z-20 overflow-hidden rounded-lg border border-slate-200 bg-white text-slate-700 shadow-lg sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80 sm:max-w-[calc(100vw-1.5rem)] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
         >
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 dark:border-slate-700">
             <span className="text-sm font-semibold text-gta-navy dark:text-slate-100">Notificações</span>

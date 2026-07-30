@@ -67,14 +67,16 @@ export function CondicoesPagamento({ total, value, onChange }: { total: number; 
       ) : (
         <>
           <p className="mt-1 subtitle">Cada parcela é uma % do total; o app calcula o valor em reais. As porcentagens devem somar 100%.</p>
+          {/* No celular a descrição não cabe na mesma linha (sobrava ~33px):
+              ela desce para uma linha própria, abaixo de %, valor e ✕. */}
           <div className="mt-4 space-y-2">
             {parcelas.map((p, i) => (
-              <div key={i} className="flex items-center gap-2">
+              <div key={i} className="flex flex-wrap items-center gap-2">
                 <div className="flex w-24 shrink-0 items-center gap-1">
                   <input className={`${inputCls} text-right`} inputMode="decimal" value={p.pct} onChange={(e) => setParcela(i, "pct", e.target.value)} placeholder="0" />
                   <span className="text-sm text-slate-400">%</span>
                 </div>
-                <input className={`${inputCls} flex-1`} value={p.texto} onChange={(e) => setParcela(i, "texto", e.target.value)} placeholder="Ex.: na assinatura do contrato" />
+                <input className={`${inputCls} order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1`} value={p.texto} onChange={(e) => setParcela(i, "texto", e.target.value)} placeholder="Ex.: na assinatura do contrato" />
                 <div className="w-28 shrink-0 text-right text-sm font-medium text-slate-600 dark:text-slate-300">{formatBRL((parseNumber(p.pct) / 100) * total)}</div>
                 <button type="button" className="icon-btn" onClick={() => removeParcela(i)} aria-label="Remover parcela"><X className="h-4 w-4" /></button>
               </div>
