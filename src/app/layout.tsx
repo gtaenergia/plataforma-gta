@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { AmbienteBanner } from "@/components/AmbienteBanner";
 
 export const metadata: Metadata = {
   title: "Plataforma GTA",
@@ -22,7 +23,10 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        <AmbienteBanner />
+        {children}
+      </body>
     </html>
   );
 }
