@@ -35,13 +35,10 @@ function paraForm(c: Cliente): FormState {
   };
 }
 
-export function ClientesList({ isAdmin = false }: { isAdmin?: boolean }) {
+export function ClientesList() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
-  const [importando, setImportando] = useState(false);
-  const [atualizando, setAtualizando] = useState(false);
 
   const [busca, setBusca] = useState("");
   const [fSegmento, setFSegmento] = useState("");
@@ -127,50 +124,11 @@ export function ClientesList({ isAdmin = false }: { isAdmin?: boolean }) {
     else setErro("Falha ao excluir.");
   }
 
-  async function importar() {
-    if (!window.confirm("Importar os clientes da pasta Serviços? Quem já existe (mesmo nome) é ignorado.")) return;
-    setErro(null);
-    setAviso(null);
-    setImportando(true);
-    try {
-      const res = await fetch("/api/clientes/importar", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Falha ao importar.");
-      setAviso(`Importação concluída: ${data.criados} criado(s), ${data.ignorados} já existente(s).`);
-      const lista = await fetch("/api/clientes").then((r) => r.json());
-      setClientes(lista.clientes ?? []);
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro ao importar.");
-    } finally {
-      setImportando(false);
-    }
-  }
-
-  async function atualizarDosServicos() {
-    if (!window.confirm("Atualizar clientes com dados da pasta Serviços? Só preenche campos vazios dos já cadastrados (nunca sobrescreve o que já está preenchido) e cria os que ainda não existem.")) return;
-    setErro(null);
-    setAviso(null);
-    setAtualizando(true);
-    try {
-      const res = await fetch("/api/clientes/atualizar", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Falha ao atualizar.");
-      setAviso(`Atualização concluída: ${data.criados} criado(s), ${data.atualizados} atualizado(s), ${data.semMudanca} sem mudança.`);
-      const lista = await fetch("/api/clientes").then((r) => r.json());
-      setClientes(lista.clientes ?? []);
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro ao atualizar.");
-    } finally {
-      setAtualizando(false);
-    }
-  }
-
   if (loading) return <Loading>Carregando clientes…</Loading>;
 
   return (
     <div className="space-y-4">
       {erro && <Alert tone="red">{erro}</Alert>}
-      {aviso && <Alert tone="green">{aviso}</Alert>}
 
       {/* Barra de ações + filtros */}
       <div className="flex flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-end sm:p-4 card">
@@ -186,19 +144,7 @@ export function ClientesList({ isAdmin = false }: { isAdmin?: boolean }) {
           </select>
         </div>
         {editando === null && (
-          <div className="flex gap-2">
-            {isAdmin && (
-              <button className="btn-secondary whitespace-nowrap" onClick={importar} disabled={importando} title="Cria os clientes extraídos da pasta Serviços (não duplica os já cadastrados)">
-                {importando ? "Importando…" : "Importar dos Serviços"}
-              </button>
-            )}
-            {isAdmin && (
-              <button className="btn-secondary whitespace-nowrap" onClick={atualizarDosServicos} disabled={atualizando} title="Preenche campos vazios (CNPJ, endereço...) dos clientes já cadastrados com dados da pasta Serviços; cria os que faltam. Nunca sobrescreve o que já está preenchido.">
-                {atualizando ? "Atualizando…" : "Atualizar dados dos Serviços"}
-              </button>
-            )}
-            <button className="btn-primary whitespace-nowrap" onClick={abrirNovo}>+ Novo cliente</button>
-          </div>
+          <button className="btn-primary whitespace-nowrap" onClick={abrirNovo}>+ Novo cliente</button>
         )}
       </div>
 
