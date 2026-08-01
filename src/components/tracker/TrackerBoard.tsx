@@ -49,7 +49,7 @@ export function TrackerBoard({ meEmail, podeVerEquipe }: { meEmail: string; pode
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Abas */}
-        <div className="flex overflow-x-auto border-b border-slate-200 dark:border-slate-700">
+        <div className="sem-barra-rolagem flex overflow-x-auto border-b border-slate-200 dark:border-slate-700">
           {ABAS.map(({ id, label, Icone }) => (
             <button
               key={id}

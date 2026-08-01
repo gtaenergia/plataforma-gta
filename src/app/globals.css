@@ -127,6 +127,15 @@ select.field-input {
          focus-visible:ring-red-400/40 dark:hover:bg-red-900/20;
 }
 
+/* Rolagem sem a barra visível. Para faixas que só precisam rolar em tela
+   estreita (abas, filtros): no desktop cabe tudo, mas o `overflow-*-auto`
+   ainda reserva a barra e deixa um traço inútil sob o conteúdo. */
+.sem-barra-rolagem {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* Edge legado */
+}
+.sem-barra-rolagem::-webkit-scrollbar { display: none; }
+
 /* ---- Área de toque -------------------------------------------------------
    O dedo não tem a precisão do mouse: a diretriz de acessibilidade pede ~44px.
    Vale abaixo do breakpoint `md` (a virada mobile do projeto) OU em qualquer
