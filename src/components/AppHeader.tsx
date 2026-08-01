@@ -159,6 +159,11 @@ export function AppHeader({ userName, isAdmin }: { userName?: string; isAdmin?: 
                     Cargos e permissões
                   </MenuLink>
                 )}
+                {isAdmin && (
+                  <MenuLink href="/admin/armazenamento" onNavigate={() => setMenuAberto(false)}>
+                    Armazenamento
+                  </MenuLink>
+                )}
                 <button
                   onClick={alternarTema}
                   role="menuitem"

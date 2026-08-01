@@ -20,6 +20,12 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "admin-armazenamento-2026-08",
+    titulo: "Novidade: painel de armazenamento",
+    mensagem: "Administradores agora veem quanto o banco e os arquivos estão ocupando — e qual tabela ou pasta está puxando o espaço. Fica no menu do perfil, em Armazenamento.",
+    link: "/admin/armazenamento",
+  },
+  {
     slug: "design-consistente-2026-08",
     titulo: "Plataforma com visual mais uniforme",
     mensagem: "Avisos, erros, títulos e tabelas agora seguem o mesmo padrão em todas as telas — e os textos secundários ficaram mais legíveis, principalmente no tema claro.",
