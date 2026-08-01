@@ -7,6 +7,35 @@ import {
   formatarDuracao,
 } from "../tracker/types";
 import { rowTo, type Row } from "../tracker/postgres-store";
+import { montarPeriodo } from "@/components/tracker/comum";
+
+describe("montarPeriodo — turno que vira a meia-noite", () => {
+  it("plantão noturno: 23:00 → 01:00 vira 2h no dia seguinte", () => {
+    const p = montarPeriodo("2026-08-01", "23:00", "01:00");
+    expect(p).not.toBeNull();
+    expect(p!.viraDia).toBe(true);
+    expect(p!.fim.getDate()).toBe(2);
+    expect((p!.fim.getTime() - p!.inicio.getTime()) / 60000).toBe(120);
+  });
+
+  it("turno normal não mexe na data", () => {
+    const p = montarPeriodo("2026-08-01", "09:00", "17:30");
+    expect(p!.viraDia).toBe(false);
+    expect(p!.fim.getDate()).toBe(1);
+    expect((p!.fim.getTime() - p!.inicio.getTime()) / 60000).toBe(510);
+  });
+
+  it("início igual ao fim conta como 24h (e avisa)", () => {
+    const p = montarPeriodo("2026-08-01", "08:00", "08:00");
+    expect(p!.viraDia).toBe(true);
+    expect((p!.fim.getTime() - p!.inicio.getTime()) / 60000).toBe(1440);
+  });
+
+  it("entrada inválida devolve null", () => {
+    expect(montarPeriodo("", "23:00", "01:00")).toBeNull();
+    expect(montarPeriodo("2026-08-01", "xx", "01:00")).toBeNull();
+  });
+});
 
 describe("startTimeEntrySchema — iniciar cronômetro", () => {
   it("aceita corpo mínimo (tudo tem default)", () => {

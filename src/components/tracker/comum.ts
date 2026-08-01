@@ -40,6 +40,27 @@ export function fmtCurta(d: Date): string {
 export const DIA_SEMANA = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
 export const DIA_SEMANA_CURTO = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
+/**
+ * Monta início e fim a partir de uma data + dois horários.
+ *
+ * Quando o fim é menor ou igual ao início, entende que o turno VIROU A
+ * MEIA-NOITE e joga o fim para o dia seguinte (23:00 → 01:00 = 2h). Sem isso
+ * um plantão noturno era rejeitado, porque os dois horários usavam a mesma data.
+ *
+ * Devolve `viraDia` para a tela poder avisar o que foi entendido — assim um
+ * erro de digitação (15:00 → 13:00) não vira silenciosamente um lançamento de
+ * 22 horas.
+ */
+export function montarPeriodo(data: string, hInicio: string, hFim: string):
+  { inicio: Date; fim: Date; viraDia: boolean } | null {
+  const inicio = new Date(`${data}T${hInicio}`);
+  const fim = new Date(`${data}T${hFim}`);
+  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) return null;
+  const viraDia = fim <= inicio;
+  if (viraDia) fim.setDate(fim.getDate() + 1);
+  return { inicio, fim, viraDia };
+}
+
 /** "01:23:45" — cronômetro ao vivo, precisão de segundo. */
 export function formatarHMS(totalSeg: number): string {
   const h = Math.floor(totalSeg / 3600);

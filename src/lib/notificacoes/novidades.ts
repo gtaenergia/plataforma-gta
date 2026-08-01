@@ -20,10 +20,19 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "apontamentos-virada-meia-noite-2026-08",
+    titulo: "Corrigido: apontamento que vira a meia-noite",
+    mensagem: "Plantão das 23h à 1h agora pode ser lançado normalmente — o sistema entende que o fim é no dia seguinte e avisa a duração antes de salvar.",
+    link: "/apontamentos",
+  },
+  {
+    // Texto atualizado após a aba ser renomeada de "Tracker" para
+    // "Apontamentos". O slug NÃO muda: onde a notificação já saiu, ela não
+    // reenvia; onde ainda não saiu, sai já com o nome certo.
     slug: "tracker-2026-08",
-    titulo: "Novidade: Tracker (registro de horas)",
-    mensagem: "Cronômetro ou lançamento manual, vinculado a uma tarefa ou avulso. Nova aba \"Tracker\" no menu.",
-    link: "/tracker",
+    titulo: "Novidade: Apontamentos (registro de horas)",
+    mensagem: "Cronômetro ou lançamento manual, vinculado a uma tarefa ou avulso. Nova aba \"Apontamentos\" no menu.",
+    link: "/apontamentos",
   },
   {
     slug: "foto-perfil-2026-07",

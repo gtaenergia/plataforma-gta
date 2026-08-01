@@ -18,7 +18,7 @@ import type { Usuario } from "./comum";
 type Aba = "tracker" | "dashboard" | "relatorios" | "calendario";
 
 const ABAS: { id: Aba; label: string; Icone: typeof Timer }[] = [
-  { id: "tracker", label: "Tracker", Icone: Timer },
+  { id: "tracker", label: "Lançamentos", Icone: Timer },
   { id: "dashboard", label: "Dashboard", Icone: BarChart3 },
   { id: "relatorios", label: "Relatórios", Icone: FileText },
   { id: "calendario", label: "Calendário", Icone: CalendarDays },

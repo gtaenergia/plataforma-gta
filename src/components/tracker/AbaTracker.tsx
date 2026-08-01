@@ -7,7 +7,7 @@ import { Badge, EmptyState, Kpi, KpiGrid, SectionCard } from "@/components/ui";
 import { CATEGORIAS_PADRAO_TAREFA, type Task } from "@/lib/tasks/types";
 import { duracaoMin, formatarDuracao, type TimeEntry } from "@/lib/tracker/types";
 import {
-  addDias, DIA_SEMANA, fmtCurta, formatarHMS, segundaDaSemana, useEntradas, ymdLocal, type Usuario,
+  addDias, DIA_SEMANA, fmtCurta, formatarHMS, montarPeriodo, segundaDaSemana, useEntradas, ymdLocal, type Usuario,
 } from "./comum";
 
 interface NovoForm {
@@ -69,6 +69,14 @@ export function AbaTracker({
 
   /** Tarefas que podem receber lançamento (mesma regra do seletor principal). */
   const tarefasAtivas = useMemo(() => [...minhas, ...outras], [minhas, outras]);
+
+  /** Prévia do lançamento manual: duração e se vira o dia. */
+  const previaManual = useMemo(() => {
+    if (!manual.inicio || !manual.fim) return null;
+    const p = montarPeriodo(manual.data, manual.inicio, manual.fim);
+    if (!p) return null;
+    return { ...p, min: Math.round((p.fim.getTime() - p.inicio.getTime()) / 60000) };
+  }, [manual]);
 
   /**
    * Cliente/categoria de uma tarefa. Tarefas antigas podem não ter esses
@@ -135,8 +143,10 @@ export function AbaTracker({
     e.preventDefault();
     setErro(null);
     if (!manual.inicio || !manual.fim) { setErro("Informe início e fim."); return; }
-    const inicio = new Date(`${manual.data}T${manual.inicio}`).toISOString();
-    const fim = new Date(`${manual.data}T${manual.fim}`).toISOString();
+    const periodo = montarPeriodo(manual.data, manual.inicio, manual.fim);
+    if (!periodo) { setErro("Data ou horário inválido."); return; }
+    const inicio = periodo.inicio.toISOString();
+    const fim = periodo.fim.toISOString();
     try {
       const res = await fetch("/api/tracker", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -344,6 +354,16 @@ export function AbaTracker({
                 <div className="flex items-end">
                   <button type="submit" className="btn-primary w-full">Adicionar</button>
                 </div>
+                {/* Mostra o que foi entendido ANTES de salvar — principalmente
+                    quando o turno vira a meia-noite, para um erro de digitação
+                    não virar um lançamento de 20h sem ninguém perceber. */}
+                {previaManual && (
+                  <p className={`col-span-2 text-xs sm:col-span-4 ${previaManual.viraDia ? "text-amber-700 dark:text-amber-300" : "text-slate-500 dark:text-slate-400"}`}>
+                    {previaManual.viraDia
+                      ? `Encerra no dia seguinte (${fmtCurta(previaManual.fim)}) — duração de ${formatarDuracao(previaManual.min)}.`
+                      : `Duração: ${formatarDuracao(previaManual.min)}.`}
+                  </p>
+                )}
               </form>
             )}
           </>
@@ -528,13 +548,17 @@ function EdicaoLancamento({
   function salvar(e: React.FormEvent) {
     e.preventDefault();
     setErro(null);
-    const novoInicio = new Date(`${data}T${inicio}`);
-    if (Number.isNaN(novoInicio.getTime())) { setErro("Horário de início inválido."); return; }
+    let novoInicio: Date;
     let novoFim: Date | null = null;
     if (fim) {
-      novoFim = new Date(`${data}T${fim}`);
-      if (Number.isNaN(novoFim.getTime())) { setErro("Horário de fim inválido."); return; }
-      if (novoFim <= novoInicio) { setErro("O fim precisa ser depois do início."); return; }
+      // Um fim menor que o início não é erro: é turno que virou a meia-noite.
+      const periodo = montarPeriodo(data, inicio, fim);
+      if (!periodo) { setErro("Data ou horário inválido."); return; }
+      novoInicio = periodo.inicio;
+      novoFim = periodo.fim;
+    } else {
+      novoInicio = new Date(`${data}T${inicio}`);
+      if (Number.isNaN(novoInicio.getTime())) { setErro("Horário de início inválido."); return; }
     }
     onSalvar({
       descricao: descricao.trim(),
