@@ -15,7 +15,6 @@ export interface TimeEntry {
   /** Cliente do lançamento — herdado da tarefa vinculada, ou texto livre se avulso. */
   cliente: string;
   categoria: string;
-  billable: boolean;
   tags: string[];
   /** ISO datetime. */
   inicio: string;
@@ -31,7 +30,6 @@ const camposBase = {
   tarefaId: z.string().trim().max(100).optional(),
   cliente: z.string().trim().max(200).default(""),
   categoria: z.string().trim().max(100).default(""),
-  billable: z.boolean().default(false),
   tags: z.array(z.string().trim().max(40)).max(20).default([]),
 };
 

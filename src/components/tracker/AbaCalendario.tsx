@@ -126,7 +126,7 @@ export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
                       {blocosDoDia(dia).map(({ entrada, top, altura }) => (
                         <div
                           key={entrada.id}
-                          className={`absolute inset-x-0.5 overflow-hidden rounded px-1 py-0.5 text-[10px] leading-tight text-white ${entrada.billable ? "bg-green-600" : "bg-gta-indigo"} ${!entrada.fim ? "animate-pulse" : ""}`}
+                          className={`absolute inset-x-0.5 overflow-hidden rounded px-1 py-0.5 text-[10px] leading-tight text-white bg-gta-indigo ${!entrada.fim ? "animate-pulse" : ""}`}
                           style={{ top, height: altura }}
                           title={`${entrada.descricao || "(sem descrição)"}${mostrarUsuario ? ` — ${nomeDe(entrada.usuarioEmail)}` : ""}\n${formatarDuracao(duracaoMin(entrada, agora))}${entrada.cliente ? `\n${entrada.cliente}` : ""}`}
                         >
@@ -141,8 +141,6 @@ export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
             </div>
           </div>
           <p className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
-            <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-gta-indigo" /> Não faturável</span>
-            <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-green-600" /> Faturável</span>
             <span>Pisca = cronômetro em andamento</span>
           </p>
         </div>

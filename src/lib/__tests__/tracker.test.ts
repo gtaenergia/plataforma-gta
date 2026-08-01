@@ -13,12 +13,12 @@ describe("startTimeEntrySchema — iniciar cronômetro", () => {
     const r = startTimeEntrySchema.safeParse({});
     expect(r.success).toBe(true);
     if (r.success) {
-      expect(r.data).toEqual({ descricao: "", cliente: "", categoria: "", billable: false, tags: [] });
+      expect(r.data).toEqual({ descricao: "", cliente: "", categoria: "", tags: [] });
     }
   });
 
-  it("aceita tarefaId, billable e tags", () => {
-    const r = startTimeEntrySchema.safeParse({ tarefaId: "abc", billable: true, tags: ["urgente"] });
+  it("aceita tarefaId e tags", () => {
+    const r = startTimeEntrySchema.safeParse({ tarefaId: "abc", tags: ["urgente"] });
     expect(r.success).toBe(true);
   });
 });
@@ -98,7 +98,6 @@ describe("rowTo — fronteira com o Postgres", () => {
     tarefa_id: null,
     cliente: "Cliente X",
     categoria: "Orçamentos",
-    billable: false,
     tags: [],
     inicio: "2026-07-30T08:00:00.000Z",
     fim: null,
@@ -128,11 +127,6 @@ describe("rowTo — fronteira com o Postgres", () => {
 
   it("tarefa_id presente é preservado", () => {
     expect(rowTo(linha({ tarefa_id: "tarefa-123" })).tarefaId).toBe("tarefa-123");
-  });
-
-  it("billable é sempre boolean de verdade (driver pode devolver 0/1)", () => {
-    expect(rowTo(linha({ billable: 1 as unknown as boolean })).billable).toBe(true);
-    expect(rowTo(linha({ billable: 0 as unknown as boolean })).billable).toBe(false);
   });
 
   it("tags null (linha antiga) vira array vazio, não crasha", () => {

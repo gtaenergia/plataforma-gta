@@ -15,10 +15,9 @@ interface NovoForm {
   tarefaId: string; // "" = avulso
   cliente: string;
   categoria: string;
-  billable: boolean;
   tagsTexto: string; // "tag1, tag2"
 }
-const FORM_VAZIO: NovoForm = { descricao: "", tarefaId: "", cliente: "", categoria: "", billable: false, tagsTexto: "" };
+const FORM_VAZIO: NovoForm = { descricao: "", tarefaId: "", cliente: "", categoria: "", tagsTexto: "" };
 
 export function AbaTracker({
   meEmail, usuarioSelecionado, tarefas, usuarios, nomeDe,
@@ -68,11 +67,22 @@ export function AbaTracker({
     };
   }, [tarefas, meEmail]);
 
-  function setTarefaId(tarefaId: string) {
-    // Tarefas antigas podem não ter `cliente`/`categoria` no registro — `?? ""`
-    // porque o tipo promete string mas o dado real nem sempre cumpre.
+  /** Tarefas que podem receber lançamento (mesma regra do seletor principal). */
+  const tarefasAtivas = useMemo(() => [...minhas, ...outras], [minhas, outras]);
+
+  /**
+   * Cliente/categoria de uma tarefa. Tarefas antigas podem não ter esses
+   * campos no registro — `?? ""` porque o tipo promete string mas o dado real
+   * nem sempre cumpre. Retorna null para "avulso" (id vazio).
+   */
+  function dadosDaTarefa(tarefaId: string): { cliente: string; categoria: string } | null {
     const t = tarefas.find((x) => x.id === tarefaId);
-    setForm((f) => ({ ...f, tarefaId, cliente: t ? (t.cliente ?? "") : f.cliente, categoria: t ? (t.categoria ?? "") : f.categoria }));
+    return t ? { cliente: t.cliente ?? "", categoria: t.categoria ?? "" } : null;
+  }
+
+  function setTarefaId(tarefaId: string) {
+    const t = dadosDaTarefa(tarefaId);
+    setForm((f) => ({ ...f, tarefaId, cliente: t ? t.cliente : f.cliente, categoria: t ? t.categoria : f.categoria }));
   }
 
   function payloadBase() {
@@ -81,7 +91,6 @@ export function AbaTracker({
       tarefaId: form.tarefaId || undefined,
       cliente: (form.cliente || "").trim(),
       categoria: (form.categoria || "").trim(),
-      billable: form.billable,
       tags: (form.tagsTexto || "").split(",").map((t) => t.trim()).filter(Boolean),
     };
   }
@@ -178,7 +187,7 @@ export function AbaTracker({
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           descricao: e.descricao, tarefaId: e.tarefaId, cliente: e.cliente,
-          categoria: e.categoria, billable: e.billable, tags: e.tags,
+          categoria: e.categoria, tags: e.tags,
         }),
       });
       const data = await res.json();
@@ -210,7 +219,6 @@ export function AbaTracker({
   }, [entradas, agora]);
 
   const totalSemanaMin = grupos.reduce((s, g) => s + g.totalMin, 0);
-  const totalBillableMin = entradas.filter((e) => e.billable).reduce((s, e) => s + duracaoMin(e, agora), 0);
   const inputCls = "field-input";
 
   return (
@@ -226,7 +234,6 @@ export function AbaTracker({
               <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                 {rodando.cliente && <span>{rodando.cliente}</span>}
                 {rodando.categoria && <span>· {rodando.categoria}</span>}
-                {rodando.billable && <Badge tone="green">Faturável</Badge>}
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -308,11 +315,7 @@ export function AbaTracker({
                 <input id="tracker-tags" className={inputCls} placeholder="Separadas por vírgula" value={form.tagsTexto} onChange={(e) => setForm((f) => ({ ...f, tagsTexto: e.target.value }))} />
               </div>
             </div>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <label className="toque flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-gta-indigo focus:ring-gta-indigo dark:border-slate-600 dark:bg-slate-700" checked={form.billable} onChange={(e) => setForm((f) => ({ ...f, billable: e.target.checked }))} />
-                Faturável
-              </label>
+            <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
               <div className="flex flex-wrap gap-2">
                 <button type="button" className="btn-secondary" onClick={() => setModoManual((v) => !v)}>
                   {modoManual ? "Cancelar lançamento manual" : "Lançar manualmente"}
@@ -365,7 +368,7 @@ export function AbaTracker({
 
       <KpiGrid>
         <Kpi label="Total da semana" value={formatarDuracao(totalSemanaMin)} destaque />
-        <Kpi label="Faturável" value={formatarDuracao(totalBillableMin)} tone="green" />
+        <Kpi label="Média por dia" value={formatarDuracao(grupos.length ? Math.round(totalSemanaMin / grupos.length) : 0)} />
         <Kpi label="Lançamentos" value={String(entradas.length)} />
         <Kpi label="Dias com registro" value={String(grupos.length)} />
       </KpiGrid>
@@ -400,6 +403,8 @@ export function AbaTracker({
                       podeRetomar={souEuMesmo && !rodando}
                       nomeDe={nomeDe}
                       mostrarUsuario={!souEuMesmo}
+                      tarefas={tarefasAtivas}
+                      onEscolherTarefa={dadosDaTarefa}
                     />
                   ))}
                 </div>
@@ -412,8 +417,14 @@ export function AbaTracker({
   );
 }
 
+/** "14:30" a partir de um ISO — para preencher <input type="time">. */
+function hhmmLocal(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 function LinhaLancamento({
-  entrada, agora, podeEditar, editando, onEditar, onCancelar, onSalvar, onExcluir, onRetomar, podeRetomar, nomeDe, mostrarUsuario,
+  entrada, agora, podeEditar, editando, onEditar, onCancelar, onSalvar, onExcluir, onRetomar, podeRetomar, nomeDe, mostrarUsuario, tarefas, onEscolherTarefa,
 }: {
   entrada: TimeEntry;
   agora: Date;
@@ -427,18 +438,21 @@ function LinhaLancamento({
   podeRetomar: boolean;
   nomeDe: (email: string) => string;
   mostrarUsuario: boolean;
+  tarefas: Task[];
+  onEscolherTarefa: (id: string) => { cliente: string; categoria: string } | null;
 }) {
-  const [descricao, setDescricao] = useState(entrada.descricao);
   const min = duracaoMin(entrada, agora);
   const hora = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
   if (editando) {
     return (
-      <div className="flex flex-wrap items-center gap-2 rounded-md border border-gta-indigo/30 bg-indigo-50/40 p-2 dark:border-indigo-500/30 dark:bg-indigo-900/10">
-        <input className="field-input min-w-0 flex-1" value={descricao} onChange={(e) => setDescricao(e.target.value)} autoFocus aria-label="Descrição do lançamento" />
-        <button type="button" className="btn-primary !py-1.5 text-xs" onClick={() => onSalvar({ descricao: descricao.trim() })}>Salvar</button>
-        <button type="button" className="btn-secondary !py-1.5 text-xs" onClick={onCancelar}>Cancelar</button>
-      </div>
+      <EdicaoLancamento
+        entrada={entrada}
+        tarefas={tarefas}
+        onEscolherTarefa={onEscolherTarefa}
+        onSalvar={onSalvar}
+        onCancelar={onCancelar}
+      />
     );
   }
 
@@ -458,7 +472,6 @@ function LinhaLancamento({
           {entrada.cliente && <span>· {entrada.cliente}</span>}
           {entrada.categoria && <span>· {entrada.categoria}</span>}
           {entrada.tags.map((t) => <Badge key={t} tone="slate">{t}</Badge>)}
-          {entrada.billable && <Badge tone="green">Faturável</Badge>}
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
@@ -478,5 +491,110 @@ function LinhaLancamento({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Edição completa de um lançamento — todos os campos, não só a descrição:
+ * tarefa (com cliente/categoria herdados), cliente, categoria, tags, e o
+ * horário (data + início + fim).
+ */
+function EdicaoLancamento({
+  entrada, tarefas, onEscolherTarefa, onSalvar, onCancelar,
+}: {
+  entrada: TimeEntry;
+  tarefas: Task[];
+  onEscolherTarefa: (id: string) => { cliente: string; categoria: string } | null;
+  onSalvar: (patch: Partial<TimeEntry>) => void;
+  onCancelar: () => void;
+}) {
+  const [descricao, setDescricao] = useState(entrada.descricao);
+  const [tarefaId, setTarefaId] = useState(entrada.tarefaId ?? "");
+  const [cliente, setCliente] = useState(entrada.cliente);
+  const [categoria, setCategoria] = useState(entrada.categoria);
+  const [tagsTexto, setTagsTexto] = useState(entrada.tags.join(", "));
+  const [data, setData] = useState(ymdLocal(new Date(entrada.inicio)));
+  const [inicio, setInicio] = useState(hhmmLocal(entrada.inicio));
+  // Lançamento em andamento não tem fim — o campo fica vazio e opcional.
+  const [fim, setFim] = useState(entrada.fim ? hhmmLocal(entrada.fim) : "");
+  const [erro, setErro] = useState<string | null>(null);
+
+  function trocarTarefa(id: string) {
+    setTarefaId(id);
+    const t = onEscolherTarefa(id);
+    if (t) { setCliente(t.cliente); setCategoria(t.categoria); }
+  }
+
+  function salvar(e: React.FormEvent) {
+    e.preventDefault();
+    setErro(null);
+    const novoInicio = new Date(`${data}T${inicio}`);
+    if (Number.isNaN(novoInicio.getTime())) { setErro("Horário de início inválido."); return; }
+    let novoFim: Date | null = null;
+    if (fim) {
+      novoFim = new Date(`${data}T${fim}`);
+      if (Number.isNaN(novoFim.getTime())) { setErro("Horário de fim inválido."); return; }
+      if (novoFim <= novoInicio) { setErro("O fim precisa ser depois do início."); return; }
+    }
+    onSalvar({
+      descricao: descricao.trim(),
+      // "" desvincula a tarefa (contrato LIMPAR do store).
+      tarefaId: tarefaId || "",
+      cliente: cliente.trim(),
+      categoria: categoria.trim(),
+      tags: tagsTexto.split(",").map((t) => t.trim()).filter(Boolean),
+      inicio: novoInicio.toISOString(),
+      ...(novoFim ? { fim: novoFim.toISOString() } : {}),
+    });
+  }
+
+  const id = (campo: string) => `edit-${entrada.id}-${campo}`;
+  const inputCls = "field-input";
+
+  return (
+    <form onSubmit={salvar} className="rounded-md border border-gta-indigo/30 bg-indigo-50/40 p-3 dark:border-indigo-500/30 dark:bg-indigo-900/10">
+      <div className="grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-6">
+        <div className="sm:col-span-3">
+          <label className="field-label" htmlFor={id("desc")}>Descrição</label>
+          <input id={id("desc")} className={inputCls} value={descricao} onChange={(e) => setDescricao(e.target.value)} autoFocus />
+        </div>
+        <div className="sm:col-span-3">
+          <label className="field-label" htmlFor={id("tarefa")}>Tarefa</label>
+          <select id={id("tarefa")} className={inputCls} value={tarefaId} onChange={(e) => trocarTarefa(e.target.value)}>
+            <option value="">Avulso (sem tarefa)</option>
+            {tarefas.map((t) => <option key={t.id} value={t.id}>{t.titulo}</option>)}
+          </select>
+        </div>
+        <div className="sm:col-span-3">
+          <label className="field-label" htmlFor={id("cliente")}>Cliente</label>
+          <input id={id("cliente")} className={inputCls} value={cliente} onChange={(e) => setCliente(e.target.value)} />
+        </div>
+        <div className="sm:col-span-3">
+          <label className="field-label" htmlFor={id("categoria")}>Categoria</label>
+          <input id={id("categoria")} className={inputCls} value={categoria} onChange={(e) => setCategoria(e.target.value)} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="field-label" htmlFor={id("data")}>Data</label>
+          <input id={id("data")} type="date" className={inputCls} value={data} onChange={(e) => setData(e.target.value)} required />
+        </div>
+        <div className="sm:col-span-1">
+          <label className="field-label" htmlFor={id("inicio")}>Início</label>
+          <input id={id("inicio")} type="time" className={inputCls} value={inicio} onChange={(e) => setInicio(e.target.value)} required />
+        </div>
+        <div className="sm:col-span-1">
+          <label className="field-label" htmlFor={id("fim")}>Fim</label>
+          <input id={id("fim")} type="time" className={inputCls} value={fim} onChange={(e) => setFim(e.target.value)} placeholder="em andamento" />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="field-label" htmlFor={id("tags")}>Tags</label>
+          <input id={id("tags")} className={inputCls} value={tagsTexto} onChange={(e) => setTagsTexto(e.target.value)} placeholder="Separadas por vírgula" />
+        </div>
+      </div>
+      {erro && <p className="field-error mt-2">{erro}</p>}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button type="submit" className="btn-primary !py-1.5 text-xs">Salvar</button>
+        <button type="button" className="btn-secondary !py-1.5 text-xs" onClick={onCancelar}>Cancelar</button>
+      </div>
+    </form>
   );
 }

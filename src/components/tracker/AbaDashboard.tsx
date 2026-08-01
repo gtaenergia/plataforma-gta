@@ -9,7 +9,7 @@ import {
 
 type Periodo = "semana" | "mes";
 
-/** Visão agregada do período: por dia, por cliente, por categoria e faturável. */
+/** Visão agregada do período: por dia, por cliente e por categoria. */
 export function AbaDashboard({ usuarioSelecionado }: { usuarioSelecionado: string }) {
   const [periodo, setPeriodo] = useState<Periodo>("semana");
 
@@ -29,9 +29,6 @@ export function AbaDashboard({ usuarioSelecionado }: { usuarioSelecionado: strin
   const min = (e: TimeEntry) => duracaoMin(e, agora);
 
   const totalMin = entradas.reduce((s, e) => s + min(e), 0);
-  const billableMin = entradas.filter((e) => e.billable).reduce((s, e) => s + min(e), 0);
-  const naoBillableMin = totalMin - billableMin;
-  const pctBillable = totalMin > 0 ? Math.round((billableMin / totalMin) * 100) : 0;
 
   /** Um bucket por dia do período — dias sem lançamento aparecem zerados. */
   const porDia = useMemo(() => {
@@ -74,8 +71,8 @@ export function AbaDashboard({ usuarioSelecionado }: { usuarioSelecionado: strin
 
       <KpiGrid>
         <Kpi label="Total" value={formatarDuracao(totalMin)} destaque />
-        <Kpi label="Faturável" value={`${formatarDuracao(billableMin)} (${pctBillable}%)`} tone="green" />
-        <Kpi label="Não faturável" value={formatarDuracao(naoBillableMin)} />
+        <Kpi label="Lançamentos" value={String(entradas.length)} />
+        <Kpi label="Dias com registro" value={String(porDia.filter((d) => d.min > 0).length)} />
         <Kpi label="Média por dia trabalhado" value={formatarDuracao(mediaDiaria)} />
       </KpiGrid>
 

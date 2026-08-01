@@ -23,7 +23,6 @@ export interface Row {
   tarefa_id: string | null;
   cliente: string;
   categoria: string;
-  billable: boolean;
   tags: string[];
   inicio: string;
   fim: string | null;
@@ -38,7 +37,6 @@ export const rowTo = (r: Row): TimeEntry => ({
   tarefaId: r.tarefa_id ?? undefined,
   cliente: r.cliente ?? "",
   categoria: r.categoria ?? "",
-  billable: !!r.billable,
   tags: r.tags ?? [],
   inicio: new Date(r.inicio).toISOString(),
   fim: r.fim ? new Date(r.fim).toISOString() : undefined,
@@ -54,6 +52,12 @@ export class PostgresTrackerStore implements TrackerStore {
     this.pool = createPool({ connectionString: getDbUrl() });
   }
 
+  /**
+   * Bancos criados antes de 08/2026 ainda têm a coluna "billable" (conceito de
+   * "faturável", removido). Ela não é dropada — a plataforma nunca apaga
+   * coluna — e como é NOT NULL DEFAULT false, os INSERTs que a omitem seguem
+   * válidos. Fica só como peso morto.
+   */
   private ensureSchema(): Promise<void> {
     if (!this.ready) {
       this.ready = this.pool
@@ -65,7 +69,6 @@ export class PostgresTrackerStore implements TrackerStore {
           tarefa_id text,
           cliente text NOT NULL DEFAULT '',
           categoria text NOT NULL DEFAULT '',
-          billable boolean NOT NULL DEFAULT false,
           tags jsonb NOT NULL DEFAULT '[]',
           inicio timestamptz NOT NULL,
           fim timestamptz,
@@ -121,10 +124,10 @@ export class PostgresTrackerStore implements TrackerStore {
     const now = new Date().toISOString();
     await this.pool.sql`
       INSERT INTO tracker_entries
-        (id, usuario_email, descricao, tarefa_id, cliente, categoria, billable, tags, inicio, fim, criado_em, atualizado_em)
+        (id, usuario_email, descricao, tarefa_id, cliente, categoria, tags, inicio, fim, criado_em, atualizado_em)
       VALUES
         (${id}, ${data.usuarioEmail}, ${data.descricao}, ${data.tarefaId ?? null}, ${data.cliente}, ${data.categoria},
-         ${data.billable}, ${JSON.stringify(data.tags)}::jsonb, ${data.inicio}, ${data.fim ?? null}, ${now}, ${now})
+         ${JSON.stringify(data.tags)}::jsonb, ${data.inicio}, ${data.fim ?? null}, ${now}, ${now})
     `;
     return { ...data, id, criadoEm: now, atualizadoEm: now };
   }
@@ -141,7 +144,6 @@ export class PostgresTrackerStore implements TrackerStore {
         tarefa_id = CASE WHEN ${tarefaId}::text IS NULL THEN tarefa_id ELSE NULLIF(${tarefaId}::text, '') END,
         cliente = COALESCE(${patch.cliente ?? null}::text, cliente),
         categoria = COALESCE(${patch.categoria ?? null}::text, categoria),
-        billable = COALESCE(${patch.billable ?? null}::boolean, billable),
         tags = COALESCE(${tagsJson}::jsonb, tags),
         inicio = COALESCE(${patch.inicio ?? null}::timestamptz, inicio),
         fim = CASE WHEN ${fim}::text IS NULL THEN fim ELSE NULLIF(${fim}::text, '')::timestamptz END,

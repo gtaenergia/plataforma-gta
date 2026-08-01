@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge, EmptyState, Kpi, KpiGrid, SectionCard } from "@/components/ui";
+import { EmptyState, Kpi, KpiGrid, SectionCard } from "@/components/ui";
 import { duracaoMin, formatarDuracao, type TimeEntry } from "@/lib/tracker/types";
 import { addDias, segundaDaSemana, useEntradas, ymdLocal, type Usuario } from "./comum";
 
@@ -18,7 +18,6 @@ export function AbaRelatorios({
   const [ate, setAte] = useState(() => ymdLocal(addDias(segundaDaSemana(hoje), 6)));
   const [fCliente, setFCliente] = useState("todos");
   const [fCategoria, setFCategoria] = useState("todos");
-  const [fBillable, setFBillable] = useState("todos");
 
   // `ate` é inclusivo na UI; a API usa [desde, ate), então soma 1 dia.
   const desdeDate = useMemo(() => new Date(`${de}T00:00:00`), [de]);
@@ -41,20 +40,17 @@ export function AbaRelatorios({
     return entradas.filter((e) => {
       if (fCliente !== "todos" && e.cliente !== fCliente) return false;
       if (fCategoria !== "todos" && e.categoria !== fCategoria) return false;
-      if (fBillable === "sim" && !e.billable) return false;
-      if (fBillable === "nao" && e.billable) return false;
       return true;
     }).sort((a, b) => (a.inicio < b.inicio ? 1 : -1));
-  }, [entradas, fCliente, fCategoria, fBillable]);
+  }, [entradas, fCliente, fCategoria]);
 
   const totalMin = filtradas.reduce((s, e) => s + min(e), 0);
-  const billableMin = filtradas.filter((e) => e.billable).reduce((s, e) => s + min(e), 0);
 
   const fmtData = (iso: string) => new Date(iso).toLocaleDateString("pt-BR");
   const fmtHora = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
   function exportarCsv() {
-    const cabecalho = ["Data", "Início", "Fim", "Duração (h)", "Usuário", "Descrição", "Cliente", "Categoria", "Tags", "Faturável"];
+    const cabecalho = ["Data", "Início", "Fim", "Duração (h)", "Usuário", "Descrição", "Cliente", "Categoria", "Tags"];
     // Aspas duplicadas e campo entre aspas: descrição/cliente podem conter vírgula.
     const escapar = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const linhas = filtradas.map((e) => [
@@ -67,7 +63,6 @@ export function AbaRelatorios({
       e.cliente,
       e.categoria,
       e.tags.join(" | "),
-      e.billable ? "Sim" : "Não",
     ].map((c) => escapar(String(c))).join(";"));
 
     // BOM (﻿) para o Excel reconhecer os acentos como UTF-8.
@@ -87,7 +82,7 @@ export function AbaRelatorios({
       {erro && <p className="field-error">{erro}</p>}
 
       <SectionCard title="Filtros">
-        <div className="grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-5">
+        <div className="grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-4">
           <div>
             <label className="field-label" htmlFor="rel-de">De</label>
             <input id="rel-de" type="date" className={inputCls} value={de} onChange={(e) => setDe(e.target.value)} />
@@ -110,20 +105,11 @@ export function AbaRelatorios({
               {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-          <div>
-            <label className="field-label" htmlFor="rel-billable">Faturável</label>
-            <select id="rel-billable" className={inputCls} value={fBillable} onChange={(e) => setFBillable(e.target.value)}>
-              <option value="todos">Todos</option>
-              <option value="sim">Só faturável</option>
-              <option value="nao">Só não faturável</option>
-            </select>
-          </div>
         </div>
       </SectionCard>
 
       <KpiGrid>
         <Kpi label="Total no filtro" value={formatarDuracao(totalMin)} destaque />
-        <Kpi label="Faturável" value={formatarDuracao(billableMin)} tone="green" />
         <Kpi label="Lançamentos" value={String(filtradas.length)} />
         <Kpi label="Horas decimais" value={(totalMin / 60).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} />
       </KpiGrid>
@@ -165,7 +151,6 @@ export function AbaRelatorios({
                       </td>
                       <td>
                         <span className="text-gta-navy dark:text-slate-100">{e.descricao || "(sem descrição)"}</span>
-                        {e.billable && <Badge tone="green" className="ml-2">Faturável</Badge>}
                       </td>
                       {mostrarUsuario && <td className="whitespace-nowrap">{nomeDe(e.usuarioEmail)}</td>}
                       <td>{e.cliente || <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
@@ -188,7 +173,6 @@ export function AbaRelatorios({
                     {mostrarUsuario && <span>· {nomeDe(e.usuarioEmail)}</span>}
                     {e.cliente && <span>· {e.cliente}</span>}
                     {e.categoria && <span>· {e.categoria}</span>}
-                    {e.billable && <Badge tone="green">Faturável</Badge>}
                   </div>
                 </div>
               ))}
