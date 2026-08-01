@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, Info, XCircle } from "lucide-react";
 
 /**
  * Primitivos de UI compartilhados da Plataforma GTA. Encapsulam o "acabamento"
@@ -59,7 +59,7 @@ export function Kpi({ label, value, destaque, tone, className = "" }: { label: R
     : "text-gta-navy dark:text-slate-100";
   return (
     <div className={`rounded-md p-2.5 shadow-sm ${destaque ? "bg-gta-navy text-white" : "bg-white dark:bg-slate-800"} ${className}`}>
-      <div className={`text-xs ${destaque ? "text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>{label}</div>
+      <div className={`text-xs ${destaque ? "text-slate-300" : "text-slate-600 dark:text-slate-400"}`}>{label}</div>
       <div className={`mt-0.5 font-semibold ${destaque ? "" : toneCls}`}>{value}</div>
     </div>
   );
@@ -105,7 +105,7 @@ export function SectionCard({ title, subtitle, actions, children, className = ""
 /** Estado vazio padronizado (listas/tabelas sem resultado). */
 export function EmptyState({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-400 dark:border-slate-700 dark:text-slate-500 ${className}`}>
+    <div className={`rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400 ${className}`}>
       {children}
     </div>
   );
@@ -114,12 +114,96 @@ export function EmptyState({ children, className = "" }: { children: ReactNode; 
 /** Link "voltar" padrão: botão fantasma com seta (usado no topo de páginas de detalhe). */
 export function BackLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link
-      href={href}
-      className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-gta-indigo dark:text-slate-300 dark:hover:bg-slate-800"
-    >
+    <Link href={href} className="btn-ghost">
       <ArrowLeft className="h-4 w-4" />
       {children}
     </Link>
+  );
+}
+
+const ALERT_ICONE = {
+  amber: AlertTriangle,
+  red: XCircle,
+  green: CheckCircle2,
+  indigo: Info,
+} as const;
+
+/**
+ * Mensagem contextual em caixa (aviso, erro, sucesso, informação).
+ *
+ * O ícone identifica o tipo sem depender só da cor — quem não distingue verde
+ * de vermelho ainda entende a mensagem. `red` e `amber` são anunciados por
+ * leitor de tela assim que aparecem, porque interrompem o que a pessoa fazia.
+ */
+export function Alert({ tone = "amber", titulo, children, className = "" }: {
+  tone?: "amber" | "red" | "green" | "indigo";
+  titulo?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  const Icone = ALERT_ICONE[tone];
+  return (
+    <div className={`alert alert-${tone} ${className}`} role={tone === "red" || tone === "amber" ? "alert" : undefined}>
+      <Icone className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+      <div className="min-w-0">
+        {titulo && <strong className="mr-1">{titulo}</strong>}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Alternador entre poucas visões (semana/mês, parcelado/a combinar).
+ * `aria-pressed` carrega o estado — para o leitor de tela e para o CSS, que
+ * pinta o item ativo a partir dele (sem classe condicional espalhada).
+ */
+export function Segmented<T extends string>({ value, onChange, options, className = "", aria }: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: ReactNode }[];
+  className?: string;
+  aria?: string;
+}) {
+  return (
+    <div className={`segmented ${className}`} role="group" aria-label={aria}>
+      {options.map((o) => (
+        <button key={o.value} type="button" aria-pressed={value === o.value} onClick={() => onChange(o.value)} className="segmented-item">
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Estado de carregamento padrão das listas e painéis. */
+export function Loading({ children = "Carregando…" }: { children?: ReactNode }) {
+  return <p className="subtitle" role="status">{children}</p>;
+}
+
+/**
+ * Casca das telas de autenticação (entrar, definir senha) — as únicas fora do
+ * cabeçalho da aplicação. Fica aqui para que as duas tenham exatamente a mesma
+ * marca, o mesmo cartão e o mesmo respiro; separadas, já tinham divergido no
+ * tamanho do logo e do título.
+ */
+export function AuthShell({ titulo, subtitulo, children }: { titulo: string; subtitulo?: ReactNode; children: ReactNode }) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-gta-navy to-gta-navy2 p-4">
+      <div className="w-full max-w-sm overflow-hidden rounded-xl bg-white shadow-xl dark:bg-slate-800">
+        <div className="h-1.5 w-full bg-gta-orange" />
+        <div className="p-8">
+          <div className="mb-6 text-center">
+            {/* alt vazio: o <h1> logo abaixo já diz o nome — com alt o leitor
+                de tela anunciaria "GTA Energia" duas vezes seguidas. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/gta-icon.png" alt="" className="mx-auto h-20 w-auto" />
+            <h1 className="mt-3 text-xl font-bold tracking-tight text-gta-navy dark:text-slate-100">{titulo}</h1>
+            {subtitulo && <p className="mt-1 subtitle">{subtitulo}</p>}
+          </div>
+          {children}
+        </div>
+      </div>
+    </main>
   );
 }

@@ -62,14 +62,14 @@ export default async function AjudaServicoPage({ params }: { params: Promise<{ s
   return (
     <div className="min-h-screen">
       <AppHeader userName={user.name} isAdmin={user.role === "admin"} />
-      <main className="mx-auto max-w-3xl px-4 py-8">
+      <main className="app-container-leitura py-8">
         <div className="mb-6">
           <BackLink href={`/nova/${servico}`}>Voltar ao configurador</BackLink>
-          <h1 className="mt-2 flex flex-wrap items-center gap-2 text-xl font-bold text-gta-navy sm:gap-2.5 sm:text-2xl dark:text-slate-100">
-            <ServiceIcon serviceKey={service.key} className="h-6 w-6 shrink-0 text-gta-indigo sm:h-7 sm:w-7 dark:text-indigo-300" />
+          <h1 className="page-title mt-2 flex flex-wrap items-center gap-2.5">
+            <ServiceIcon serviceKey={service.key} className="h-7 w-7 shrink-0 text-gta-indigo dark:text-indigo-300" />
             Como precificar — {service.label}
           </h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Tutorial, fórmulas e valores padrão de precificação deste serviço.</p>
+          <p className="mt-1 subtitle">Tutorial, fórmulas e valores padrão de precificação deste serviço.</p>
         </div>
         {conteudo}
       </main>

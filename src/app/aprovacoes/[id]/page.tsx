@@ -16,7 +16,7 @@ export default async function OrcamentoPage({ params }: { params: Promise<{ id: 
   return (
     <div className="min-h-screen">
       <AppHeader userName={user.name} isAdmin={user.role === "admin"} />
-      <main className="mx-auto max-w-3xl px-4 py-8">
+      <main className="app-container-leitura py-8">
         <OrcamentoDetalhe inicial={redigirOrcamento(orc)!} perms={perms} currentEmail={user.email} isAdmin={user.role === "admin"} oneDriveAtivo={oneDriveConfigurado()} />
       </main>
     </div>

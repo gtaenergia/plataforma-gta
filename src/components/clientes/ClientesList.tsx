@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Badge, EmptyState, SectionCard } from "@/components/ui";
+import { Alert, Badge, EmptyState, Loading, SectionCard } from "@/components/ui";
 import { usePaginacao, Paginacao } from "@/components/Paginacao";
 import { SEGMENTOS, UFS, cidadeUf, type Cliente } from "@/lib/clientes/types";
 
@@ -165,18 +165,18 @@ export function ClientesList({ isAdmin = false }: { isAdmin?: boolean }) {
     }
   }
 
-  if (loading) return <p className="subtitle">Carregando clientes...</p>;
+  if (loading) return <Loading>Carregando clientes…</Loading>;
 
   return (
     <div className="space-y-4">
-      {erro && <p className="field-error">{erro}</p>}
-      {aviso && <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-900/30 dark:text-green-300">{aviso}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
+      {aviso && <Alert tone="green">{aviso}</Alert>}
 
       {/* Barra de ações + filtros */}
       <div className="flex flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-end sm:p-4 card">
         <div className="flex-1 sm:min-w-[220px]">
           <label className="field-label">Buscar nome / documento / cidade</label>
-          <input className="field-input" placeholder="Digite para filtrar..." value={busca} onChange={(e) => setBusca(e.target.value)} />
+          <input className="field-input" placeholder="Digite para filtrar…" value={busca} onChange={(e) => setBusca(e.target.value)} />
         </div>
         <div className="min-w-[160px]">
           <label className="field-label">Segmento</label>
@@ -189,12 +189,12 @@ export function ClientesList({ isAdmin = false }: { isAdmin?: boolean }) {
           <div className="flex gap-2">
             {isAdmin && (
               <button className="btn-secondary whitespace-nowrap" onClick={importar} disabled={importando} title="Cria os clientes extraídos da pasta Serviços (não duplica os já cadastrados)">
-                {importando ? "Importando..." : "Importar dos Serviços"}
+                {importando ? "Importando…" : "Importar dos Serviços"}
               </button>
             )}
             {isAdmin && (
               <button className="btn-secondary whitespace-nowrap" onClick={atualizarDosServicos} disabled={atualizando} title="Preenche campos vazios (CNPJ, endereço...) dos clientes já cadastrados com dados da pasta Serviços; cria os que faltam. Nunca sobrescreve o que já está preenchido.">
-                {atualizando ? "Atualizando..." : "Atualizar dados dos Serviços"}
+                {atualizando ? "Atualizando…" : "Atualizar dados dos Serviços"}
               </button>
             )}
             <button className="btn-primary whitespace-nowrap" onClick={abrirNovo}>+ Novo cliente</button>
@@ -211,7 +211,7 @@ export function ClientesList({ isAdmin = false }: { isAdmin?: boolean }) {
           <form onSubmit={salvar} className="space-y-5">
             {/* Identificação */}
             <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Identificação</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Identificação</h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
                 <div className="sm:col-span-4">
                   <label className="field-label">Nome / Razão social *</label>
@@ -240,7 +240,7 @@ export function ClientesList({ isAdmin = false }: { isAdmin?: boolean }) {
 
             {/* Contato */}
             <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Contato</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Contato</h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
                 <div className="sm:col-span-2">
                   <label className="field-label">Nome do contato</label>
@@ -259,7 +259,7 @@ export function ClientesList({ isAdmin = false }: { isAdmin?: boolean }) {
 
             {/* Endereço */}
             <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Endereço</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Endereço</h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
                 <div className="sm:col-span-2">
                   <label className="field-label">CEP</label>
@@ -294,20 +294,20 @@ export function ClientesList({ isAdmin = false }: { isAdmin?: boolean }) {
             {/* Observações */}
             <div>
               <label className="field-label">Observações</label>
-              <textarea className="field-input min-h-[70px]" value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)} placeholder="Notas internas sobre o cliente..." />
+              <textarea className="field-input min-h-[70px]" value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)} placeholder="Notas internas sobre o cliente…" />
             </div>
 
             <div className="flex justify-end gap-2">
               <button type="button" className="btn-secondary" onClick={fecharForm}>Cancelar</button>
               <button type="submit" className="btn-primary" disabled={salvando}>
-                {salvando ? "Salvando..." : editando === "novo" ? "Cadastrar cliente" : "Salvar alterações"}
+                {salvando ? "Salvando…" : editando === "novo" ? "Cadastrar cliente" : "Salvar alterações"}
               </button>
             </div>
           </form>
         </SectionCard>
       )}
 
-      <div className="text-sm text-slate-500 dark:text-slate-400">
+      <div className="subtitle">
         {filtrados.length} de {clientes.length} {clientes.length === 1 ? "cliente" : "clientes"}
       </div>
 
@@ -325,7 +325,7 @@ export function ClientesList({ isAdmin = false }: { isAdmin?: boolean }) {
               </div>
               {c.segmento && <Badge tone="indigo" className="shrink-0">{c.segmento}</Badge>}
             </div>
-            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
               {c.documento && <span className="font-mono">{c.documento}</span>}
               {c.telefone && <span>{c.telefone}</span>}
               {c.email && <span className="truncate">{c.email}</span>}
@@ -354,7 +354,7 @@ export function ClientesList({ isAdmin = false }: { isAdmin?: boolean }) {
           <tbody>
             {filtrados.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
                   {clientes.length === 0 ? "Nenhum cliente cadastrado ainda." : "Nenhum cliente corresponde aos filtros."}
                 </td>
               </tr>
@@ -362,16 +362,16 @@ export function ClientesList({ isAdmin = false }: { isAdmin?: boolean }) {
             {paginados.map((c) => (
               <tr key={c.id}>
                 <td className="px-4 py-2 font-medium text-gta-navy dark:text-slate-100">{c.nome}</td>
-                <td className="px-4 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">{c.documento || "—"}</td>
+                <td className="px-4 py-2 font-mono text-xs text-slate-600 dark:text-slate-400">{c.documento || "—"}</td>
                 <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{cidadeUf(c) || "—"}</td>
                 <td className="px-4 py-2 text-slate-600 dark:text-slate-300">
                   <div className="flex flex-col">
                     {c.telefone && <span>{c.telefone}</span>}
-                    {c.email && <span className="text-xs text-slate-400 dark:text-slate-500">{c.email}</span>}
+                    {c.email && <span className="hint">{c.email}</span>}
                     {!c.telefone && !c.email && "—"}
                   </div>
                 </td>
-                <td className="px-4 py-2">{c.segmento ? <Badge tone="indigo">{c.segmento}</Badge> : <span className="text-slate-400">—</span>}</td>
+                <td className="px-4 py-2">{c.segmento ? <Badge tone="indigo">{c.segmento}</Badge> : <span className="sem-valor">—</span>}</td>
                 <td className="px-4 py-2">
                   <div className="flex items-center justify-end gap-3 whitespace-nowrap text-xs">
                     <button onClick={() => abrirEdicao(c)} className="text-gta-indigo hover:underline">Editar</button>

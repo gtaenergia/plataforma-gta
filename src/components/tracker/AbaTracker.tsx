@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play, X } from "lucide-react";
 import { ClienteInput } from "@/components/clientes/ClienteInput";
-import { Badge, EmptyState, Kpi, KpiGrid, SectionCard } from "@/components/ui";
+import { Alert, Badge, EmptyState, Kpi, KpiGrid, Loading, SectionCard } from "@/components/ui";
 import { CATEGORIAS_PADRAO_TAREFA, type Task } from "@/lib/tasks/types";
 import { duracaoMin, formatarDuracao, type TimeEntry } from "@/lib/tracker/types";
 import {
@@ -229,11 +229,10 @@ export function AbaTracker({
   }, [entradas, agora]);
 
   const totalSemanaMin = grupos.reduce((s, g) => s + g.totalMin, 0);
-  const inputCls = "field-input";
 
   return (
     <div className="space-y-6">
-      {(erro || erroLista) && <p className="field-error">{erro ?? erroLista}</p>}
+      {(erro || erroLista) && <Alert tone="red">{erro ?? erroLista}</Alert>}
 
       {/* Cronômetro / lançamento manual — sempre do usuário logado */}
       <SectionCard title="Registrar tempo">
@@ -241,7 +240,7 @@ export function AbaTracker({
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gta-indigo/30 bg-indigo-50/60 p-3 dark:border-indigo-500/30 dark:bg-indigo-900/20">
             <div className="min-w-0">
               <div className="truncate font-medium text-gta-navy dark:text-slate-100">{rodando.descricao || "(sem descrição)"}</div>
-              <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+              <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
                 {rodando.cliente && <span>{rodando.cliente}</span>}
                 {rodando.categoria && <span>· {rodando.categoria}</span>}
               </div>
@@ -263,7 +262,7 @@ export function AbaTracker({
                 <label className="field-label" htmlFor="tracker-descricao">Descrição</label>
                 <input
                   id="tracker-descricao"
-                  className={inputCls}
+                  className="field-input"
                   placeholder="Em que você está trabalhando?"
                   value={form.descricao}
                   onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))}
@@ -271,7 +270,7 @@ export function AbaTracker({
               </div>
               <div className="sm:col-span-3">
                 <label className="field-label" htmlFor="tracker-tarefa">Tarefa</label>
-                <select id="tracker-tarefa" className={inputCls} value={form.tarefaId} onChange={(e) => setTarefaId(e.target.value)}>
+                <select id="tracker-tarefa" className="field-input" value={form.tarefaId} onChange={(e) => setTarefaId(e.target.value)}>
                   <option value="">Avulso (sem tarefa)</option>
                   {minhas.length > 0 && (
                     <optgroup label="Minhas tarefas">
@@ -290,14 +289,14 @@ export function AbaTracker({
                 {form.tarefaId ? (
                   <input
                     id="tracker-cliente"
-                    className={`${inputCls} bg-slate-50 dark:bg-slate-900/50`}
+                    className="field-input bg-slate-50 dark:bg-slate-900/50"
                     value={form.cliente}
                     placeholder="(a tarefa não tem cliente)"
                     readOnly
                     title="Vem da tarefa selecionada"
                   />
                 ) : (
-                  <ClienteInput id="tracker-cliente" placeholder="Ex.: CPDF" className={inputCls} value={form.cliente} onNome={(v) => setForm((f) => ({ ...f, cliente: v }))} listId="tracker-clientes" />
+                  <ClienteInput id="tracker-cliente" placeholder="Ex.: CPDF" className="field-input" value={form.cliente} onNome={(v) => setForm((f) => ({ ...f, cliente: v }))} listId="tracker-clientes" />
                 )}
               </div>
               <div className="sm:col-span-2">
@@ -305,7 +304,7 @@ export function AbaTracker({
                 {form.tarefaId ? (
                   <input
                     id="tracker-categoria"
-                    className={`${inputCls} bg-slate-50 dark:bg-slate-900/50`}
+                    className="field-input bg-slate-50 dark:bg-slate-900/50"
                     value={form.categoria}
                     placeholder="(a tarefa não tem categoria)"
                     readOnly
@@ -313,7 +312,7 @@ export function AbaTracker({
                   />
                 ) : (
                   <>
-                    <input id="tracker-categoria" className={inputCls} list="tracker-categorias" placeholder="Ex.: Projetos" value={form.categoria} onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))} />
+                    <input id="tracker-categoria" className="field-input" list="tracker-categorias" placeholder="Ex.: Projetos" value={form.categoria} onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))} />
                     <datalist id="tracker-categorias">
                       {CATEGORIAS_PADRAO_TAREFA.map((c) => <option key={c} value={c} />)}
                     </datalist>
@@ -322,7 +321,7 @@ export function AbaTracker({
               </div>
               <div className="sm:col-span-2">
                 <label className="field-label" htmlFor="tracker-tags">Tags</label>
-                <input id="tracker-tags" className={inputCls} placeholder="Separadas por vírgula" value={form.tagsTexto} onChange={(e) => setForm((f) => ({ ...f, tagsTexto: e.target.value }))} />
+                <input id="tracker-tags" className="field-input" placeholder="Separadas por vírgula" value={form.tagsTexto} onChange={(e) => setForm((f) => ({ ...f, tagsTexto: e.target.value }))} />
               </div>
             </div>
             <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
@@ -341,15 +340,15 @@ export function AbaTracker({
               <form onSubmit={adicionarManual} className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 sm:grid-cols-4 dark:bg-slate-900/50">
                 <div>
                   <label className="field-label" htmlFor="tracker-data">Data</label>
-                  <input id="tracker-data" type="date" className={inputCls} value={manual.data} onChange={(e) => setManual((m) => ({ ...m, data: e.target.value }))} required />
+                  <input id="tracker-data" type="date" className="field-input" value={manual.data} onChange={(e) => setManual((m) => ({ ...m, data: e.target.value }))} required />
                 </div>
                 <div>
                   <label className="field-label" htmlFor="tracker-inicio">Início</label>
-                  <input id="tracker-inicio" type="time" className={inputCls} value={manual.inicio} onChange={(e) => setManual((m) => ({ ...m, inicio: e.target.value }))} required />
+                  <input id="tracker-inicio" type="time" className="field-input" value={manual.inicio} onChange={(e) => setManual((m) => ({ ...m, inicio: e.target.value }))} required />
                 </div>
                 <div>
                   <label className="field-label" htmlFor="tracker-fim">Fim</label>
-                  <input id="tracker-fim" type="time" className={inputCls} value={manual.fim} onChange={(e) => setManual((m) => ({ ...m, fim: e.target.value }))} required />
+                  <input id="tracker-fim" type="time" className="field-input" value={manual.fim} onChange={(e) => setManual((m) => ({ ...m, fim: e.target.value }))} required />
                 </div>
                 <div className="flex items-end">
                   <button type="submit" className="btn-primary w-full">Adicionar</button>
@@ -358,7 +357,7 @@ export function AbaTracker({
                     quando o turno vira a meia-noite, para um erro de digitação
                     não virar um lançamento de 20h sem ninguém perceber. */}
                 {previaManual && (
-                  <p className={`col-span-2 text-xs sm:col-span-4 ${previaManual.viraDia ? "text-amber-700 dark:text-amber-300" : "text-slate-500 dark:text-slate-400"}`}>
+                  <p className={`col-span-2 text-xs sm:col-span-4 ${previaManual.viraDia ? "text-amber-700 dark:text-amber-300" : "text-slate-600 dark:text-slate-400"}`}>
                     {previaManual.viraDia
                       ? `Encerra no dia seguinte (${fmtCurta(previaManual.fim)}) — duração de ${formatarDuracao(previaManual.min)}.`
                       : `Duração: ${formatarDuracao(previaManual.min)}.`}
@@ -394,7 +393,7 @@ export function AbaTracker({
       </KpiGrid>
 
       {carregando ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500">Carregando…</p>
+        <Loading />
       ) : grupos.length === 0 ? (
         <EmptyState>Nenhum lançamento nesta semana.</EmptyState>
       ) : (
@@ -405,7 +404,7 @@ export function AbaTracker({
               <SectionCard
                 key={g.dia}
                 title={`${DIA_SEMANA[d.getDay()]} · ${fmtCurta(d)}`}
-                actions={<span className="text-sm font-medium text-slate-500 dark:text-slate-400">{formatarDuracao(g.totalMin)}</span>}
+                actions={<span className="text-sm font-medium text-slate-600 dark:text-slate-400">{formatarDuracao(g.totalMin)}</span>}
               >
                 <div className="space-y-2">
                   {g.itens.map((it) => (
@@ -487,7 +486,7 @@ function LinhaLancamento({
         >
           {entrada.descricao || "(sem descrição)"}
         </button>
-        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
           {mostrarUsuario && <span className="font-medium">{nomeDe(entrada.usuarioEmail)}</span>}
           {entrada.cliente && <span>· {entrada.cliente}</span>}
           {entrada.categoria && <span>· {entrada.categoria}</span>}
@@ -573,45 +572,44 @@ function EdicaoLancamento({
   }
 
   const id = (campo: string) => `edit-${entrada.id}-${campo}`;
-  const inputCls = "field-input";
 
   return (
     <form onSubmit={salvar} className="rounded-md border border-gta-indigo/30 bg-indigo-50/40 p-3 dark:border-indigo-500/30 dark:bg-indigo-900/10">
       <div className="grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-6">
         <div className="sm:col-span-3">
           <label className="field-label" htmlFor={id("desc")}>Descrição</label>
-          <input id={id("desc")} className={inputCls} value={descricao} onChange={(e) => setDescricao(e.target.value)} autoFocus />
+          <input id={id("desc")} className="field-input" value={descricao} onChange={(e) => setDescricao(e.target.value)} autoFocus />
         </div>
         <div className="sm:col-span-3">
           <label className="field-label" htmlFor={id("tarefa")}>Tarefa</label>
-          <select id={id("tarefa")} className={inputCls} value={tarefaId} onChange={(e) => trocarTarefa(e.target.value)}>
+          <select id={id("tarefa")} className="field-input" value={tarefaId} onChange={(e) => trocarTarefa(e.target.value)}>
             <option value="">Avulso (sem tarefa)</option>
             {tarefas.map((t) => <option key={t.id} value={t.id}>{t.titulo}</option>)}
           </select>
         </div>
         <div className="sm:col-span-3">
           <label className="field-label" htmlFor={id("cliente")}>Cliente</label>
-          <input id={id("cliente")} className={inputCls} value={cliente} onChange={(e) => setCliente(e.target.value)} />
+          <input id={id("cliente")} className="field-input" value={cliente} onChange={(e) => setCliente(e.target.value)} />
         </div>
         <div className="sm:col-span-3">
           <label className="field-label" htmlFor={id("categoria")}>Categoria</label>
-          <input id={id("categoria")} className={inputCls} value={categoria} onChange={(e) => setCategoria(e.target.value)} />
+          <input id={id("categoria")} className="field-input" value={categoria} onChange={(e) => setCategoria(e.target.value)} />
         </div>
         <div className="sm:col-span-2">
           <label className="field-label" htmlFor={id("data")}>Data</label>
-          <input id={id("data")} type="date" className={inputCls} value={data} onChange={(e) => setData(e.target.value)} required />
+          <input id={id("data")} type="date" className="field-input" value={data} onChange={(e) => setData(e.target.value)} required />
         </div>
         <div className="sm:col-span-1">
           <label className="field-label" htmlFor={id("inicio")}>Início</label>
-          <input id={id("inicio")} type="time" className={inputCls} value={inicio} onChange={(e) => setInicio(e.target.value)} required />
+          <input id={id("inicio")} type="time" className="field-input" value={inicio} onChange={(e) => setInicio(e.target.value)} required />
         </div>
         <div className="sm:col-span-1">
           <label className="field-label" htmlFor={id("fim")}>Fim</label>
-          <input id={id("fim")} type="time" className={inputCls} value={fim} onChange={(e) => setFim(e.target.value)} placeholder="em andamento" />
+          <input id={id("fim")} type="time" className="field-input" value={fim} onChange={(e) => setFim(e.target.value)} placeholder="em andamento" />
         </div>
         <div className="sm:col-span-2">
           <label className="field-label" htmlFor={id("tags")}>Tags</label>
-          <input id={id("tags")} className={inputCls} value={tagsTexto} onChange={(e) => setTagsTexto(e.target.value)} placeholder="Separadas por vírgula" />
+          <input id={id("tags")} className="field-input" value={tagsTexto} onChange={(e) => setTagsTexto(e.target.value)} placeholder="Separadas por vírgula" />
         </div>
       </div>
       {erro && <p className="field-error mt-2">{erro}</p>}

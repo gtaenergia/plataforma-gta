@@ -51,7 +51,7 @@ export function Paginacao({ total, inicio, fim, pagina, totalPaginas, porPagina,
   return (
     <div className="flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:gap-3 dark:text-slate-300">
       <div className="flex items-center gap-2">
-        <span className="text-slate-500 dark:text-slate-400">
+        <span className="text-slate-600 dark:text-slate-400">
           {inicio}–{fim} de {total}
         </span>
         <select className="field-input !w-auto !py-1 text-xs" value={porPagina} onChange={(e) => setPorPagina(Number(e.target.value))}>
@@ -64,7 +64,7 @@ export function Paginacao({ total, inicio, fim, pagina, totalPaginas, porPagina,
         <button className={btnCls} disabled={pagina <= 1} onClick={() => setPagina(pagina - 1)} aria-label="Anterior">
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <span className="px-1 text-slate-500 dark:text-slate-400">Página {pagina} de {totalPaginas}</span>
+        <span className="px-1 text-slate-600 dark:text-slate-400">Página {pagina} de {totalPaginas}</span>
         <button className={btnCls} disabled={pagina >= totalPaginas} onClick={() => setPagina(pagina + 1)} aria-label="Próxima">
           <ChevronRight className="h-4 w-4" />
         </button>

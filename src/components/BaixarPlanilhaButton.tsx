@@ -41,7 +41,7 @@ export function BaixarPlanilhaButton({ serviceKey, dados, nome, disabled }: {
   return (
     <button type="button" className="btn-secondary inline-flex items-center gap-1.5" onClick={baixar} disabled={disabled || baixando} title="Planilha .xlsx com as fórmulas do cálculo">
       <FileSpreadsheet className="h-4 w-4" />
-      {baixando ? "Gerando..." : erro ? "Erro — tentar de novo" : "Baixar planilha (.xlsx)"}
+      {baixando ? "Gerando…" : erro ? "Erro — tentar de novo" : "Baixar planilha (.xlsx)"}
     </button>
   );
 }

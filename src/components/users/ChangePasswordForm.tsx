@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { Alert } from "@/components/ui";
 /**
  * Formulário de troca de senha.
  * - `requireCurrent`: pede a senha atual (troca voluntária em /conta).
@@ -69,10 +70,10 @@ export function ChangePasswordForm({
         <label className="field-label">Confirmar nova senha</label>
         <input type="password" className="field-input" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} autoComplete="new-password" required />
       </div>
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
       {ok && !redirectTo && <p className="text-sm font-medium text-green-600 dark:text-green-400">Senha alterada com sucesso.</p>}
       <button type="submit" className="btn-primary" disabled={salvando}>
-        {salvando ? "Salvando..." : "Alterar senha"}
+        {salvando ? "Salvando…" : "Alterar senha"}
       </button>
     </form>
   );

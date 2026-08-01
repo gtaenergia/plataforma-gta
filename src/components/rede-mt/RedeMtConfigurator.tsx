@@ -7,7 +7,7 @@ import { X } from "lucide-react";
 import { RedeMtParamsForm } from "./RedeMtParamsForm";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
-import { Kpi } from "@/components/ui";
+import { Alert, Kpi } from "@/components/ui";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -204,34 +204,30 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
     } finally { setGerando(false); }
   }
 
-  const inputCls = "field-input";
-  const sec = "section-card";
-  const h2 = "section-title";
-
   return (
     <div className="space-y-6">
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       {/* Cliente e local */}
-      <section className={sec}>
-        <h2 className={h2}>Cliente e local</h2>
+      <section className="section-card">
+        <h2 className="section-title">Cliente e local</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3"><label className="field-label">Nome do cliente *</label><ClienteInput className={inputCls} value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></div>
-          <div className="sm:col-span-3"><label className="field-label">Cidade/UF *</label><input className={inputCls} value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></div>
-          <div className="sm:col-span-3"><label className="field-label">Local / obra</label><input className={inputCls} value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Fazenda — zona rural/GO" /></div>
-          <div className="sm:col-span-1"><label className="field-label">Validade (dias)</label><input type="number" className={inputCls} value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} /></div>
-          <div className="sm:col-span-2"><label className="field-label">Emissão</label><input type="date" className={inputCls} value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></div>
+          <div className="sm:col-span-3"><label className="field-label">Nome do cliente *</label><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></div>
+          <div className="sm:col-span-3"><label className="field-label">Cidade/UF *</label><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></div>
+          <div className="sm:col-span-3"><label className="field-label">Local / obra</label><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Fazenda — zona rural/GO" /></div>
+          <div className="sm:col-span-1"><label className="field-label">Validade (dias)</label><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} /></div>
+          <div className="sm:col-span-2"><label className="field-label">Emissão</label><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></div>
         </div>
-        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">A referência é gerada automaticamente ao salvar.</p>
+        <p className="mt-2 hint">A referência é gerada automaticamente ao salvar.</p>
       </section>
 
       {/* Escopo e custo */}
-      <section className={sec}>
-        <h2 className={h2}>Escopo e custo</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Monte a composição do custo por linha (etapa projeto ou execução). O app soma cada etapa e aplica o <strong>Fator K</strong> para sugerir o preço.</p>
+      <section className="section-card">
+        <h2 className="section-title">Escopo e custo</h2>
+        <p className="mt-1 subtitle">Monte a composição do custo por linha (etapa projeto ou execução). O app soma cada etapa e aplica o <strong>Fator K</strong> para sugerir o preço.</p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3"><label className="field-label">Extensão / porte</label><input className={inputCls} value={form.extensao} onChange={(e) => set("extensao", e.target.value)} placeholder="Ex.: 1 km / loteamento 80 lotes" /></div>
-          <div className="sm:col-span-3"><label className="field-label">Tensão</label><input className={inputCls} value={form.tensao} onChange={(e) => set("tensao", e.target.value)} placeholder="Ex.: 13,8 kV" /></div>
+          <div className="sm:col-span-3"><label className="field-label">Extensão / porte</label><input className="field-input" value={form.extensao} onChange={(e) => set("extensao", e.target.value)} placeholder="Ex.: 1 km / loteamento 80 lotes" /></div>
+          <div className="sm:col-span-3"><label className="field-label">Tensão</label><input className="field-input" value={form.tensao} onChange={(e) => set("tensao", e.target.value)} placeholder="Ex.: 13,8 kV" /></div>
         </div>
 
         {/* Composição de custo editável */}
@@ -241,13 +237,13 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
           </div>
           {custoRows.map((r, i) => (
             <div key={i} className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <select className={`${inputCls} sm:w-28`} value={r.etapa} onChange={(e) => setRow(i, { etapa: e.target.value as CustoRow["etapa"] })}>
+              <select className="field-input sm:w-28" value={r.etapa} onChange={(e) => setRow(i, { etapa: e.target.value as CustoRow["etapa"] })}>
                 <option value="projeto">Projeto</option>
                 <option value="execucao">Execução</option>
               </select>
-              <input className={`${inputCls} flex-1`} value={r.descricao} onChange={(e) => setRow(i, { descricao: e.target.value })} placeholder="Descrição do item de custo" />
-              <input className={`${inputCls} text-right sm:w-14`} inputMode="decimal" value={r.qtd} onChange={(e) => setRow(i, { qtd: e.target.value })} placeholder="1" />
-              <input className={`${inputCls} text-right sm:w-28`} inputMode="decimal" value={r.valorUnit} onChange={(e) => setRow(i, { valorUnit: e.target.value })} placeholder="0,00" />
+              <input className="field-input flex-1" value={r.descricao} onChange={(e) => setRow(i, { descricao: e.target.value })} placeholder="Descrição do item de custo" />
+              <input className="field-input text-right sm:w-14" inputMode="decimal" value={r.qtd} onChange={(e) => setRow(i, { qtd: e.target.value })} placeholder="1" />
+              <input className="field-input text-right sm:w-28" inputMode="decimal" value={r.valorUnit} onChange={(e) => setRow(i, { valorUnit: e.target.value })} placeholder="0,00" />
               <div className="text-right text-sm font-medium text-slate-600 sm:w-28 dark:text-slate-300">{brl(rowTotal(r))}</div>
               <button type="button" className="icon-btn" onClick={() => removeRow(i)} aria-label="Remover"><X className="h-4 w-4" /></button>
             </div>
@@ -255,7 +251,7 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <button type="button" className="text-sm font-medium text-gta-indigo hover:underline" onClick={addRow}>+ Adicionar item de custo</button>
-          <div className="text-xs text-slate-500 dark:text-slate-400">Custo projeto: <strong className="text-slate-700 dark:text-slate-200">{brl(custoProjeto)}</strong> · Custo execução: <strong className="text-slate-700 dark:text-slate-200">{brl(custoExecucao)}</strong></div>
+          <div className="text-xs text-slate-600 dark:text-slate-400">Custo projeto: <strong className="text-slate-700 dark:text-slate-200">{brl(custoProjeto)}</strong> · Custo execução: <strong className="text-slate-700 dark:text-slate-200">{brl(custoExecucao)}</strong></div>
         </div>
 
         {preco && (preco.faturamentoProjeto > 0 || preco.faturamentoExecucao > 0) && (
@@ -269,9 +265,9 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
       </section>
 
       {/* Preço */}
-      <section className={sec}>
+      <section className="section-card">
         <div className="flex items-center justify-between">
-          <h2 className={h2}>Preço</h2>
+          <h2 className="section-title">Preço</h2>
           {preco && precoTocado.current && preco.faturamentoTotal > 0 && (
             <button type="button" className="toque text-xs text-gta-indigo hover:underline" onClick={() => { precoTocado.current = false; setForm((f) => ({ ...f, valorProjeto: nf(preco.faturamentoProjeto, 2), valorExecucao: nf(preco.faturamentoExecucao, 2) })); }}>Usar sugerido {brl(preco.faturamentoTotal)}</button>
           )}
@@ -279,13 +275,13 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div className="sm:col-span-2">
             <label className="field-label">Valor do projeto (R$)</label>
-            <input className={inputCls} value={form.valorProjeto} onChange={(e) => { precoTocado.current = true; set("valorProjeto", e.target.value); }} />
-            {preco && preco.custoProjeto > 0 ? <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">custo {brl(preco.custoProjeto)} × {nf(preco.fatorKProjeto, 3)} / (1−NF) → {brl(preco.faturamentoProjeto)}</p> : null}
+            <input className="field-input" value={form.valorProjeto} onChange={(e) => { precoTocado.current = true; set("valorProjeto", e.target.value); }} />
+            {preco && preco.custoProjeto > 0 ? <p className="mt-1 hint">custo {brl(preco.custoProjeto)} × {nf(preco.fatorKProjeto, 3)} / (1−NF) → {brl(preco.faturamentoProjeto)}</p> : null}
           </div>
           <div className="sm:col-span-2">
             <label className="field-label">Valor da execução (R$)</label>
-            <input className={inputCls} value={form.valorExecucao} onChange={(e) => { precoTocado.current = true; set("valorExecucao", e.target.value); }} />
-            {preco && preco.custoExecucao > 0 ? <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">custo {brl(preco.custoExecucao)} × Fator K {nf(preco.fatorKExecucao, 2)} → {brl(preco.faturamentoExecucao)}</p> : null}
+            <input className="field-input" value={form.valorExecucao} onChange={(e) => { precoTocado.current = true; set("valorExecucao", e.target.value); }} />
+            {preco && preco.custoExecucao > 0 ? <p className="mt-1 hint">custo {brl(preco.custoExecucao)} × Fator K {nf(preco.fatorKExecucao, 2)} → {brl(preco.faturamentoExecucao)}</p> : null}
           </div>
           <div className="sm:col-span-2 flex items-end">
             <div className="w-full rounded-md bg-gta-navy p-2 text-white shadow-sm">
@@ -297,7 +293,7 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
 
         {preco && (preco.custoProjeto > 0 || preco.custoExecucao > 0) && (
           <div className="mt-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Composição do faturamento (uso interno)</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Composição do faturamento (uso interno)</p>
             <div className="mt-2 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4 dark:bg-slate-900/50">
               <Kpi label="Custo (projeto)" value={brl(preco.custoProjeto)} />
               <Kpi label="Custo (execução)" value={brl(preco.custoExecucao)} />
@@ -307,7 +303,7 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
               <Kpi label="Margem projeto" value={`${nf(preco.margemProjeto * 100, 1)}%`} />
               <Kpi label="Margem execução" value={`${nf(preco.margemExecucao * 100, 1)}%`} />
             </div>
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Projeto: faturamento = custo × Fator K / (1 − NF). Execução: custo × Fator K, NF sobre o faturamento. Ajuste em “Parâmetros de preço”.</p>
+            <p className="mt-1 hint">Projeto: faturamento = custo × Fator K / (1 − NF). Execução: custo × Fator K, NF sobre o faturamento. Ajuste em “Parâmetros de preço”.</p>
           </div>
         )}
       </section>
@@ -316,26 +312,26 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
       <CondicoesPagamento total={totalCliente} value={cond} onChange={setCond} />
 
       {/* Textos */}
-      <details className={sec}>
+      <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Textos da proposta (opcional)</summary>
         <div className="mt-4 space-y-3">
-          <div><label className="field-label">Objeto</label><textarea className={`${inputCls} min-h-[70px]`} value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
-          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className={`${inputCls} min-h-[90px]`} value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
-          <div><label className="field-label">Prazo de execução</label><input className={inputCls} value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
+          <div><label className="field-label">Objeto</label><textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
+          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className="field-input min-h-[90px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
+          <div><label className="field-label">Prazo de execução</label><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
         </div>
       </details>
 
       {/* Parâmetros */}
-      <details className={sec}>
+      <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Parâmetros de preço (Fator K e NF de projeto e execução)</summary>
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Padrão GTA: projeto Fator K 1,889 / NF 15% (margem 40%); execução Fator K 1,7 / NF 6% (margem ~35%).</p>
+        <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">Padrão GTA: projeto Fator K 1,889 / NF 15% (margem 40%); execução Fator K 1,7 / NF 6% (margem ~35%).</p>
         <div className="mt-4"><RedeMtParamsForm onSaved={aplicarParams} /></div>
       </details>
 
       {/* Ações */}
       <div className="flex flex-wrap items-center gap-3">
-        <button className="btn-secondary" onClick={() => salvar(false)} disabled={salvando}>{salvando ? "Salvando..." : savedId ? "Salvar alterações" : "Salvar proposta"}</button>
-        <button className="btn-primary" onClick={gerar} disabled={gerando || totalCliente <= 0}>{gerando ? "Gerando..." : "Gerar .docx"}</button>
+        <button className="btn-secondary" onClick={() => salvar(false)} disabled={salvando}>{salvando ? "Salvando…" : savedId ? "Salvar alterações" : "Salvar proposta"}</button>
+        <button className="btn-primary" onClick={gerar} disabled={gerando || totalCliente <= 0}>{gerando ? "Gerando…" : "Gerar .docx"}</button>
         <BaixarPlanilhaButton serviceKey="rede-mt" nome={`rede-mt-${form.clienteNome || "proposta"}`} dados={() => ({
           cliente: form.clienteNome,
           referencia: form.referenciaSeq ? String(form.referenciaSeq) : undefined,

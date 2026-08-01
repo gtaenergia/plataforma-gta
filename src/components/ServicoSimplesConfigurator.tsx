@@ -7,6 +7,7 @@ import { SERVICOS_SIMPLES } from "./servicos-simples-configs";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 
+import { Alert } from "@/components/ui";
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
 const brl = (v: number) => "R$ " + nf(v, 2);
@@ -151,45 +152,41 @@ export function ServicoSimplesConfigurator({ serviceKey, propostaId }: { service
     } finally { setGerando(false); }
   }
 
-  const inputCls = "field-input";
-  const sec = "section-card";
-  const h2 = "section-title";
-
   return (
     <div className="space-y-6">
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       {/* Cliente e local */}
-      <section className={sec}>
-        <h2 className={h2}>Cliente e local</h2>
+      <section className="section-card">
+        <h2 className="section-title">Cliente e local</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3"><label className="field-label">Nome do cliente *</label><ClienteInput className={inputCls} value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></div>
-          <div className="sm:col-span-3"><label className="field-label">Cidade/UF *</label><input className={inputCls} value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></div>
-          <div className="sm:col-span-3"><label className="field-label">Local / obra</label><input className={inputCls} value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} /></div>
-          <div className="sm:col-span-1"><label className="field-label">Validade (dias)</label><input type="number" className={inputCls} value={form.validadeDias} onChange={(e) => set("validadeDias", e.target.value)} /></div>
-          <div className="sm:col-span-2"><label className="field-label">Emissão</label><input type="date" className={inputCls} value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></div>
+          <div className="sm:col-span-3"><label className="field-label">Nome do cliente *</label><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></div>
+          <div className="sm:col-span-3"><label className="field-label">Cidade/UF *</label><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></div>
+          <div className="sm:col-span-3"><label className="field-label">Local / obra</label><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} /></div>
+          <div className="sm:col-span-1"><label className="field-label">Validade (dias)</label><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", e.target.value)} /></div>
+          <div className="sm:col-span-2"><label className="field-label">Emissão</label><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></div>
         </div>
-        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">A referência é gerada automaticamente ao salvar.</p>
+        <p className="mt-2 hint">A referência é gerada automaticamente ao salvar.</p>
       </section>
 
       {/* Campos do serviço */}
-      <section className={sec}>
-        <h2 className={h2}>{config.tituloSecao}</h2>
+      <section className="section-card">
+        <h2 className="section-title">{config.tituloSecao}</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
           {config.campos.map((c) => (
             <div key={c.name} className={c.width ?? "sm:col-span-2"}>
               <label className="field-label">{c.label}</label>
-              <input className={inputCls} type={c.type === "number" ? "number" : "text"} inputMode={c.type === "number" || c.type === "currency" ? "decimal" : undefined} value={form[c.name] ?? ""} onChange={(e) => set(c.name, e.target.value)} placeholder={c.placeholder} />
-              {c.help && <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{c.help}</p>}
+              <input className="field-input" type={c.type === "number" ? "number" : "text"} inputMode={c.type === "number" || c.type === "currency" ? "decimal" : undefined} value={form[c.name] ?? ""} onChange={(e) => set(c.name, e.target.value)} placeholder={c.placeholder} />
+              {c.help && <p className="mt-1 hint">{c.help}</p>}
             </div>
           ))}
         </div>
       </section>
 
       {/* Preço */}
-      <section className={sec}>
+      <section className="section-card">
         <div className="flex items-center justify-between">
-          <h2 className={h2}>Preço</h2>
+          <h2 className="section-title">Preço</h2>
           {precoSugerido > 0 && precoTocado.current && (
             <button type="button" className="toque text-xs text-gta-indigo hover:underline" onClick={() => { precoTocado.current = false; setForm((f) => ({ ...f, valorServico: nf(precoSugerido, 2) })); }}>Usar sugerido {brl(precoSugerido)}</button>
           )}
@@ -197,8 +194,8 @@ export function ServicoSimplesConfigurator({ serviceKey, propostaId }: { service
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div className="sm:col-span-3">
             <label className="field-label">{config.precoLabel ?? "Valor do serviço (R$)"} *</label>
-            <input className={inputCls} value={form.valorServico} onChange={(e) => { precoTocado.current = true; set("valorServico", e.target.value); }} />
-            {precoSugerido > 0 && config.ajudaPreco ? <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{config.ajudaPreco(driver(), precoSugerido)}</p> : null}
+            <input className="field-input" value={form.valorServico} onChange={(e) => { precoTocado.current = true; set("valorServico", e.target.value); }} />
+            {precoSugerido > 0 && config.ajudaPreco ? <p className="mt-1 hint">{config.ajudaPreco(driver(), precoSugerido)}</p> : null}
           </div>
           <div className="sm:col-span-3 flex items-end">
             <div className="w-full rounded-md bg-gta-navy p-2 text-white shadow-sm">
@@ -212,20 +209,20 @@ export function ServicoSimplesConfigurator({ serviceKey, propostaId }: { service
       <CondicoesPagamento total={valorServico} value={cond} onChange={setCond} />
 
       {/* Textos */}
-      <details className={sec}>
+      <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Textos da proposta (opcional)</summary>
         <div className="mt-4 space-y-3">
-          <div><label className="field-label">Objeto</label><textarea className={`${inputCls} min-h-[70px]`} value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
-          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className={`${inputCls} min-h-[90px]`} value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
-          <div><label className="field-label">Prazo de execução</label><input className={inputCls} value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
-          <p className="text-xs text-slate-400 dark:text-slate-500">A forma de pagamento é montada na seção “Condições de pagamento” acima.</p>
+          <div><label className="field-label">Objeto</label><textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
+          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className="field-input min-h-[90px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
+          <div><label className="field-label">Prazo de execução</label><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
+          <p className="hint">A forma de pagamento é montada na seção “Condições de pagamento” acima.</p>
         </div>
       </details>
 
       {/* Ações */}
       <div className="flex flex-wrap items-center gap-3">
-        <button className="btn-secondary" onClick={() => salvar(false)} disabled={salvando}>{salvando ? "Salvando..." : savedId ? "Salvar alterações" : "Salvar proposta"}</button>
-        <button className="btn-primary" onClick={gerar} disabled={gerando || valorServico <= 0}>{gerando ? "Gerando..." : "Gerar .docx"}</button>
+        <button className="btn-secondary" onClick={() => salvar(false)} disabled={salvando}>{salvando ? "Salvando…" : savedId ? "Salvar alterações" : "Salvar proposta"}</button>
+        <button className="btn-primary" onClick={gerar} disabled={gerando || valorServico <= 0}>{gerando ? "Gerando…" : "Gerar .docx"}</button>
         <BaixarPlanilhaButton serviceKey={config.serviceKey} disabled={valorServico <= 0} nome={`${config.serviceKey}-${form.clienteNome || "proposta"}`} dados={() => ({
           cliente: form.clienteNome, servico: config.tituloSecao,
           itens: [{ descricao: config.montarDescricao(driver()), valor: valorServico }],

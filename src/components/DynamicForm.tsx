@@ -112,7 +112,7 @@ export function DynamicForm({
 
         <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-4">
           <button type="submit" className="btn-primary w-full sm:w-auto" disabled={generating}>
-            {generating ? "Gerando..." : `Gerar proposta (${serviceLabel})`}
+            {generating ? "Gerando…" : `Gerar proposta (${serviceLabel})`}
           </button>
           {status && <span className="text-sm text-slate-600 dark:text-slate-300">{status}</span>}
         </div>
@@ -173,8 +173,8 @@ function ArrayFieldEditor({ field }: { field: FieldDef }) {
     <div>
       <label className="field-label">{field.label}</label>
       <div className="overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs text-slate-500 dark:bg-slate-900/50 dark:text-slate-400">
+        <table className="table-compacta">
+          <thead>
             <tr>
               {cols.map((c) => (
                 <th key={c.name} className="px-2 py-2 font-medium">
@@ -186,7 +186,7 @@ function ArrayFieldEditor({ field }: { field: FieldDef }) {
           </thead>
           <tbody>
             {fields.map((row, i) => (
-              <tr key={row.id} className="border-t border-slate-100 dark:border-slate-700">
+              <tr key={row.id}>
                 {cols.map((c) => (
                   <td key={c.name} className="px-2 py-1">
                     <input

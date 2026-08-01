@@ -82,7 +82,7 @@ export function ConexaoAjuda() {
             da proposta e são pagas diretamente pelo cliente.
           </li>
         </ul>
-        <p className="text-xs text-slate-400 dark:text-slate-500">
+        <p className="hint">
           O prazo padrão é “conforme os trâmites da concessionária” — depende da distribuidora, não da GTA.
         </p>
       </AjudaSecao>
@@ -103,7 +103,7 @@ export function ConexaoAjuda() {
             ],
             [
               "Salário mínimo vigente",
-              <span key="s">R$ 1.630 <span className="text-slate-400">(editável)</span></span>,
+              <span key="s">R$ 1.630 <span className="text-slate-500 dark:text-slate-400">(editável)</span></span>,
               "Base do cálculo. Atualize a cada reajuste do salário mínimo.",
             ],
             [

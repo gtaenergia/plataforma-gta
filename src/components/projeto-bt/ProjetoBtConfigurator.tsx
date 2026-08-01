@@ -7,6 +7,7 @@ import { ProjetoBtParamsForm } from "./ProjetoBtParamsForm";
 import { CondicoesPagamento, montarFormaPagamento, type CondPag } from "@/components/CondicoesPagamento";
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 
+import { Alert } from "@/components/ui";
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
 const brl = (v: number) => "R$ " + nf(v, 2);
@@ -252,55 +253,51 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
     } finally { setGerando(false); }
   }
 
-  const inputCls = "field-input";
-  const sec = "section-card";
-  const h2 = "section-title";
-
   return (
     <div className="space-y-6">
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       {/* Cliente e local */}
-      <section className={sec}>
-        <h2 className={h2}>Cliente e local</h2>
+      <section className="section-card">
+        <h2 className="section-title">Cliente e local</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3"><label className="field-label">Nome do cliente *</label><ClienteInput className={inputCls} value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></div>
-          <div className="sm:col-span-3"><label className="field-label">Cidade/UF *</label><input className={inputCls} value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></div>
-          <div className="sm:col-span-3"><label className="field-label">Local / obra</label><input className={inputCls} value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} /></div>
-          <div className="sm:col-span-3"><label className="field-label">Porte / referência</label><input className={inputCls} value={form.porte} onChange={(e) => set("porte", e.target.value)} placeholder="Ex.: edifício 21 pav. / 800 m² / galpão industrial" /></div>
-          <div className="sm:col-span-1"><label className="field-label">Validade (dias)</label><input type="number" className={inputCls} value={form.validadeDias} onChange={(e) => set("validadeDias", e.target.value)} /></div>
-          <div className="sm:col-span-2"><label className="field-label">Emissão</label><input type="date" className={inputCls} value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></div>
+          <div className="sm:col-span-3"><label className="field-label">Nome do cliente *</label><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></div>
+          <div className="sm:col-span-3"><label className="field-label">Cidade/UF *</label><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></div>
+          <div className="sm:col-span-3"><label className="field-label">Local / obra</label><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} /></div>
+          <div className="sm:col-span-3"><label className="field-label">Porte / referência</label><input className="field-input" value={form.porte} onChange={(e) => set("porte", e.target.value)} placeholder="Ex.: edifício 21 pav. / 800 m² / galpão industrial" /></div>
+          <div className="sm:col-span-1"><label className="field-label">Validade (dias)</label><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", e.target.value)} /></div>
+          <div className="sm:col-span-2"><label className="field-label">Emissão</label><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></div>
         </div>
-        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">A referência é gerada automaticamente ao salvar. O porte entra na descrição de cada disciplina.</p>
+        <p className="mt-2 hint">A referência é gerada automaticamente ao salvar. O porte entra na descrição de cada disciplina.</p>
       </section>
 
       {/* Disciplinas */}
       {/* Porte do projeto (dirige o preço por m²) */}
-      <section className={sec}>
-        <h2 className={h2}>Porte do projeto</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">A <strong>área construída</strong> dirige a sugestão de preço de cada disciplina (R$/m²). Em branco, cada disciplina parte do piso e você ajusta à mão.</p>
+      <section className="section-card">
+        <h2 className="section-title">Porte do projeto</h2>
+        <p className="mt-1 subtitle">A <strong>área construída</strong> dirige a sugestão de preço de cada disciplina (R$/m²). Em branco, cada disciplina parte do piso e você ajusta à mão.</p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div className="sm:col-span-2">
             <label className="field-label">Área construída (m²)</label>
-            <input className={inputCls} inputMode="decimal" value={form.areaM2} onChange={(e) => set("areaM2", e.target.value)} placeholder="Ex.: 800" />
+            <input className="field-input" inputMode="decimal" value={form.areaM2} onChange={(e) => set("areaM2", e.target.value)} placeholder="Ex.: 800" />
           </div>
           <div className="sm:col-span-2">
             <label className="field-label">Tipo de edificação</label>
-            <select className={inputCls} value={form.tipo} onChange={(e) => set("tipo", e.target.value)}>
+            <select className="field-input" value={form.tipo} onChange={(e) => set("tipo", e.target.value)}>
               {TIPOS.map((t) => <option key={t.id} value={t.id}>{t.nome}{t.id === "industrial" ? ` (×${nf(params.multIndustrial ?? 1.4, 1)})` : ""}</option>)}
             </select>
           </div>
           <div className="sm:col-span-2">
-            <label className="field-label">Custo de execução (R$) <span className="font-normal text-slate-400">— opcional</span></label>
-            <input className={inputCls} inputMode="decimal" value={form.custoExecucao} onChange={(e) => set("custoExecucao", e.target.value)} placeholder="p/ conferir o % (honorário/obra)" />
+            <label className="field-label">Custo de execução (R$) <span className="font-normal text-slate-500 dark:text-slate-400">— opcional</span></label>
+            <input className="field-input" inputMode="decimal" value={form.custoExecucao} onChange={(e) => set("custoExecucao", e.target.value)} placeholder="p/ conferir o % (honorário/obra)" />
           </div>
         </div>
       </section>
 
       {/* Disciplinas */}
-      <section className={sec}>
-        <h2 className={h2}>Disciplinas do projeto</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Marque as disciplinas contratadas — cada uma vira um item na proposta, precificada pela área. O valor é editável por disciplina.</p>
+      <section className="section-card">
+        <h2 className="section-title">Disciplinas do projeto</h2>
+        <p className="mt-1 subtitle">Marque as disciplinas contratadas — cada uma vira um item na proposta, precificada pela área. O valor é editável por disciplina.</p>
         <div className="mt-4 space-y-2">
           {DISCIPLINAS.map((d) => {
             const on = !!form[`on_${d.id}`];
@@ -315,16 +312,16 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
                     <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-gta-indigo focus:ring-gta-indigo" checked={on} onChange={() => toggle(d.id)} />
                     <span>
                       <span className="block text-sm font-medium text-gta-navy dark:text-slate-100">{d.nome}</span>
-                      <span className="block text-xs text-slate-400 dark:text-slate-500">{d.ajuda}</span>
+                      <span className="block hint">{d.ajuda}</span>
                     </span>
                   </label>
                   <div className="w-full sm:w-48">
                     <div className="relative">
-                      <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">R$</span>
-                      <input className={`${inputCls} pl-8 text-right`} inputMode="decimal" value={form[`v_${d.id}`] ?? ""} disabled={!on} onChange={(e) => setValorDisc(d.id, e.target.value)} />
+                      <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 dark:text-slate-400">R$</span>
+                      <input className="field-input pl-8 text-right" inputMode="decimal" value={form[`v_${d.id}`] ?? ""} disabled={!on} onChange={(e) => setValorDisc(d.id, e.target.value)} />
                     </div>
                     {on && (
-                      <p className="mt-1 flex items-center justify-end gap-1.5 text-right text-[11px] text-slate-400 dark:text-slate-500">
+                      <p className="mt-1 flex items-center justify-end gap-1.5 text-right text-[11px] text-slate-500 dark:text-slate-400">
                         <span>{areaM2 > 0 ? `${brl(taxa)}/m² × ${nf(areaM2, 0)}${mult !== 1 ? ` × ${nf(mult, 1)}` : ""} → ` : `piso `}{brl(sug)}</span>
                         {editado && <button type="button" className="text-gta-indigo hover:underline" onClick={() => { valoresTocados.current.delete(d.id); set(`v_${d.id}`, nf(sug, 2)); }}>usar</button>}
                       </p>
@@ -340,7 +337,7 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
           <div className="text-xl font-bold">{brl(total)}</div>
         </div>
         {pctExec !== null && (
-          <p className={`mt-2 text-xs ${pctExec < 1.5 || pctExec > 6 ? "text-amber-600 dark:text-amber-400" : "text-slate-500 dark:text-slate-400"}`}>
+          <p className={`mt-2 text-xs ${pctExec < 1.5 || pctExec > 6 ? "text-amber-600 dark:text-amber-400" : "text-slate-600 dark:text-slate-400"}`}>
             Conferência: honorário = <strong>{nf(pctExec, 2)}%</strong> do custo de execução informado. Referência real (CPMG): ~2,4%; faixa usual de projeto: 2–6%.
           </p>
         )}
@@ -352,35 +349,35 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
       <CondicoesPagamento total={total} value={cond} onChange={setCond} />
 
       {/* Textos */}
-      <details className={sec}>
+      <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Textos da proposta (opcional)</summary>
         <div className="mt-4 space-y-3">
           <div>
             <div className="flex items-center justify-between">
-              <label className="field-label">Objeto <span className="font-normal text-slate-400">(gerado a partir das disciplinas)</span></label>
+              <label className="field-label">Objeto <span className="font-normal text-slate-500 dark:text-slate-400">(gerado a partir das disciplinas)</span></label>
               {objetoTocado.current && (
                 <button type="button" className="toque text-xs text-gta-indigo hover:underline" onClick={() => { objetoTocado.current = false; setForm((f) => ({ ...f, objeto: montarObjeto(idsSelecionados ? idsSelecionados.split(",") : []) })); }}>Recompor automático</button>
               )}
             </div>
-            <textarea className={`${inputCls} min-h-[70px]`} value={form.objeto} onChange={(e) => { objetoTocado.current = true; set("objeto", e.target.value); }} />
+            <textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => { objetoTocado.current = true; set("objeto", e.target.value); }} />
           </div>
-          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className={`${inputCls} min-h-[110px]`} value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
-          <div><label className="field-label">Prazo de entrega</label><input className={inputCls} value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
-          <p className="text-xs text-slate-400 dark:text-slate-500">A forma de pagamento é montada na seção “Condições de pagamento” acima.</p>
+          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className="field-input min-h-[110px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
+          <div><label className="field-label">Prazo de entrega</label><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
+          <p className="hint">A forma de pagamento é montada na seção “Condições de pagamento” acima.</p>
         </div>
       </details>
 
       {/* Parâmetros de preço (taxas R$/m²) */}
-      <details className={sec}>
+      <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Parâmetros de preço (taxas R$/m² por disciplina)</summary>
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Padrão ancorado no CPMG (677 m² → ~R$ 18/m² do predial elétrico). Ao salvar, valem para todas as novas propostas de Projeto BT.</p>
+        <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">Padrão ancorado no CPMG (677 m² → ~R$ 18/m² do predial elétrico). Ao salvar, valem para todas as novas propostas de Projeto BT.</p>
         <div className="mt-4"><ProjetoBtParamsForm onSaved={aplicarParams} /></div>
       </details>
 
       {/* Ações */}
       <div className="flex flex-wrap items-center gap-3">
-        <button className="btn-secondary" onClick={() => salvar(false)} disabled={salvando}>{salvando ? "Salvando..." : savedId ? "Salvar alterações" : "Salvar proposta"}</button>
-        <button className="btn-primary" onClick={gerar} disabled={gerando || total <= 0}>{gerando ? "Gerando..." : "Gerar .docx"}</button>
+        <button className="btn-secondary" onClick={() => salvar(false)} disabled={salvando}>{salvando ? "Salvando…" : savedId ? "Salvar alterações" : "Salvar proposta"}</button>
+        <button className="btn-primary" onClick={gerar} disabled={gerando || total <= 0}>{gerando ? "Gerando…" : "Gerar .docx"}</button>
         <BaixarPlanilhaButton serviceKey="projeto-bt" disabled={selecionadas.length === 0} nome={`projeto-bt-${form.clienteNome || "proposta"}`} dados={() => ({
           cliente: form.clienteNome,
           referencia: form.referenciaSeq ? String(form.referenciaSeq) : undefined,

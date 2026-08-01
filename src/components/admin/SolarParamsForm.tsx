@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { Alert, Loading } from "@/components/ui";
 /**
  * Formulário dos parâmetros do Solar (custos/imposto/comissão/eficiência).
  * Valores em % são exibidos como porcentagem (7,01) e salvos como fração (0,0701).
@@ -142,8 +143,8 @@ export function SolarParamsForm({ onSaved }: { onSaved?: (p: Params) => void }) 
 
   if (!texto) {
     return erro
-      ? <p className="field-error">{erro}</p>
-      : <p className="subtitle">Carregando parâmetros...</p>;
+      ? <Alert tone="red">{erro}</Alert>
+      : <Loading>Carregando parâmetros…</Loading>;
   }
 
   return (
@@ -168,11 +169,11 @@ export function SolarParamsForm({ onSaved }: { onSaved?: (p: Params) => void }) 
         </div>
       ))}
 
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       <div className="flex flex-wrap items-center gap-3">
         <button className="btn-primary" onClick={salvar} disabled={salvando}>
-          {salvando ? "Salvando..." : "Salvar parâmetros"}
+          {salvando ? "Salvando…" : "Salvar parâmetros"}
         </button>
         {defaults && (
           <button

@@ -57,7 +57,7 @@ export function ExecucaoSubestacaoAjuda() {
             ["2,0 (Ecosol 2 MVA)", "R$ 200.000", <span key="d" className="text-green-600 dark:text-green-400">≈ 44%</span>],
           ]}
         />
-        <p className="text-xs text-slate-400 dark:text-slate-500">
+        <p className="hint">
           Indicador de margem: <span className="text-green-600 dark:text-green-400">≥ 30% boa</span> ·{" "}
           <span className="text-amber-600 dark:text-amber-400">15–30% atenção</span> ·{" "}
           <span className="text-red-600 dark:text-red-400">&lt; 15% baixa</span>. O Fator K aceita valores de 1 a 4.
@@ -92,7 +92,7 @@ export function ExecucaoSubestacaoAjuda() {
             [<span key="m">Margem líquida</span>, <span key="mv" className="text-green-600 dark:text-green-400">≈ 35%</span>, "RESULTADO de K 1,7 + NF 6% — não se digita, sai da conta"],
           ]}
         />
-        <p className="text-xs text-slate-400 dark:text-slate-500">
+        <p className="hint">
           Mexer no Fator K é o que muda a margem: 1,5 → ~27%, 1,7 → ~35%, 2,0 → ~44% (relação margem ≈ 0,94 − 1 ÷ K).
         </p>
       </AjudaSecao>

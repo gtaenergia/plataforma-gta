@@ -20,6 +20,12 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "design-consistente-2026-08",
+    titulo: "Plataforma com visual mais uniforme",
+    mensagem: "Avisos, erros, títulos e tabelas agora seguem o mesmo padrão em todas as telas — e os textos secundários ficaram mais legíveis, principalmente no tema claro.",
+    link: "/",
+  },
+  {
     slug: "apontamentos-virada-meia-noite-2026-08",
     titulo: "Corrigido: apontamento que vira a meia-noite",
     mensagem: "Plantão das 23h à 1h agora pode ser lançado normalmente — o sistema entende que o fim é no dia seguinte e avisa a duração antes de salvar.",

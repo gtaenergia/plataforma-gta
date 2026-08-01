@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { Alert, Loading } from "@/components/ui";
 type ParamKey =
   | "taxaForca" | "pisoForca"
   | "taxaIluminacao" | "pisoIluminacao"
@@ -72,7 +73,7 @@ export function ProjetoBtParamsForm({ onSaved }: { onSaved?: (p: Params) => void
     }
   }
 
-  if (!texto) return erro ? <p className="field-error">{erro}</p> : <p className="subtitle">Carregando parâmetros...</p>;
+  if (!texto) return erro ? <Alert tone="red">{erro}</Alert> : <Loading>Carregando parâmetros…</Loading>;
 
   return (
     <div className="space-y-4">
@@ -96,9 +97,9 @@ export function ProjetoBtParamsForm({ onSaved }: { onSaved?: (p: Params) => void
         <input className="field-input" inputMode="decimal" value={texto.multIndustrial} onChange={(e) => setTexto({ ...texto, multIndustrial: e.target.value })} />
         <p className="mt-1 hint">{CAMPO_MULT.help}</p>
       </div>
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
       <div className="flex flex-wrap items-center gap-3">
-        <button className="btn-primary" onClick={salvar} disabled={salvando}>{salvando ? "Salvando..." : "Salvar parâmetros"}</button>
+        <button className="btn-primary" onClick={salvar} disabled={salvando}>{salvando ? "Salvando…" : "Salvar parâmetros"}</button>
         {defaults && <button type="button" className="btn-secondary" onClick={() => { setTexto(paraTexto(defaults)); setStatus("Padrões restaurados — clique em Salvar."); }}>Restaurar padrões</button>}
         {status && <span className="text-sm text-green-600 dark:text-green-400">{status}</span>}
       </div>

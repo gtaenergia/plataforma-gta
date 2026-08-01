@@ -71,7 +71,7 @@ export function CarregadorAjuda() {
             [<span key="e">Engine GTA (padrão)</span>, <Destaque key="ev">≈ R$ 4.100</Destaque>, "7 kW mono, 1 ponto"],
           ]}
         />
-        <p className="text-xs text-slate-400 dark:text-slate-500">
+        <p className="hint">
           O carregador (equipamento) entra à parte, no campo “Equipamento / carregador” (0 = fornecido pelo cliente).
           Obra civil pesada, deslocamento longo e projeto/ART podem virar linha separada conforme o caso.
         </p>
@@ -134,7 +134,7 @@ export function CarregadorAjuda() {
             ["Acessórios", "terminais tubulares, fita isolante, autofusão", "nº de pontos"],
           ]}
         />
-        <p className="text-xs text-slate-400 dark:text-slate-500">
+        <p className="hint">
           O carregador (equipamento) não entra na lista — é do cliente. A lista é custo interno; no .docx vai a descrição dos
           materiais, sem os preços de custo.
         </p>

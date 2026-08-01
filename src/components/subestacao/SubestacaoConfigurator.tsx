@@ -3,11 +3,10 @@
 import { ClienteInput } from "@/components/clientes/ClienteInput";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
 import { SubestacaoParamsForm } from "./SubestacaoParamsForm";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
-import { Kpi } from "@/components/ui";
+import { Alert, Kpi } from "@/components/ui";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -315,67 +314,63 @@ export function SubestacaoConfigurator({ propostaId }: { propostaId?: string }) 
     }
   }
 
-  const inputCls = "field-input";
-  const sec = "section-card";
-  const h2 = "section-title";
-
   const aprovOk = sizing ? sizing.aproveitamento <= 1.0 : true;
 
   return (
     <div className="space-y-6">
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       {/* Cliente e local */}
-      <section className={sec}>
-        <h2 className={h2}>Cliente e local</h2>
+      <section className="section-card">
+        <h2 className="section-title">Cliente e local</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div className="sm:col-span-3">
             <label className="field-label">Nome do cliente *</label>
-            <ClienteInput className={inputCls} value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} />
+            <ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} />
           </div>
           <div className="sm:col-span-3">
             <label className="field-label">Cidade/UF *</label>
-            <input className={inputCls} value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goianápolis/GO" />
+            <input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goianápolis/GO" />
           </div>
           <div className="sm:col-span-3">
             <label className="field-label">Local da obra</label>
-            <input className={inputCls} value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Edifício Residencial — Centro" />
+            <input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Edifício Residencial — Centro" />
           </div>
           <div className="sm:col-span-1">
             <label className="field-label">Validade (dias)</label>
-            <input type="number" className={inputCls} value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} />
+            <input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} />
           </div>
           <div className="sm:col-span-2">
             <label className="field-label">Emissão</label>
-            <input type="date" className={inputCls} value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} />
+            <input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} />
           </div>
         </div>
-        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">A referência (nº da proposta) é gerada automaticamente ao salvar.</p>
+        <p className="mt-2 hint">A referência (nº da proposta) é gerada automaticamente ao salvar.</p>
       </section>
 
       {/* Dados da subestação */}
-      <section className={sec}>
-        <h2 className={h2}>Dados da subestação</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      <section className="section-card">
+        <h2 className="section-title">Dados da subestação</h2>
+        <p className="mt-1 subtitle">
           Informe a carga (ou a demanda) — o sistema dimensiona o transformador e a proteção.
         </p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div className="sm:col-span-2">
             <label className="field-label">Tipo de subestação</label>
-            <select className={inputCls} value={form.tipoSE} onChange={(e) => set("tipoSE", e.target.value as Form["tipoSE"])}>
+            <select className="field-input" value={form.tipoSE} onChange={(e) => set("tipoSE", e.target.value as Form["tipoSE"])}>
               {["Aérea", "Abrigada", "Pedestal"].map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
           <div className="sm:col-span-2">
             <label className="field-label">Tensão primária (MT)</label>
-            <select className={inputCls} value={form.tensaoMt} onChange={(e) => set("tensaoMt", Number(e.target.value))}>
+            <select className="field-input" value={form.tensaoMt} onChange={(e) => set("tensaoMt", Number(e.target.value))}>
               <option value={13.8}>13,8 kV</option>
               <option value={34.5}>34,5 kV</option>
             </select>
           </div>
           <div className="sm:col-span-2">
             <label className="field-label">Tensão secundária (BT)</label>
-            <select className={inputCls} value={form.tensaoBt} onChange={(e) => set("tensaoBt", Number(e.target.value))}>
+            <select className="field-input" value={form.tensaoBt} onChange={(e) => set("tensaoBt", Number(e.target.value))}>
               <option value={380}>380/220 V</option>
               <option value={220}>220/127 V</option>
               <option value={440}>440/254 V</option>
@@ -383,7 +378,7 @@ export function SubestacaoConfigurator({ propostaId }: { propostaId?: string }) 
           </div>
           <div className="sm:col-span-2">
             <label className="field-label">Entrada por</label>
-            <select className={inputCls} value={form.modo} onChange={(e) => set("modo", e.target.value as Form["modo"])}>
+            <select className="field-input" value={form.modo} onChange={(e) => set("modo", e.target.value as Form["modo"])}>
               <option value="carga">Carga instalada (kW)</option>
               <option value="demanda">Demanda (kVA)</option>
             </select>
@@ -392,34 +387,30 @@ export function SubestacaoConfigurator({ propostaId }: { propostaId?: string }) 
             <>
               <div className="sm:col-span-2">
                 <label className="field-label">Carga instalada (kW) *</label>
-                <input className={inputCls} inputMode="decimal" value={form.cargaKw} onChange={(e) => set("cargaKw", e.target.value)} placeholder="Ex.: 250" />
+                <input className="field-input" inputMode="decimal" value={form.cargaKw} onChange={(e) => set("cargaKw", e.target.value)} placeholder="Ex.: 250" />
               </div>
               <div className="sm:col-span-1">
                 <label className="field-label">Fator de demanda</label>
-                <input className={inputCls} inputMode="decimal" value={form.fatorDemanda} onChange={(e) => set("fatorDemanda", e.target.value)} />
+                <input className="field-input" inputMode="decimal" value={form.fatorDemanda} onChange={(e) => set("fatorDemanda", e.target.value)} />
               </div>
               <div className="sm:col-span-1">
                 <label className="field-label">Fator de potência</label>
-                <input className={inputCls} inputMode="decimal" value={form.fatorPotencia} onChange={(e) => set("fatorPotencia", e.target.value)} />
+                <input className="field-input" inputMode="decimal" value={form.fatorPotencia} onChange={(e) => set("fatorPotencia", e.target.value)} />
               </div>
             </>
           ) : (
             <div className="sm:col-span-2">
               <label className="field-label">Demanda (kVA) *</label>
-              <input className={inputCls} inputMode="decimal" value={form.demandaKva} onChange={(e) => set("demandaKva", e.target.value)} placeholder="Ex.: 225" />
+              <input className="field-input" inputMode="decimal" value={form.demandaKva} onChange={(e) => set("demandaKva", e.target.value)} placeholder="Ex.: 225" />
             </div>
           )}
           <div className="sm:col-span-2">
             <label className="field-label">Nº de subestações</label>
-            <input type="number" className={inputCls} value={form.qtdSubestacoes} onChange={(e) => set("qtdSubestacoes", Number(e.target.value))} />
+            <input type="number" className="field-input" value={form.qtdSubestacoes} onChange={(e) => set("qtdSubestacoes", Number(e.target.value))} />
           </div>
         </div>
 
-        {sizing?.aviso && (
-          <p className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200">
-            <AlertTriangle className="inline h-3.5 w-3.5" aria-hidden /> {sizing.aviso}
-          </p>
-        )}
+        {sizing?.aviso && <Alert tone="amber" className="mt-4">{sizing.aviso}</Alert>}
 
         {sizing && sizing.trafoKva > 0 && (
           <div className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4 dark:bg-slate-900/50">
@@ -433,7 +424,7 @@ export function SubestacaoConfigurator({ propostaId }: { propostaId?: string }) 
             {sizing.atendimento === "Aérea" && <Kpi label="Poste (NT.002)" value={sizing.poste} />}
             <Kpi label="Banco de capacitores" value={`${nf(sizing.bancoCapacitor, sizing.bancoCapacitor % 1 ? 1 : 0)} kVAr`} />
             <div className={`rounded-md p-2 shadow-sm ${aprovOk ? "bg-white dark:bg-slate-800" : "bg-amber-50 dark:bg-amber-900/30"}`}>
-              <div className="text-xs text-slate-500 dark:text-slate-400">Aproveitamento do trafo</div>
+              <div className="text-xs text-slate-600 dark:text-slate-400">Aproveitamento do trafo</div>
               <div className={`mt-0.5 font-semibold ${aprovOk ? "text-gta-navy dark:text-slate-100" : "text-amber-700 dark:text-amber-300"}`}>
                 {nf(sizing.aproveitamento * 100, 0)}% {aprovOk ? "" : "· acima do nominal (NT.002)"}
               </div>
@@ -448,9 +439,9 @@ export function SubestacaoConfigurator({ propostaId }: { propostaId?: string }) 
       </section>
 
       {/* Preço */}
-      <section className={sec}>
+      <section className="section-card">
         <div className="flex items-center justify-between">
-          <h2 className={h2}>Preço</h2>
+          <h2 className="section-title">Preço</h2>
           {preco && !precoTocado.current && (
             <button type="button" className="toque text-xs text-gta-indigo hover:underline" onClick={() => { precoTocado.current = false; setForm((f) => ({ ...f, valorProjeto: nf(preco.precoTotal, 2) })); }}>
               Usar sugerido {brl(preco.precoTotal)}
@@ -460,16 +451,16 @@ export function SubestacaoConfigurator({ propostaId }: { propostaId?: string }) 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div className="sm:col-span-2">
             <label className="field-label">Valor do projeto (R$) *</label>
-            <input className={inputCls} value={form.valorProjeto} onChange={(e) => { precoTocado.current = true; set("valorProjeto", e.target.value); }} placeholder="Ex.: 8.000,00" />
+            <input className="field-input" value={form.valorProjeto} onChange={(e) => { precoTocado.current = true; set("valorProjeto", e.target.value); }} placeholder="Ex.: 8.000,00" />
             {preco ? (
-              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+              <p className="mt-1 hint">
                 {nf(preco.horas, 1)} h × valor/hora + ART = custo {brl(preco.custo)} · margem {nf(preco.margem * 100, 0)}% → sugerido {brl(preco.precoTotal)}
               </p>
             ) : null}
           </div>
           <div className="sm:col-span-2">
             <label className="field-label">Impostos / NF (R$)</label>
-            <input className={inputCls} value={form.impostos} onChange={(e) => set("impostos", e.target.value)} />
+            <input className="field-input" value={form.impostos} onChange={(e) => set("impostos", e.target.value)} />
           </div>
           <div className="sm:col-span-2 flex items-end">
             <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
@@ -490,21 +481,21 @@ export function SubestacaoConfigurator({ propostaId }: { propostaId?: string }) 
       <CondicoesPagamento total={total} value={cond} onChange={setCond} />
 
       {/* Textos */}
-      <details className={sec}>
+      <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Textos da proposta (opcional)</summary>
         <div className="mt-4 space-y-3">
-          <div><label className="field-label">Objeto</label><textarea className={`${inputCls} min-h-[70px]`} value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
-          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className={`${inputCls} min-h-[70px]`} value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
-          <div><label className="field-label">Prazo de execução</label><input className={inputCls} value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
+          <div><label className="field-label">Objeto</label><textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
+          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className="field-input min-h-[70px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
+          <div><label className="field-label">Prazo de execução</label><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
         </div>
       </details>
 
       {/* Parâmetros de preço (retraído; disponível a todos) */}
-      <details className={sec}>
+      <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">
           Parâmetros de preço (modelo por custo)
         </summary>
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">
           Preço = (horas × valor/hora + ART) × (1 + margem). Ao salvar, valem para todos os próximos cálculos.
         </p>
         <div className="mt-4">
@@ -515,10 +506,10 @@ export function SubestacaoConfigurator({ propostaId }: { propostaId?: string }) 
       {/* Ações */}
       <div className="flex flex-wrap items-center gap-3">
         <button className="btn-secondary" onClick={() => salvar(false)} disabled={salvando}>
-          {salvando ? "Salvando..." : savedId ? "Salvar alterações" : "Salvar proposta"}
+          {salvando ? "Salvando…" : savedId ? "Salvar alterações" : "Salvar proposta"}
         </button>
         <button className="btn-primary" onClick={gerar} disabled={gerando || !sizing || sizing.trafoKva === 0 || parseBR(form.valorProjeto) <= 0}>
-          {gerando ? "Gerando..." : "Gerar .docx"}
+          {gerando ? "Gerando…" : "Gerar .docx"}
         </button>
         <BaixarPlanilhaButton
           serviceKey="projeto-subestacao"

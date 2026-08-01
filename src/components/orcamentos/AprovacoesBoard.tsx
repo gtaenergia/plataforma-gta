@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ESTACOES, estacaoLabel, type Estacao, type Orcamento } from "@/lib/orcamentos/types";
-import { Badge, EmptyState, type Tone } from "@/components/ui";
+import { Alert, Badge, EmptyState, Loading, type Tone } from "@/components/ui";
 import { usePaginacao, Paginacao } from "@/components/Paginacao";
 import { formatBRL } from "@/lib/format";
 
@@ -79,7 +79,7 @@ export function AprovacoesBoard() {
 
   const { paginados, controles } = usePaginacao(ordenada);
 
-  if (loading) return <p className="subtitle">Carregando orçamentos...</p>;
+  if (loading) return <Loading>Carregando orçamentos…</Loading>;
 
   return (
     <div className="space-y-4">
@@ -103,7 +103,7 @@ export function AprovacoesBoard() {
         <span className="ml-auto hint">{lista.length} orçamento(s)</span>
       </div>
 
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       {filtrada.length === 0 ? (
         <EmptyState>

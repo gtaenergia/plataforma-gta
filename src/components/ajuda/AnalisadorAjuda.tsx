@@ -91,7 +91,7 @@ export function AnalisadorAjuda() {
           linhas={[
             [<span key="v">Valor por semana</span>, <Destaque key="vv">R$ 1.500</Destaque>, "Tabela para diagnóstico básico (7 dias de medição)"],
             ["Condição de pagamento", "50% + 50%", "50% na contratação e 50% na entrega do relatório"],
-            ["Análise completa", <span key="a">~R$ 5.000 <span className="text-slate-400">por escopo</span></span>, "Comparação com a concessionária (30 d) ou laudo PRODIST Mód. 8"],
+            ["Análise completa", <span key="a">~R$ 5.000 <span className="text-slate-500 dark:text-slate-400">por escopo</span></span>, "Comparação com a concessionária (30 d) ou laudo PRODIST Mód. 8"],
             ["Instalação / retirada", "Inclusas", "Não são cobradas à parte"],
             ["Prazo", "Medição + relatório", "Período de medição mais a emissão do relatório técnico"],
           ]}

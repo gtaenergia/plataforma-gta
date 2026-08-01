@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { EmptyState, Kpi, KpiGrid, SectionCard } from "@/components/ui";
+import { Alert, EmptyState, Kpi, KpiGrid, Loading, SectionCard, Segmented } from "@/components/ui";
 import { duracaoMin, formatarDuracao, type TimeEntry } from "@/lib/tracker/types";
 import {
   addDias, agruparPor, DIA_SEMANA_CURTO, fmtCurta, horasDecimais, inicioDoMes, segundaDaSemana, useEntradas,
@@ -51,22 +51,16 @@ export function AbaDashboard({ usuarioSelecionado }: { usuarioSelecionado: strin
 
   return (
     <div className="space-y-6">
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm font-medium capitalize text-gta-navy dark:text-slate-100">{rotulo}</span>
-        <div className="inline-flex rounded-lg border border-slate-200 p-0.5 text-xs dark:border-slate-700">
-          {(["semana", "mes"] as Periodo[]).map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPeriodo(p)}
-              className={`toque justify-center rounded-md px-3 py-1 font-medium transition ${periodo === p ? "bg-gta-indigo text-white" : "text-slate-500 hover:text-gta-indigo dark:text-slate-400"}`}
-            >
-              {p === "semana" ? "Esta semana" : "Este mês"}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          aria="Período"
+          value={periodo}
+          onChange={setPeriodo}
+          options={[{ value: "semana", label: "Esta semana" }, { value: "mes", label: "Este mês" }]}
+        />
       </div>
 
       <KpiGrid>
@@ -77,7 +71,7 @@ export function AbaDashboard({ usuarioSelecionado }: { usuarioSelecionado: strin
       </KpiGrid>
 
       {carregando ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500">Carregando…</p>
+        <Loading />
       ) : entradas.length === 0 ? (
         <EmptyState>Nenhum lançamento neste período.</EmptyState>
       ) : (
@@ -87,7 +81,7 @@ export function AbaDashboard({ usuarioSelecionado }: { usuarioSelecionado: strin
             <div className="flex items-end gap-1 overflow-x-auto pb-1" style={{ minHeight: 160 }}>
               {porDia.map((d, i) => (
                 <div key={i} className="flex min-w-[36px] flex-1 flex-col items-center gap-1">
-                  <span className="text-[10px] tabular-nums text-slate-400 dark:text-slate-500">
+                  <span className="text-[10px] tabular-nums text-slate-500 dark:text-slate-400">
                     {d.min > 0 ? horasDecimais(d.min) : ""}
                   </span>
                   <div
@@ -95,10 +89,10 @@ export function AbaDashboard({ usuarioSelecionado }: { usuarioSelecionado: strin
                     style={{ height: `${Math.max(d.min > 0 ? 4 : 2, (d.min / maxDia) * 110)}px` }}
                     title={`${fmtCurta(d.data)}: ${formatarDuracao(d.min)}`}
                   />
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                  <span className="text-[10px] text-slate-600 dark:text-slate-400">
                     {DIA_SEMANA_CURTO[d.data.getDay()]}
                   </span>
-                  <span className="text-[10px] tabular-nums text-slate-400 dark:text-slate-500">{fmtCurta(d.data)}</span>
+                  <span className="text-[10px] tabular-nums text-slate-500 dark:text-slate-400">{fmtCurta(d.data)}</span>
                 </div>
               ))}
             </div>
@@ -120,7 +114,7 @@ export function AbaDashboard({ usuarioSelecionado }: { usuarioSelecionado: strin
 
 /** Lista com barra proporcional ao total — leitura rápida de "onde foi o tempo". */
 function ListaProporcional({ itens, total }: { itens: { nome: string; min: number }[]; total: number }) {
-  if (itens.length === 0) return <p className="text-sm text-slate-400 dark:text-slate-500">Sem dados.</p>;
+  if (itens.length === 0) return <p className="text-sm text-slate-500 dark:text-slate-400">Sem dados.</p>;
   return (
     <div className="space-y-2">
       {itens.map((it) => {
@@ -129,7 +123,7 @@ function ListaProporcional({ itens, total }: { itens: { nome: string; min: numbe
           <div key={it.nome}>
             <div className="flex items-center justify-between gap-2 text-sm">
               <span className="min-w-0 truncate text-slate-700 dark:text-slate-300">{it.nome}</span>
-              <span className="shrink-0 tabular-nums text-slate-500 dark:text-slate-400">
+              <span className="shrink-0 tabular-nums text-slate-600 dark:text-slate-400">
                 {formatarDuracao(it.min)} · {pct}%
               </span>
             </div>

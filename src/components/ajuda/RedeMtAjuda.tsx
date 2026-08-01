@@ -72,7 +72,7 @@ export function RedeMtAjuda() {
             ["Execução", "R$ 50.000", "1,7", "R$ 85.000", "35,2%"],
           ]}
         />
-        <p className="text-xs text-slate-400 dark:text-slate-500">
+        <p className="hint">
           Materiais e equipamentos principais da execução (postes, cabos, transformadores) entram <strong>à parte</strong>, fora do custo × Fator K.
         </p>
       </AjudaSecao>
@@ -125,7 +125,7 @@ export function RedeMtAjuda() {
             [<span key="ne">NF execução</span>, <Destaque key="nev">6%</Destaque>, "Imposto/nota sobre o faturamento da execução."],
           ]}
         />
-        <p className="text-xs text-slate-400 dark:text-slate-500">
+        <p className="hint">
           Limites de segurança: Fator K projeto 1–5, Fator K execução 1–4, NF 0–50%. Faturamento sempre arredondado para o R$ 10 mais próximo.
         </p>
       </AjudaSecao>

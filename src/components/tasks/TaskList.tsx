@@ -13,7 +13,7 @@ import {
   type StatusTarefa,
   type Task,
 } from "@/lib/tasks/types";
-import { Badge, type Tone } from "@/components/ui";
+import { Alert, Badge, Loading, type Tone } from "@/components/ui";
 
 interface Usuario {
   email: string;
@@ -286,7 +286,7 @@ export function TaskList({ currentUserEmail }: { currentUserEmail: string }) {
     }
   }
 
-  if (loading) return <p className="subtitle">Carregando tarefas...</p>;
+  if (loading) return <Loading>Carregando tarefas…</Loading>;
 
   return (
     <div className="space-y-4">
@@ -354,7 +354,7 @@ export function TaskList({ currentUserEmail }: { currentUserEmail: string }) {
         </select>
         <input
           className="field-input w-full sm:!w-56"
-          placeholder="Buscar..."
+          placeholder="Buscar…"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
@@ -363,12 +363,12 @@ export function TaskList({ currentUserEmail }: { currentUserEmail: string }) {
         </span>
       </div>
 
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       {/* nova tarefa */}
       {novaAberta && (
-        <form onSubmit={criar} className="rounded-xl border border-gta-indigo/30 bg-white p-4 shadow-sm dark:bg-slate-800">
-          <h2 className="mb-3 text-sm font-semibold text-gta-navy dark:text-slate-100">Nova tarefa</h2>
+        <form onSubmit={criar} className="section-card-destaque">
+          <h2 className="section-title mb-3">Nova tarefa</h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
             <div className="sm:col-span-6">
               <label className="field-label">Título *</label>
@@ -380,11 +380,11 @@ export function TaskList({ currentUserEmail }: { currentUserEmail: string }) {
             </div>
             <div className="sm:col-span-2">
               <label className="field-label">Cliente</label>
-              <input className="field-input" list="tarefa-clientes" value={form.cliente} onChange={(e) => setForm({ ...form, cliente: e.target.value })} placeholder="Ex.: CPDF, Fazenda Rio Doce..." />
+              <input className="field-input" list="tarefa-clientes" value={form.cliente} onChange={(e) => setForm({ ...form, cliente: e.target.value })} placeholder="Ex.: CPDF, Fazenda Rio Doce…" />
             </div>
             <div className="sm:col-span-2">
               <label className="field-label">Categoria</label>
-              <input className="field-input" list="tarefa-categorias" value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} placeholder="Ex.: Administrativo, Orçamentos..." />
+              <input className="field-input" list="tarefa-categorias" value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} placeholder="Ex.: Administrativo, Orçamentos…" />
             </div>
             <div className="sm:col-span-2">
               <label className="field-label">Demandante</label>
@@ -434,7 +434,7 @@ export function TaskList({ currentUserEmail }: { currentUserEmail: string }) {
           </div>
           <div className="mt-3">
             <button type="submit" className="btn-primary" disabled={salvando}>
-              {salvando ? "Salvando..." : "Criar tarefa"}
+              {salvando ? "Salvando…" : "Criar tarefa"}
             </button>
           </div>
         </form>
@@ -460,7 +460,7 @@ export function TaskList({ currentUserEmail }: { currentUserEmail: string }) {
           <tbody>
             {visiveis.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
+                <td colSpan={10} className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
                   Nenhuma tarefa encontrada. Crie a primeira com “+ Nova tarefa”.
                 </td>
               </tr>
@@ -487,7 +487,7 @@ export function TaskList({ currentUserEmail }: { currentUserEmail: string }) {
       {visiveis.length > 0 && (
         <div className="flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:gap-3 dark:text-slate-300">
           <div className="flex items-center gap-2">
-            <span className="text-slate-500 dark:text-slate-400">
+            <span className="text-slate-600 dark:text-slate-400">
               {inicio}–{fim} de {visiveis.length}
             </span>
             <select
@@ -511,7 +511,7 @@ export function TaskList({ currentUserEmail }: { currentUserEmail: string }) {
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="px-1 text-slate-500 dark:text-slate-400">
+            <span className="px-1 text-slate-600 dark:text-slate-400">
               Página {paginaAtual} de {totalPaginas}
             </span>
             <button
@@ -604,7 +604,7 @@ function TaskRow({
             {t.titulo}
           </button>
           {t.comentarios.length > 0 && (
-            <span className="ml-2 inline-flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500"><MessageSquare className="h-3.5 w-3.5" aria-hidden />{t.comentarios.length}</span>
+            <span className="ml-2 inline-flex items-center gap-1 hint"><MessageSquare className="h-3.5 w-3.5" aria-hidden />{t.comentarios.length}</span>
           )}
           {/* No mobile, prioridade/prazo/responsável ficam ocultos nas colunas — mostra o essencial aqui */}
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5 md:hidden">
@@ -612,23 +612,23 @@ function TaskRow({
               {PRIORIDADES.find((p) => p.value === t.prioridade)?.label}
             </Badge>
             {t.prazoComercial && (
-              <span className={`text-[11px] ${lateCom ? "font-semibold text-red-600 dark:text-red-400" : "text-slate-400 dark:text-slate-500"}`}>
+              <span className={`text-[11px] ${lateCom ? "font-semibold text-red-600 dark:text-red-400" : "text-slate-500 dark:text-slate-400"}`}>
                 Com: {formatPrazoHora(t.prazoComercial, t.horaComercial)}
               </span>
             )}
             {prazoOp(t) && (
-              <span className={`text-[11px] ${lateOp ? "font-semibold text-red-600 dark:text-red-400" : "text-slate-400 dark:text-slate-500"}`}>
+              <span className={`text-[11px] ${lateOp ? "font-semibold text-red-600 dark:text-red-400" : "text-slate-500 dark:text-slate-400"}`}>
                 Op: {formatPrazoHora(prazoOp(t), t.horaOperacional)}
               </span>
             )}
-            {t.cliente && <span className="text-[11px] text-slate-400 dark:text-slate-500">· {t.cliente}</span>}
-            {t.categoria && <span className="text-[11px] text-slate-400 dark:text-slate-500">· {t.categoria}</span>}
-            {demandanteLabel(t.demandante) && <span className="text-[11px] text-slate-400 dark:text-slate-500">· {demandanteLabel(t.demandante)}</span>}
+            {t.cliente && <span className="text-[11px] text-slate-500 dark:text-slate-400">· {t.cliente}</span>}
+            {t.categoria && <span className="text-[11px] text-slate-500 dark:text-slate-400">· {t.categoria}</span>}
+            {demandanteLabel(t.demandante) && <span className="text-[11px] text-slate-500 dark:text-slate-400">· {demandanteLabel(t.demandante)}</span>}
           </div>
         </td>
-        <td className="hidden px-4 py-2 text-slate-600 md:table-cell dark:text-slate-300">{t.cliente || <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
-        <td className="hidden px-4 py-2 text-slate-600 md:table-cell dark:text-slate-300">{t.categoria || <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
-        <td className="hidden px-4 py-2 text-slate-600 md:table-cell dark:text-slate-300">{demandanteLabel(t.demandante) || <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
+        <td className="hidden px-4 py-2 text-slate-600 md:table-cell dark:text-slate-300">{t.cliente || <span className="sem-valor">—</span>}</td>
+        <td className="hidden px-4 py-2 text-slate-600 md:table-cell dark:text-slate-300">{t.categoria || <span className="sem-valor">—</span>}</td>
+        <td className="hidden px-4 py-2 text-slate-600 md:table-cell dark:text-slate-300">{demandanteLabel(t.demandante) || <span className="sem-valor">—</span>}</td>
         <td className="hidden px-4 py-2 text-slate-600 md:table-cell dark:text-slate-300">{nomeDe(t.responsavel)}</td>
         <td className="hidden px-4 py-2 md:table-cell">
           <Badge tone={PRIORIDADE_TONE[t.prioridade]}>
@@ -653,9 +653,9 @@ function TaskRow({
             {!editando ? (
               <div className="space-y-3">
                 <p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">
-                  {t.descricao || <span className="italic text-slate-400 dark:text-slate-500">Sem descrição.</span>}
+                  {t.descricao || <span className="italic text-slate-500 dark:text-slate-400">Sem descrição.</span>}
                 </p>
-                <p className="text-xs text-slate-400 dark:text-slate-500">
+                <p className="hint">
                   Criada por {nomeDe(t.criadoPor)} em {formatDataHora(t.criadoEm)} · Atualizada em {formatDataHora(t.atualizadoEm)}
                 </p>
                 <button className="btn-secondary !py-1 text-xs" onClick={() => setEditando(true)}>
@@ -747,14 +747,14 @@ function TaskRow({
 
             {/* comentários */}
             <div className="mt-4 border-t border-slate-200 pt-3 dark:border-slate-700">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400">
                 Comentários ({t.comentarios.length})
               </h3>
               <ul className="space-y-2">
                 {t.comentarios.map((c) => (
                   <li key={c.id} className="rounded-md bg-white p-2 text-sm shadow-sm dark:bg-slate-800">
                     <span className="font-medium text-gta-navy dark:text-slate-100">{c.autor}</span>
-                    <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">{formatDataHora(c.em)}</span>
+                    <span className="ml-2 hint">{formatDataHora(c.em)}</span>
                     <p className="mt-0.5 whitespace-pre-wrap text-slate-700 dark:text-slate-300">{c.texto}</p>
                   </li>
                 ))}
@@ -771,7 +771,7 @@ function TaskRow({
               >
                 <input
                   className="field-input"
-                  placeholder="Escreva um comentário..."
+                  placeholder="Escreva um comentário…"
                   value={comentario}
                   onChange={(e) => setComentario(e.target.value)}
                 />

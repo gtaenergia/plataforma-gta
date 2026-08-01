@@ -53,8 +53,8 @@ export function LaudoAjuda() {
         <TabelaAjuda
           colunas={["Caso", "Valor por unidade"]}
           linhas={[
-            [<span key="a">Subestação — laudo + ART <span className="text-slate-400 dark:text-slate-500">(KIPAO)</span></span>, <Destaque key="av">R$ 2.500</Destaque>],
-            [<span key="b">Torre em laudo multi-torre <span className="text-slate-400 dark:text-slate-500">(Av. Parque)</span></span>, "R$ 2.000"],
+            [<span key="a">Subestação — laudo + ART <span className="text-slate-500 dark:text-slate-400">(KIPAO)</span></span>, <Destaque key="av">R$ 2.500</Destaque>],
+            [<span key="b">Torre em laudo multi-torre <span className="text-slate-500 dark:text-slate-400">(Av. Parque)</span></span>, "R$ 2.000"],
             [<span key="c">Inspeção de SE com termografia</span>, "≈ R$ 15.000"],
           ]}
         />

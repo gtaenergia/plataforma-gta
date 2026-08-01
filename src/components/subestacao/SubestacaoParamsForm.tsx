@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { Alert, Loading } from "@/components/ui";
 /**
  * Parâmetros de preço do Projeto de Subestação (modelo por custo).
  * A margem é exibida em % (50) e salva como fração (0,5). Disponível a todos.
@@ -80,7 +81,7 @@ export function SubestacaoParamsForm({ onSaved }: { onSaved?: (p: Params) => voi
   }
 
   if (!texto) {
-    return erro ? <p className="field-error">{erro}</p> : <p className="subtitle">Carregando parâmetros...</p>;
+    return erro ? <Alert tone="red">{erro}</Alert> : <Loading>Carregando parâmetros…</Loading>;
   }
 
   return (
@@ -94,9 +95,9 @@ export function SubestacaoParamsForm({ onSaved }: { onSaved?: (p: Params) => voi
           </div>
         ))}
       </div>
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
       <div className="flex flex-wrap items-center gap-3">
-        <button className="btn-primary" onClick={salvar} disabled={salvando}>{salvando ? "Salvando..." : "Salvar parâmetros"}</button>
+        <button className="btn-primary" onClick={salvar} disabled={salvando}>{salvando ? "Salvando…" : "Salvar parâmetros"}</button>
         {defaults && (
           <button type="button" className="btn-secondary" onClick={() => { setTexto(paraTexto(defaults)); setStatus("Padrões restaurados — clique em Salvar para aplicar."); }}>
             Restaurar padrões

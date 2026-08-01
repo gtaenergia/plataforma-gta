@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { PERMISSOES, PERMISSOES_POR_MODULO, type PermissaoKey } from "@/lib/rbac/permissoes";
 import type { Cargo } from "@/lib/cargos/types";
-import { EmptyState } from "@/components/ui";
+import { Alert, EmptyState, Loading } from "@/components/ui";
 
 /** Checkboxes de permissão agrupadas por módulo. */
 function PermissoesEditor({
@@ -19,7 +19,7 @@ function PermissoesEditor({
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       {PERMISSOES_POR_MODULO.map((grupo) => (
         <div key={grupo.modulo}>
-          <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+          <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             {grupo.modulo}
           </div>
           <div className="space-y-1.5">
@@ -96,7 +96,7 @@ function CargoCard({
         <span className="hint">{sel.size} permissão(ões)</span>
         <div className="ml-auto flex gap-2">
           <button className="btn-primary !py-1.5 text-xs" disabled={!alterado || !nome.trim() || salvando} onClick={salvar}>
-            {salvando ? "Salvando..." : "Salvar"}
+            {salvando ? "Salvando…" : "Salvar"}
           </button>
           <button className="btn-danger !py-1.5 text-xs" onClick={() => onExcluir(cargo)}>
             Excluir
@@ -195,7 +195,7 @@ export function CargosAdmin() {
     });
   }
 
-  if (loading) return <p className="subtitle">Carregando cargos...</p>;
+  if (loading) return <Loading>Carregando cargos…</Loading>;
 
   return (
     <div className="space-y-4">
@@ -206,10 +206,10 @@ export function CargosAdmin() {
         <span className="ml-auto hint">{lista.length} cargo(s)</span>
       </div>
 
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       {novoAberto && (
-        <form onSubmit={criar} className="section-card !border-gta-indigo/30">
+        <form onSubmit={criar} className="section-card-destaque">
           <h2 className="section-title mb-4">Novo cargo</h2>
           <div className="mb-4">
             <label className="field-label">Nome do cargo *</label>
@@ -224,7 +224,7 @@ export function CargosAdmin() {
           <PermissoesEditor selecionadas={novoSel} onToggle={toggleNovo} idPrefix="novo" />
           <div className="mt-4">
             <button type="submit" className="btn-primary" disabled={criando || !novoNome.trim()}>
-              {criando ? "Criando..." : "Criar cargo"}
+              {criando ? "Criando…" : "Criar cargo"}
             </button>
           </div>
         </form>

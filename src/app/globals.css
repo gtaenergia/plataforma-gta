@@ -42,21 +42,51 @@ body {
   @apply rounded-lg border border-slate-200 bg-slate-50 p-4
          dark:border-slate-700 dark:bg-slate-900/50;
 }
+/* Cartão em destaque — borda índigo. Para o formulário de criação que se abre
+   acima de uma lista ("Nova tarefa", "Novo usuário", "Novo cargo"). */
+.section-card-destaque {
+  @apply rounded-xl border border-gta-indigo/30 bg-white p-4 shadow-sm sm:p-5
+         dark:border-indigo-500/40 dark:bg-slate-800;
+}
+/* Caixa interna em destaque — fundo índigo suave. Para o item "ao vivo" ou em
+   edição dentro de uma lista (ex.: o lançamento rodando nos Apontamentos). */
+.subcard-destaque {
+  @apply rounded-lg border border-gta-indigo/30 bg-indigo-50/60 p-3
+         dark:border-indigo-500/30 dark:bg-indigo-900/20;
+}
 
-/* Container das telas largas (dashboard, listas, configuradores) — centralizado
-   com largura máxima e padding lateral. Telas de leitura/foco (ajuda, conta,
-   login) mantêm larguras menores próprias. Ajuste o max-w aqui para toda a app. */
+/* Containers de página — três larguras, uma por tipo de tela. Ajuste aqui e
+   vale para toda a app; não escreva `mx-auto max-w-*` solto numa página nova.
+     - padrão : listas, dashboards, configuradores (precisa de espaço)
+     - leitura: texto corrido/detalhe — linha curta cansa menos o olho
+     - foco   : formulário curto isolado (conta, trocar senha) */
 .app-container {
   @apply mx-auto w-full max-w-7xl px-4;
 }
+.app-container-leitura {
+  @apply mx-auto w-full max-w-3xl px-4;
+}
+.app-container-foco {
+  @apply mx-auto w-full max-w-xl px-4;
+}
 
 /* ---- Tipografia ----------------------------------------------------------- */
+/* Escala de texto: o TAMANHO faz a hierarquia, a cor só separa "principal" de
+   "secundário". Por isso subtitle e hint dividem o mesmo tom e diferem em 14px
+   vs 12px. Os tons secundários foram escurecidos no modo claro para passar na
+   WCAG AA (4,5:1 sobre o fundo da página) — antes subtitle dava 4,40 e hint
+   2,37, e hint é texto de 12px, o que mais precisa de contraste. */
 .page-title    { @apply text-2xl font-bold tracking-tight text-gta-navy dark:text-slate-100; }
 .section-title { @apply text-lg font-semibold text-gta-navy dark:text-slate-100; }
-.subtitle      { @apply text-sm text-slate-500 dark:text-slate-400; }
-.hint          { @apply text-xs text-slate-400 dark:text-slate-500; }
+.subtitle      { @apply text-sm text-slate-600 dark:text-slate-400; }
+.hint          { @apply text-xs text-slate-600 dark:text-slate-400; }
 
 /* ---- Formulários ---------------------------------------------------------- */
+/* Travessão de "campo sem valor" numa lista/tabela. Fica de propósito mais
+   apagado que o texto — é ausência de dado, não dado — mas não tão apagado a
+   ponto de sumir (o slate-300 anterior dava 1,9:1 no fundo claro). */
+.sem-valor { @apply text-slate-400 dark:text-slate-600; }
+
 .field-label {
   @apply block text-sm font-medium text-gta-navy/80 mb-1 dark:text-slate-300;
 }
@@ -88,8 +118,10 @@ select.field-input {
 .dark select.field-input {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M5 7.5L10 12.5L15 7.5'/%3E%3C/svg%3E");
 }
+/* Mensagem presa a UM campo. Falha de operação (não salvou, não carregou) usa
+   o componente <Alert tone="red">, que tem caixa e ícone. */
 .field-error {
-  @apply mt-1 text-xs text-red-600 dark:text-red-400;
+  @apply mt-1 text-xs text-red-700 dark:text-red-400;
 }
 
 /* ---- Botões --------------------------------------------------------------- */
@@ -112,6 +144,14 @@ select.field-input {
          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40
          disabled:cursor-not-allowed disabled:opacity-60
          dark:border-red-900/50 dark:bg-slate-800 dark:text-red-400 dark:hover:bg-red-900/20;
+}
+/* Ação discreta sobre o fundo da página (voltar, atalhos do topo). Sem borda
+   nem fundo em repouso — não compete com a ação principal da tela. */
+.btn-ghost {
+  @apply inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium
+         text-slate-600 transition hover:bg-slate-100 hover:text-gta-indigo
+         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gta-indigo/40
+         dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-300;
 }
 /* Ação textual (links de "Abrir", "Ver mais"…). */
 .btn-link {
@@ -145,9 +185,11 @@ select.field-input {
   .icon-btn { @apply h-11 w-11; }
   /* Links de ação e botões compactos ganham altura mínima sem mudar a fonte. */
   .btn-link,
+  .btn-ghost,
   .btn-primary,
   .btn-secondary,
-  .btn-danger { @apply min-h-[44px]; }
+  .btn-danger,
+  .segmented-item { @apply min-h-[44px]; }
   /* Anula os !py-1/!py-1.5 usados para compactar botões no desktop. */
   .btn-primary.\!py-1, .btn-secondary.\!py-1,
   .btn-primary.\!py-1\.5, .btn-secondary.\!py-1\.5 { @apply !py-2; }
@@ -162,6 +204,33 @@ select.field-input {
   .field-input { @apply min-h-[44px] !py-2; }
 }
 
+/* ---- Alternador segmentado ------------------------------------------------
+   Escolha entre 2–3 opções que trocam a VISÃO (semana/mês, parcelado/a
+   combinar). Para mais opções ou para navegação, use abas. */
+.segmented {
+  @apply inline-flex rounded-lg border border-slate-200 p-0.5 text-xs dark:border-slate-700;
+}
+.segmented-item {
+  @apply inline-flex items-center justify-center rounded-md px-3 py-1 font-medium transition
+         text-slate-500 hover:text-gta-indigo
+         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gta-indigo/40
+         dark:text-slate-400 dark:hover:text-indigo-300;
+}
+.segmented-item[aria-pressed="true"] {
+  @apply bg-gta-indigo text-white hover:text-white dark:text-white dark:hover:text-white;
+}
+
+/* ---- Alertas (mensagens contextuais em caixa) -----------------------------
+   Uma só forma para aviso/erro/sucesso/informação — muda apenas a cor. Use o
+   componente <Alert> de ui.tsx, que já põe o ícone e o papel de acessibilidade. */
+.alert {
+  @apply flex items-start gap-2 rounded-lg border p-3 text-sm;
+}
+.alert-amber  { @apply border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700/60 dark:bg-amber-900/25 dark:text-amber-200; }
+.alert-green  { @apply border-green-300 bg-green-50 text-green-800 dark:border-green-700/60 dark:bg-green-900/25 dark:text-green-200; }
+.alert-red    { @apply border-red-300 bg-red-50 text-red-800 dark:border-red-700/60 dark:bg-red-900/25 dark:text-red-200; }
+.alert-indigo { @apply border-gta-indigo/30 bg-indigo-50/60 text-gta-navy dark:border-indigo-500/40 dark:bg-indigo-900/20 dark:text-indigo-100; }
+
 /* ---- Badges (pílulas de status) ------------------------------------------ */
 .badge        { @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium; }
 .badge-slate  { @apply bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300; }
@@ -171,9 +240,14 @@ select.field-input {
 .badge-indigo { @apply bg-gta-indigo/10 text-gta-indigo dark:bg-gta-indigo/20 dark:text-indigo-300; }
 
 /* ---- Tabela de dados ------------------------------------------------------ */
-/* Estrutura repetida (largura, cabeçalho, bordas/hover das linhas). O padding
-   das células do corpo fica inline, pois varia (linha de dados vs. estado vazio). */
+/* Estrutura repetida (largura, cabeçalho, bordas/hover das linhas). */
 .data-table { @apply w-full text-sm; }
+/* Padding padrão das células do corpo. Vai dentro de :where() — que não soma
+   especificidade — para continuar valendo como PADRÃO e ainda assim ceder a
+   qualquer utilitário na própria célula (a lista de tarefas, por exemplo,
+   comprime para px-3 no celular). Sem isso, uma tabela nova nasce com as
+   colunas coladas até alguém lembrar de repetir o px-4 py-2 célula a célula. */
+:where(.data-table tbody td) { @apply px-4 py-2; }
 .data-table thead {
   @apply bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500
          dark:bg-slate-900/50 dark:text-slate-400;
@@ -183,3 +257,12 @@ select.field-input {
   @apply border-t border-slate-100 transition hover:bg-slate-50/60
          dark:border-slate-700 dark:hover:bg-slate-700/40;
 }
+
+/* Tabela densa DENTRO de um cartão (lista de materiais, simulação mês a mês).
+   Diferente da .data-table: sem faixa de fundo no cabeçalho e sem hover — ela
+   já está sobre uma superfície e não é uma lista navegável. O padding das
+   células fica inline, porque cada tabela tem sua própria grade de colunas. */
+.table-compacta { @apply w-full text-sm; }
+.table-compacta thead { @apply text-left text-xs text-slate-500 dark:text-slate-400; }
+.table-compacta thead th { @apply font-medium; }
+.table-compacta tbody tr { @apply border-t border-slate-100 dark:border-slate-700; }

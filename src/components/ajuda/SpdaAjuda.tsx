@@ -49,7 +49,7 @@ export function SpdaAjuda() {
         <TabelaAjuda
           colunas={["Cenário", "Blocos", "Área (m²)", "Risco + Projeto", "Faturamento"]}
           linhas={[
-            ["Prédio único pequeno", "1", "200", "1.650 + 600 = 2.250", <span key="p">R$ 2.500 <span className="text-xs text-slate-400">(piso)</span></span>],
+            ["Prédio único pequeno", "1", "200", "1.650 + 600 = 2.250", <span key="p">R$ 2.500 <span className="hint">(piso)</span></span>],
             ["Condomínio 2 torres", "2", "800", "3.300 + 2.400", "R$ 5.700"],
             ["Galpão industrial", "3", "1.500", "4.950 + 4.500", "R$ 9.450"],
           ]}

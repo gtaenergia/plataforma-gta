@@ -14,7 +14,7 @@ import { SolarParamsForm } from "@/components/admin/SolarParamsForm";
 import { CopyButton } from "@/components/CopyButton";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
-import { Kpi } from "@/components/ui";
+import { Alert, Kpi } from "@/components/ui";
 
 /** Formatação pt-BR local (sem depender de libs de servidor). */
 const nf = (v: number, d = 2) =>
@@ -243,7 +243,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
           touched.current = { nPaineis: (dados.nPaineis ?? 0) > 0, inversor: (dados.potenciaInversor ?? 0) > 0 };
           if (dados.potenciaPainel && !PAINEIS_COMERCIAIS.includes(dados.potenciaPainel)) setPainelCustom(true);
           if (dados.potenciaInversor && !INVERSORES_COMERCIAIS.includes(dados.potenciaInversor)) setInvCustom(true);
-          // potência de micro fora do catálogo volta já no modo "Outra..."
+          // potência de micro fora do catálogo volta já no modo "Outra…"
           if (dados.microPotenciaKw && !MICROINVERSORES_COMERCIAIS.includes(dados.microPotenciaKw)) setMicroCustom(true);
         }
       }).catch(() => {});
@@ -562,64 +562,60 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
     }
   }
 
-  const inputCls = "field-input";
-  const sec = "section-card";
-  const h2 = "section-title";
-
   const painelSelect = painelCustom ? "outro" : String(form.potenciaPainel);
   const invSelect = invCustom ? "outro" : String(form.potenciaInversor);
   const microSelect = microCustom ? "outro" : String(form.microPotenciaKw || 0);
 
   return (
     <div className="space-y-6">
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       {/* Identificação */}
-      <section className={sec}>
-        <h2 className={h2}>Cliente e local</h2>
+      <section className="section-card">
+        <h2 className="section-title">Cliente e local</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div className="sm:col-span-3">
             <label className="field-label">Nome do cliente *</label>
-            <ClienteInput className={inputCls} value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} />
+            <ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} />
           </div>
           <div className="sm:col-span-3">
             <label className="field-label">Cidade da instalação *</label>
             <input
-              className={inputCls}
+              className="field-input"
               list="municipios-list"
               value={form.municipio}
               onChange={(e) => preencherMunicipio(e.target.value)}
-              placeholder="Digite 2+ letras e selecione..."
+              placeholder="Digite 2+ letras e selecione…"
             />
             <datalist id="municipios-list">
               {sugestoesMunicipio.map((m) => (
                 <option key={m.nome} value={m.nome} />
               ))}
             </datalist>
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Usada para buscar a irradiação solar (HSP) da região.</p>
+            <p className="mt-1 hint">Usada para buscar a irradiação solar (HSP) da região.</p>
           </div>
           <div className="sm:col-span-3">
             <label className="field-label">Cidade/UF (como sai no documento)</label>
-            <input className={inputCls} value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" />
+            <input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" />
           </div>
           <div className="sm:col-span-3">
             <label className="field-label">Validade (dias)</label>
-            <input type="number" className={inputCls} value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} />
+            <input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} />
           </div>
           <div className="sm:col-span-3">
             <label className="field-label">Emissão</label>
-            <input type="date" className={inputCls} value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} />
+            <input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} />
           </div>
         </div>
-        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+        <p className="mt-2 hint">
           A referência (nº da proposta) é gerada automaticamente ao salvar.
         </p>
       </section>
 
       {/* 1 · Consumo */}
-      <section className={sec}>
-        <h2 className={h2}>Consumo mensal (kWh)</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      <section className="section-card">
+        <h2 className="section-title">Consumo mensal (kWh)</h2>
+        <p className="mt-1 subtitle">
           Copie os 12 meses da conta de energia. É a única entrada necessária — o dimensionamento sai daqui.
         </p>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-6">
@@ -627,7 +623,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
             <div key={mes}>
               <label className="field-label">{mes.slice(0, 3)}</label>
               <input
-                className={inputCls}
+                className="field-input"
                 inputMode="numeric"
                 value={form.consumo[i]}
                 onChange={(e) => set("consumo", form.consumo.map((c, j) => (j === i ? e.target.value : c)))}
@@ -636,7 +632,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
           ))}
           <div className="sm:col-span-2">
             <label className="field-label">Tipo de conexão</label>
-            <select className={inputCls} value={form.tipoConexao} onChange={(e) => set("tipoConexao", e.target.value as Form["tipoConexao"])}>
+            <select className="field-input" value={form.tipoConexao} onChange={(e) => set("tipoConexao", e.target.value as Form["tipoConexao"])}>
               <option value="mono">Monofásico</option>
               <option value="bi">Bifásico</option>
               <option value="tri">Trifásico</option>
@@ -649,12 +645,12 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
               min="0"
               max="200"
               step="5"
-              className={inputCls}
+              className="field-input"
               value={form.margemSeguranca}
               onChange={(e) => set("margemSeguranca", Number(e.target.value))}
               placeholder="0"
             />
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Folga p/ superdimensionar (ex.: +10%). 0 = sem folga.</p>
+            <p className="mt-1 hint">Folga p/ superdimensionar (ex.: +10%). 0 = sem folga.</p>
           </div>
           <div className="flex items-end sm:col-span-2">
             <button
@@ -671,11 +667,11 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
       </section>
 
       {/* 2 · Dimensionamento */}
-      <section className={sec}>
-        <h2 className={h2}>Dimensionamento</h2>
+      <section className="section-card">
+        <h2 className="section-title">Dimensionamento</h2>
 
         {!calc && (
-          <p className="mt-2 subcard text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-2 subcard subtitle">
             Preencha a <strong>cidade da instalação</strong> e o <strong>consumo</strong> acima — o
             sistema sugere os painéis e o inversor automaticamente.
           </p>
@@ -688,7 +684,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
               <strong>{Math.max(1, calc.sizing.nPlacasSugerido)} painéis</strong> de {form.potenciaPainel} Wp
               {" "}(≈ {nf((Math.max(1, calc.sizing.nPlacasSugerido) * form.potenciaPainel) / 1000, 2)} kWp)
               {" "}+ <strong>{sugestaoInversor}</strong>
-              <span className="text-slate-500 dark:text-slate-400"> · necessidade calculada: {nf(calc.sizing.kwpNecessaria, 2)} kWp</span>
+              <span className="text-slate-600 dark:text-slate-400"> · necessidade calculada: {nf(calc.sizing.kwpNecessaria, 2)} kWp</span>
             </div>
             <button type="button" className="btn-secondary !py-1.5 text-xs" onClick={aplicarSugestao}>
               Aplicar sugestão
@@ -701,7 +697,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
             <label className="field-label">Potência do painel (Wp)</label>
             <div className="flex gap-2">
               <select
-                className={inputCls}
+                className="field-input"
                 value={painelSelect}
                 onChange={(e) => {
                   if (e.target.value === "outro") setPainelCustom(true);
@@ -712,7 +708,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
                 <option value="outro">Outra...</option>
               </select>
               {painelCustom && (
-                <input type="number" className={inputCls} value={form.potenciaPainel} onChange={(e) => set("potenciaPainel", Number(e.target.value))} />
+                <input type="number" className="field-input" value={form.potenciaPainel} onChange={(e) => set("potenciaPainel", Number(e.target.value))} />
               )}
             </div>
           </div>
@@ -720,7 +716,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
             <label className="field-label">Nº de painéis</label>
             <input
               type="number"
-              className={inputCls}
+              className="field-input"
               value={form.nPaineis || ""}
               placeholder="auto"
               onChange={(e) => { touched.current.nPaineis = true; set("nPaineis", Number(e.target.value)); }}
@@ -728,14 +724,14 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
           </div>
           <div className="sm:col-span-2">
             <label className="field-label">Tipo de inversor</label>
-            <select className={inputCls} value={form.tipoInversor} onChange={(e) => set("tipoInversor", e.target.value as Form["tipoInversor"])}>
+            <select className="field-input" value={form.tipoInversor} onChange={(e) => set("tipoInversor", e.target.value as Form["tipoInversor"])}>
               <option value="string">Inversor (string)</option>
               <option value="micro">Microinversor</option>
             </select>
           </div>
 
           {/* Micro e string funcionam igual aqui: o catálogo é atalho e
-              "Outra..." libera digitar. A quantidade também é editável — em
+              "Outra…" libera digitar. A quantidade também é editável — em
               branco segue a sugestão do cálculo. */}
           {ehMicro ? (
             <>
@@ -743,7 +739,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
                 <label className="field-label">Microinversor (kW)</label>
                 <div className="flex gap-2">
                   <select
-                    className={inputCls}
+                    className="field-input"
                     value={microSelect}
                     onChange={(e) => {
                       touched.current.inversor = true;
@@ -762,7 +758,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
                       type="number"
                       step="0.1"
                       min="0"
-                      className={inputCls}
+                      className="field-input"
                       placeholder="kW"
                       value={form.microPotenciaKw || ""}
                       onChange={(e) => { touched.current.inversor = true; set("microPotenciaKw", Number(e.target.value)); }}
@@ -775,7 +771,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
                 <input
                   type="number"
                   min="1"
-                  className={inputCls}
+                  className="field-input"
                   value={form.microQtd || ""}
                   placeholder={calc?.micro ? String(calc.micro.qtdSugerida) : "auto"}
                   onChange={(e) => set("microQtd", Number(e.target.value))}
@@ -789,7 +785,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
                 <label className="field-label">Inversor (kW)</label>
                 <div className="flex gap-2">
                   <select
-                    className={inputCls}
+                    className="field-input"
                     value={invSelect}
                     onChange={(e) => {
                       touched.current.inversor = true;
@@ -809,7 +805,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
                     <input
                       type="number"
                       step="0.5"
-                      className={inputCls}
+                      className="field-input"
                       value={form.potenciaInversor}
                       onChange={(e) => { touched.current.inversor = true; set("potenciaInversor", Number(e.target.value)); }}
                     />
@@ -818,13 +814,13 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
               </div>
               <div className="sm:col-span-1">
                 <label className="field-label">Qtd. inversores</label>
-                <input type="number" className={inputCls} value={form.qtdInversores} onChange={(e) => set("qtdInversores", Number(e.target.value))} />
+                <input type="number" className="field-input" value={form.qtdInversores} onChange={(e) => set("qtdInversores", Number(e.target.value))} />
               </div>
             </>
           )}
           <div className="sm:col-span-2">
             <label className="field-label">Tipo de telhado</label>
-            <select className={inputCls} value={form.tipoTelhado} onChange={(e) => set("tipoTelhado", e.target.value)}>
+            <select className="field-input" value={form.tipoTelhado} onChange={(e) => set("tipoTelhado", e.target.value)}>
               {TIPOS_TELHADO.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
@@ -836,7 +832,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
             <Kpi label="Consumo médio" value={`${nf(calc.sizing.consumoMedio, 0)} kWh/mês`} />
             <Kpi label="HSP média (local)" value={nf(calc.sizing.hspMedia, 2)} />
             <div className={`rounded-md p-2 shadow-sm ${overloadOk ? "bg-white dark:bg-slate-800" : "bg-amber-50 dark:bg-amber-900/30"}`}>
-              <div className="text-xs text-slate-500 dark:text-slate-400">
+              <div className="text-xs text-slate-600 dark:text-slate-400">
                 {calc.micro ? "Overload por micro" : "Overload do inversor"}
               </div>
               <div className={`mt-0.5 font-semibold ${overloadOk ? "text-gta-navy dark:text-slate-100" : "text-amber-700 dark:text-amber-300"}`}>
@@ -887,12 +883,12 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
         )}
 
         <details className="mt-3">
-          <summary className="cursor-pointer text-xs font-medium text-slate-500 dark:text-slate-400">Ajustes avançados (eficiência e overload)</summary>
+          <summary className="cursor-pointer text-xs font-medium text-slate-600 dark:text-slate-400">Ajustes avançados (eficiência e overload)</summary>
           <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
               <label className="field-label">Eficiência do sistema (%)</label>
               <input
-                type="number" step="1" min="30" max="100" className={inputCls}
+                type="number" step="1" min="30" max="100" className="field-input"
                 value={Math.round(form.eficiencia * 100)}
                 onChange={(e) => set("eficiencia", Number(e.target.value) / 100)}
               />
@@ -900,12 +896,12 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
             <div>
               <label className="field-label">Overload desejado (%)</label>
               <input
-                type="number" step="1" min="0" max="100" className={inputCls}
+                type="number" step="1" min="0" max="100" className="field-input"
                 value={Math.round(form.overloadDesejado * 100)}
                 onChange={(e) => set("overloadDesejado", Number(e.target.value) / 100)}
               />
             </div>
-            <p className="col-span-2 self-end text-xs text-slate-400 dark:text-slate-500">
+            <p className="col-span-2 self-end hint">
               Padrão vem dos Parâmetros (abaixo) — mude aqui só para esta proposta.
             </p>
           </div>
@@ -914,17 +910,17 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
 
       {/* Geração + gráfico */}
       {calc?.geracao && (
-        <section className={sec}>
-          <h2 className={h2}>Simulação de geração</h2>
+        <section className="section-card">
+          <h2 className="section-title">Simulação de geração</h2>
           <GraficoGeracao linhas={calc.geracao.linhas} />
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs text-slate-500 dark:text-slate-400">
+            <table className="table-compacta">
+              <thead>
                 <tr><th className="py-1">Mês</th><th>Insolação</th><th>Geração (kWh)</th><th>Consumo (kWh)</th></tr>
               </thead>
               <tbody>
                 {calc.geracao.linhas.map((l) => (
-                  <tr key={l.mes} className="border-t border-slate-100 dark:border-slate-700">
+                  <tr key={l.mes}>
                     <td className="py-1">{l.mes}</td>
                     <td>{nf(l.insolacao, 3)}</td>
                     <td className="font-medium text-green-700 dark:text-green-400">{nf(l.energia, 0)}</td>
@@ -944,33 +940,33 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
 
       {/* Lista de materiais (editável) */}
       {materiais.length > 0 && (
-        <section className={sec}>
+        <section className="section-card">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className={h2}>Lista de materiais (para cotar)</h2>
+            <h2 className="section-title">Lista de materiais (para cotar)</h2>
             <div className="flex items-center gap-3">
               {calc?.bom && <button type="button" className="toque text-xs text-gta-indigo hover:underline" onClick={restaurarMat}>Restaurar sugestão</button>}
               <CopyButton label="Copiar lista" text={() => materiais.filter((m) => m.descricao.trim()).map((m) => `${m.qtde}\t${m.descricao}`).join("\n")} />
             </div>
           </div>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Lista genérica (sem marca) para enviar ao distribuidor. Edite a qtde/descrição, adicione ou remova itens — vai assim para a proposta.</p>
+          <p className="mt-1 subtitle">Lista genérica (sem marca) para enviar ao distribuidor. Edite a qtde/descrição, adicione ou remova itens — vai assim para a proposta.</p>
           {/* A lista editada para de acompanhar o cálculo (senão apagaria o que
               foi digitado). Se o dimensionamento mudou depois disso, avisa —
               sem isso a proposta sairia com uma lista de outro sistema. */}
           {listaDesatualizada && (
-            <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+            <Alert tone="amber" className="mt-2">
               O dimensionamento mudou depois que você editou esta lista — ela não acompanha mais o cálculo.
               Confira os itens ou{" "}
               <button type="button" className="toque font-semibold underline" onClick={restaurarMat}>
                 restaure a sugestão
               </button>
               {" "}(isso descarta suas edições).
-            </p>
+            </Alert>
           )}
           <div className="mt-3 space-y-2">
             {materiais.map((m, i) => (
               <div key={i} className="flex items-center gap-2">
-                <input className={`${inputCls} shrink-0 grow-0 basis-20 text-center`} value={m.qtde} onChange={(e) => setMat(i, "qtde", e.target.value)} placeholder="Qtde" />
-                <input className={`${inputCls} min-w-0 flex-1`} value={m.descricao} onChange={(e) => setMat(i, "descricao", e.target.value)} placeholder="Descrição do item" />
+                <input className="field-input shrink-0 grow-0 basis-20 text-center" value={m.qtde} onChange={(e) => setMat(i, "qtde", e.target.value)} placeholder="Qtde" />
+                <input className="field-input min-w-0 flex-1" value={m.descricao} onChange={(e) => setMat(i, "descricao", e.target.value)} placeholder="Descrição do item" />
                 <button type="button" className="icon-btn" onClick={() => removeMat(i)} aria-label="Remover item"><X className="h-4 w-4" /></button>
               </div>
             ))}
@@ -980,30 +976,30 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
       )}
 
       {/* 4 · Distribuidor e preço */}
-      <section className={sec}>
-        <h2 className={h2}>Preço e margem</h2>
+      <section className="section-card">
+        <h2 className="section-title">Preço e margem</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div className="sm:col-span-2">
             <label className="field-label">Distribuidor</label>
-            <select className={inputCls} value={form.distribuidor} onChange={(e) => set("distribuidor", e.target.value)}>
+            <select className="field-input" value={form.distribuidor} onChange={(e) => set("distribuidor", e.target.value)}>
               {DISTRIBUIDORES.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
             </select>
           </div>
           <div className="sm:col-span-2">
             <label className="field-label">Valor do kit (cotação) *</label>
-            <input className={inputCls} value={form.kit} onChange={(e) => set("kit", e.target.value)} placeholder="Ex.: 18.400,27" />
+            <input className="field-input" value={form.kit} onChange={(e) => set("kit", e.target.value)} placeholder="Ex.: 18.400,27" />
           </div>
           <div>
             <label className="field-label">Fator</label>
-            <input type="number" step="0.05" className={inputCls} value={form.fator} onChange={(e) => set("fator", Number(e.target.value))} />
+            <input type="number" step="0.05" className="field-input" value={form.fator} onChange={(e) => set("fator", Number(e.target.value))} />
           </div>
           <div>
             <label className="field-label">Viagens</label>
-            <input type="number" min="0" className={inputCls} value={form.viagens} onChange={(e) => set("viagens", Number(e.target.value))} />
+            <input type="number" min="0" className="field-input" value={form.viagens} onChange={(e) => set("viagens", Number(e.target.value))} />
           </div>
           <div className="sm:col-span-2">
             <label className="field-label">Execução civil (R$)</label>
-            <input className={inputCls} value={form.execucaoCivil} onChange={(e) => set("execucaoCivil", e.target.value)} />
+            <input className="field-input" value={form.execucaoCivil} onChange={(e) => set("execucaoCivil", e.target.value)} />
           </div>
         </div>
 
@@ -1013,7 +1009,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
             <Kpi label="Serviços GTA" value={brl(calc.pricing.servicos)} />
             <Kpi label="Lucro (líq.)" value={brl(calc.pricing.lucroLiquido)} />
             <div className="rounded-md bg-white p-2 shadow-sm dark:bg-slate-800">
-              <div className="text-xs text-slate-500 dark:text-slate-400">Margem líquida</div>
+              <div className="text-xs text-slate-600 dark:text-slate-400">Margem líquida</div>
               <div className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-sm font-semibold ${nivelMargem?.cls}`}>
                 {pct(calc.pricing.margemLiquida)} · {nivelMargem?.label}
               </div>
@@ -1031,9 +1027,9 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
       <CondicoesPagamento total={calc?.pricing?.valorTotal ?? 0} value={cond} onChange={setCond} />
 
       {/* 5 · Economia e retorno */}
-      <section className={sec}>
-        <h2 className={h2}>Economia e retorno do investimento</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      <section className="section-card">
+        <h2 className="section-title">Economia e retorno do investimento</h2>
+        <p className="mt-1 subtitle">
           Informe a distribuidora e a tarifa da conta de energia. O Fio B (Lei 14.300) é buscado
           automaticamente. Requer o valor do kit preenchido acima.
         </p>
@@ -1041,7 +1037,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
           <div className="sm:col-span-3">
             <label className="field-label">Distribuidora</label>
             <input
-              className={inputCls}
+              className="field-input"
               list="distribuidoras-list"
               value={form.distribuidora}
               onChange={(e) => set("distribuidora", e.target.value)}
@@ -1053,7 +1049,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
           </div>
           <div className="sm:col-span-1">
             <label className="field-label">Subgrupo</label>
-            <select className={inputCls} value={form.subgrupo} onChange={(e) => set("subgrupo", e.target.value as Form["subgrupo"])}>
+            <select className="field-input" value={form.subgrupo} onChange={(e) => set("subgrupo", e.target.value as Form["subgrupo"])}>
               <option value="B1">B1 (residencial)</option>
               <option value="B2">B2 (rural)</option>
               <option value="B3">B3 (demais)</option>
@@ -1061,8 +1057,8 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
           </div>
           <div className="sm:col-span-2">
             <label className="field-label">Tarifa de energia (R$/kWh)</label>
-            <input className={inputCls} value={form.tarifaEnergia} onChange={(e) => set("tarifaEnergia", e.target.value)} placeholder="Ex.: 1,14" />
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Valor cheio da conta (com impostos).</p>
+            <input className="field-input" value={form.tarifaEnergia} onChange={(e) => set("tarifaEnergia", e.target.value)} placeholder="Ex.: 1,14" />
+            <p className="mt-1 hint">Valor cheio da conta (com impostos).</p>
           </div>
         </div>
 
@@ -1072,20 +1068,20 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
               <Kpi label="Economia média/mês" value={brl(calc.economia.economiaMensalMedia)} destaque />
               <Kpi label="Economia no 1º ano" value={brl(calc.economia.economiaAno1)} />
               <div className="rounded-md bg-white p-2 shadow-sm dark:bg-slate-800">
-                <div className="text-xs text-slate-500 dark:text-slate-400">Payback</div>
+                <div className="text-xs text-slate-600 dark:text-slate-400">Payback</div>
                 <div className="mt-0.5 font-semibold text-green-700 dark:text-green-400">
                   {calc.economia.paybackAnos <= 25 ? paybackTexto(calc.economia.paybackMeses) : "acima de 25 anos"}
                 </div>
               </div>
               <Kpi label="Economia em 25 anos" value={brl(calc.economia.economiaHorizonte)} />
             </div>
-            <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+            <p className="mt-2 hint">
               Considera inflação da tarifa, degradação dos módulos, Fio B progressivo e o consumo simultâneo
               (ajustáveis nos Parâmetros). Gasto atual ≈ {brl(calc.economia.gastoSemSolarAno1 / 12)}/mês → com solar ≈ {brl(calc.economia.gastoComSolarAno1 / 12)}/mês.
             </p>
           </>
         ) : (
-          <p className="mt-4 subcard text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-4 subcard subtitle">
             Preencha o <strong>valor do kit</strong>, a <strong>distribuidora</strong> e a <strong>tarifa</strong> para
             ver a economia mensal e o payback.
           </p>
@@ -1093,11 +1089,11 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
       </section>
 
       {/* Parâmetros de preço e dimensionamento (retraído; disponível a todos) */}
-      <details className={sec}>
+      <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">
           Parâmetros de preço e dimensionamento
         </summary>
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">
           Valores padrão da plataforma (custos, imposto/NF, comissão, fator, eficiência). Ao salvar, valem
           para todos os próximos cálculos.
         </p>
@@ -1107,14 +1103,14 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
       </details>
 
       {/* Textos (edição manual) */}
-      <details className={sec}>
+      <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Textos da proposta (opcional)</summary>
         <div className="mt-4 space-y-3">
-          <div><label className="field-label">Objeto</label><input className={inputCls} value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
-          <div><label className="field-label">Objetivo</label><textarea className={`${inputCls} min-h-[70px]`} value={form.textoObjetivo} onChange={(e) => set("textoObjetivo", e.target.value)} /></div>
-          <div><label className="field-label">Observação técnica</label><textarea className={`${inputCls} min-h-[70px]`} value={form.textoObservacao} onChange={(e) => set("textoObservacao", e.target.value)} /></div>
+          <div><label className="field-label">Objeto</label><input className="field-input" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
+          <div><label className="field-label">Objetivo</label><textarea className="field-input min-h-[70px]" value={form.textoObjetivo} onChange={(e) => set("textoObjetivo", e.target.value)} /></div>
+          <div><label className="field-label">Observação técnica</label><textarea className="field-input min-h-[70px]" value={form.textoObservacao} onChange={(e) => set("textoObservacao", e.target.value)} /></div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div><label className="field-label">Prazo de execução</label><input className={inputCls} value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
+            <div><label className="field-label">Prazo de execução</label><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
           </div>
         </div>
       </details>
@@ -1122,10 +1118,10 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
       {/* 5 · Ações */}
       <div className="flex flex-wrap items-center gap-3">
         <button className="btn-secondary" onClick={() => salvar(false)} disabled={salvando}>
-          {salvando ? "Salvando..." : savedId ? "Salvar alterações" : "Salvar proposta"}
+          {salvando ? "Salvando…" : savedId ? "Salvar alterações" : "Salvar proposta"}
         </button>
         <button className="btn-primary" onClick={gerar} disabled={gerando || !calc?.pricing} title={!calc?.pricing ? "Informe o valor do kit para gerar" : undefined}>
-          {gerando ? "Gerando..." : "Gerar .docx"}
+          {gerando ? "Gerando…" : "Gerar .docx"}
         </button>
         <BaixarPlanilhaButton
           serviceKey="solar"
@@ -1195,7 +1191,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
         <button className="toque text-sm text-gta-indigo hover:underline" onClick={() => router.push("/propostas")}>
           Ver propostas
         </button>
-        {!calc?.pricing && <span className="text-xs text-slate-400 dark:text-slate-500">Informe o valor do kit para habilitar a geração.</span>}
+        {!calc?.pricing && <span className="hint">Informe o valor do kit para habilitar a geração.</span>}
         {status && <span className="text-sm text-green-600 dark:text-green-400">{status}</span>}
       </div>
     </div>
@@ -1230,7 +1226,7 @@ function GraficoGeracao({ linhas }: { linhas: { mes: string; energia: number; co
           );
         })}
       </svg>
-      <div className="flex gap-4 text-xs text-slate-500 dark:text-slate-400">
+      <div className="flex gap-4 text-xs text-slate-600 dark:text-slate-400">
         <span className="inline-flex items-center gap-1"><span className="inline-block h-2 w-2 bg-[#1B7A3E]" /> Geração</span>
         <span className="inline-flex items-center gap-1"><span className="inline-block h-2 w-2 bg-[#E65100]" /> Consumo</span>
       </div>

@@ -124,7 +124,7 @@ export function NotificacoesSino() {
 
           <div className="max-h-[60vh] overflow-y-auto">
             {itens.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-slate-400 dark:text-slate-500">Nenhuma notificação.</p>
+              <p className="px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">Nenhuma notificação.</p>
             ) : (
               itens.map((n) => (
                 <button
@@ -137,8 +137,8 @@ export function NotificacoesSino() {
                   <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.lida ? "bg-transparent" : "bg-gta-orange"}`} aria-hidden />
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-medium text-gta-navy dark:text-slate-100">{n.titulo}</span>
-                    {n.mensagem && <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{n.mensagem}</span>}
-                    <span className="mt-1 block text-[11px] text-slate-400 dark:text-slate-500">{tempoRelativo(n.criadoEm)}</span>
+                    {n.mensagem && <span className="mt-0.5 block text-xs text-slate-600 dark:text-slate-400">{n.mensagem}</span>}
+                    <span className="mt-1 block text-[11px] text-slate-500 dark:text-slate-400">{tempoRelativo(n.criadoEm)}</span>
                   </span>
                 </button>
               ))

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ROLE_LABEL, type PublicUser, type Role } from "@/lib/users/types";
 import type { Cargo } from "@/lib/cargos/types";
-import { Badge, type Tone } from "@/components/ui";
+import { Alert, Badge, Loading, type Tone } from "@/components/ui";
 
 const ROLE_TONE: Record<Role, Tone> = { admin: "indigo", member: "slate" };
 
@@ -91,7 +91,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
     setUsuarios((prev) => prev.filter((x) => x.id !== u.id));
   }
 
-  if (loading) return <p className="subtitle">Carregando usuários...</p>;
+  if (loading) return <Loading>Carregando usuários…</Loading>;
 
   return (
     <div className="space-y-4">
@@ -99,20 +99,20 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
         <button className="btn-primary" onClick={() => setNovoAberto((v) => !v)}>
           {novoAberto ? "Fechar" : "+ Novo usuário"}
         </button>
-        <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">{usuarios.length} usuário(s)</span>
+        <span className="ml-auto hint">{usuarios.length} usuário(s)</span>
       </div>
 
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       {/* credencial gerada */}
       {credencial && (
-        <div className="rounded-xl border border-green-300 bg-green-50 p-4 text-sm dark:border-green-700 dark:bg-green-900/30">
-          <p className="font-semibold text-green-800 dark:text-green-300">Senha provisória gerada</p>
-          <p className="mt-1 text-green-700 dark:text-green-300">
+        <Alert tone="green">
+          <strong>Senha provisória gerada.</strong>
+          <p className="mt-1">
             Entregue estes dados a <strong>{credencial.email}</strong>. A pessoa será obrigada a
             definir uma nova senha no primeiro acesso.
           </p>
-          <div className="mt-2 flex items-center gap-3">
+          <div className="mt-2 flex flex-wrap items-center gap-3">
             <code className="rounded bg-white px-3 py-1 text-base font-bold tracking-wide text-gta-navy shadow-sm dark:bg-slate-800 dark:text-slate-100">
               {credencial.senha}
             </code>
@@ -122,17 +122,17 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
             >
               Copiar
             </button>
-            <button className="text-xs text-slate-500 hover:underline dark:text-slate-400" onClick={() => setCredencial(null)}>
+            <button className="btn-link !text-xs" onClick={() => setCredencial(null)}>
               Ocultar
             </button>
           </div>
-        </div>
+        </Alert>
       )}
 
       {/* novo usuário */}
       {novoAberto && (
-        <form onSubmit={criar} className="rounded-xl border border-gta-indigo/30 bg-white p-4 shadow-sm dark:bg-slate-800">
-          <h2 className="mb-3 text-sm font-semibold text-gta-navy dark:text-slate-100">Novo usuário</h2>
+        <form onSubmit={criar} className="section-card-destaque">
+          <h2 className="section-title mb-3">Novo usuário</h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
             <div className="sm:col-span-3">
               <label className="field-label">Nome *</label>
@@ -171,7 +171,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
           </div>
           <div className="mt-3">
             <button type="submit" className="btn-primary" disabled={salvando}>
-              {salvando ? "Criando..." : "Criar usuário"}
+              {salvando ? "Criando…" : "Criar usuário"}
             </button>
           </div>
         </form>
@@ -187,21 +187,21 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="font-medium text-gta-navy dark:text-slate-100">
-                    {u.name} {eu && <span className="text-xs font-normal text-slate-400 dark:text-slate-500">(você)</span>}
+                    {u.name} {eu && <span className="text-xs font-normal text-slate-500 dark:text-slate-400">(você)</span>}
                   </div>
                   <div className="truncate text-sm text-slate-600 dark:text-slate-300">{u.email}</div>
                 </div>
                 <Badge tone={ROLE_TONE[u.role]} className="shrink-0">{ROLE_LABEL[u.role]}</Badge>
               </div>
               <div className="mt-1.5 text-xs">
-                {u.active ? <span className="text-green-700 dark:text-green-400">Ativo</span> : <span className="text-slate-400 dark:text-slate-500">Inativo</span>}
+                {u.active ? <span className="text-green-700 dark:text-green-400">Ativo</span> : <span className="text-slate-500 dark:text-slate-400">Inativo</span>}
                 {u.mustChangePassword && u.active && <span className="ml-1 text-amber-600 dark:text-amber-400">(troca pendente)</span>}
               </div>
               <div className="mt-2 text-xs">
                 {u.role === "admin" ? (
-                  <span className="text-slate-400 dark:text-slate-500">Cargo: todas as permissões (admin)</span>
+                  <span className="text-slate-500 dark:text-slate-400">Cargo: todas as permissões (admin)</span>
                 ) : (
-                  <label className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                  <label className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                     Cargo:
                     <select
                       className="field-input !w-auto !py-1 !text-xs"
@@ -250,7 +250,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
               return (
                 <tr key={u.id} className={!u.active ? "opacity-50" : ""}>
                   <td className="px-4 py-2 font-medium text-gta-navy dark:text-slate-100">
-                    {u.name} {eu && <span className="text-xs font-normal text-slate-400 dark:text-slate-500">(você)</span>}
+                    {u.name} {eu && <span className="text-xs font-normal text-slate-500 dark:text-slate-400">(você)</span>}
                   </td>
                   <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{u.email}</td>
                   <td className="px-4 py-2">
@@ -258,7 +258,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
                   </td>
                   <td className="px-4 py-2">
                     {u.role === "admin" ? (
-                      <span className="text-xs text-slate-400 dark:text-slate-500">Todas (admin)</span>
+                      <span className="hint">Todas (admin)</span>
                     ) : (
                       <select
                         className="field-input !w-auto !py-1 !text-xs"
@@ -276,7 +276,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
                     {u.active ? (
                       <span className="text-green-700 dark:text-green-400">Ativo</span>
                     ) : (
-                      <span className="text-slate-400 dark:text-slate-500">Inativo</span>
+                      <span className="text-slate-500 dark:text-slate-400">Inativo</span>
                     )}
                     {u.mustChangePassword && u.active && (
                       <span className="ml-1 text-xs text-amber-600 dark:text-amber-400">(troca pendente)</span>

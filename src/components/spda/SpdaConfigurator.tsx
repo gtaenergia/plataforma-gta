@@ -7,7 +7,7 @@ import { AlertTriangle } from "lucide-react";
 import { SpdaParamsForm } from "./SpdaParamsForm";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
-import { Kpi } from "@/components/ui";
+import { Alert, Kpi } from "@/components/ui";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -202,35 +202,31 @@ export function SpdaConfigurator({ propostaId }: { propostaId?: string }) {
     } finally { setGerando(false); }
   }
 
-  const inputCls = "field-input";
-  const sec = "section-card";
-  const h2 = "section-title";
-
   return (
     <div className="space-y-6">
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       {/* Cliente e local */}
-      <section className={sec}>
-        <h2 className={h2}>Cliente e local</h2>
+      <section className="section-card">
+        <h2 className="section-title">Cliente e local</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3"><label className="field-label">Nome do cliente *</label><ClienteInput className={inputCls} value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></div>
-          <div className="sm:col-span-3"><label className="field-label">Cidade/UF *</label><input className={inputCls} value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></div>
-          <div className="sm:col-span-3"><label className="field-label">Local / obra</label><input className={inputCls} value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Campus — Quirinópolis/GO" /></div>
-          <div className="sm:col-span-1"><label className="field-label">Validade (dias)</label><input type="number" className={inputCls} value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} /></div>
-          <div className="sm:col-span-2"><label className="field-label">Emissão</label><input type="date" className={inputCls} value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></div>
+          <div className="sm:col-span-3"><label className="field-label">Nome do cliente *</label><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></div>
+          <div className="sm:col-span-3"><label className="field-label">Cidade/UF *</label><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></div>
+          <div className="sm:col-span-3"><label className="field-label">Local / obra</label><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Campus — Quirinópolis/GO" /></div>
+          <div className="sm:col-span-1"><label className="field-label">Validade (dias)</label><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} /></div>
+          <div className="sm:col-span-2"><label className="field-label">Emissão</label><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></div>
         </div>
-        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">A referência é gerada automaticamente ao salvar.</p>
+        <p className="mt-2 hint">A referência é gerada automaticamente ao salvar.</p>
       </section>
 
       {/* Estrutura e área */}
-      <section className={sec}>
-        <h2 className={h2}>Estrutura e área</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">O preço vem das métricas reais: <strong>risco por bloco</strong> + <strong>projeto por m²</strong>.</p>
+      <section className="section-card">
+        <h2 className="section-title">Estrutura e área</h2>
+        <p className="mt-1 subtitle">O preço vem das métricas reais: <strong>risco por bloco</strong> + <strong>projeto por m²</strong>.</p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-2"><label className="field-label">Nº de blocos / estruturas *</label><input type="number" min={1} className={inputCls} value={form.nBlocos} onChange={(e) => set("nBlocos", Math.max(1, Number(e.target.value)))} /></div>
-          <div className="sm:col-span-2"><label className="field-label">Área total de cobertura (m²) *</label><input className={inputCls} inputMode="decimal" value={form.areaM2} onChange={(e) => set("areaM2", e.target.value)} placeholder="Ex.: 3.790" /></div>
-          <div className="sm:col-span-2"><label className="field-label">Custo logístico estimado (R$)</label><input className={inputCls} inputMode="decimal" value={form.custoLogistico} onChange={(e) => set("custoLogistico", e.target.value)} placeholder="0" /><p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Deslocamento, hospedagem, diárias, terrômetro, estagiário — só para conferir a margem.</p></div>
+          <div className="sm:col-span-2"><label className="field-label">Nº de blocos / estruturas *</label><input type="number" min={1} className="field-input" value={form.nBlocos} onChange={(e) => set("nBlocos", Math.max(1, Number(e.target.value)))} /></div>
+          <div className="sm:col-span-2"><label className="field-label">Área total de cobertura (m²) *</label><input className="field-input" inputMode="decimal" value={form.areaM2} onChange={(e) => set("areaM2", e.target.value)} placeholder="Ex.: 3.790" /></div>
+          <div className="sm:col-span-2"><label className="field-label">Custo logístico estimado (R$)</label><input className="field-input" inputMode="decimal" value={form.custoLogistico} onChange={(e) => set("custoLogistico", e.target.value)} placeholder="0" /><p className="mt-1 hint">Deslocamento, hospedagem, diárias, terrômetro, estagiário — só para conferir a margem.</p></div>
         </div>
 
         {preco && (
@@ -247,9 +243,9 @@ export function SpdaConfigurator({ propostaId }: { propostaId?: string }) {
       </section>
 
       {/* Preço */}
-      <section className={sec}>
+      <section className="section-card">
         <div className="flex items-center justify-between">
-          <h2 className={h2}>Preço</h2>
+          <h2 className="section-title">Preço</h2>
           {preco && precoTocado.current && (
             <button type="button" className="toque text-xs text-gta-indigo hover:underline" onClick={() => { precoTocado.current = false; setForm((f) => ({ ...f, valorProjeto: nf(preco.design, 2) })); }}>Usar sugerido {brl(preco.design)}</button>
           )}
@@ -257,13 +253,13 @@ export function SpdaConfigurator({ propostaId }: { propostaId?: string }) {
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div className="sm:col-span-2">
             <label className="field-label">Valor do projeto (R$) *</label>
-            <input className={inputCls} value={form.valorProjeto} onChange={(e) => { precoTocado.current = true; set("valorProjeto", e.target.value); }} placeholder="Ex.: 21.870,00" />
-            {preco ? <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">risco {brl(riscoItem)} + projeto {brl(projetoItem)} = {brl(valorTotalProjeto)} · margem {nf(margemVal * 100, 0)}%</p> : null}
+            <input className="field-input" value={form.valorProjeto} onChange={(e) => { precoTocado.current = true; set("valorProjeto", e.target.value); }} placeholder="Ex.: 21.870,00" />
+            {preco ? <p className="mt-1 hint">risco {brl(riscoItem)} + projeto {brl(projetoItem)} = {brl(valorTotalProjeto)} · margem {nf(margemVal * 100, 0)}%</p> : null}
           </div>
           <div className="sm:col-span-2">
             <label className="field-label">Execução (R$, 0 = só projeto)</label>
-            <input className={inputCls} value={form.valorExecucao} onChange={(e) => set("valorExecucao", e.target.value)} />
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Mão de obra; materiais faturados à parte.</p>
+            <input className="field-input" value={form.valorExecucao} onChange={(e) => set("valorExecucao", e.target.value)} />
+            <p className="mt-1 hint">Mão de obra; materiais faturados à parte.</p>
           </div>
           <div className="sm:col-span-2 flex items-end">
             <div className="w-full rounded-md bg-gta-navy p-2 text-white shadow-sm">
@@ -275,7 +271,7 @@ export function SpdaConfigurator({ propostaId }: { propostaId?: string }) {
 
         {preco && (
           <div className="mt-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Composição do faturamento (uso interno)</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Composição do faturamento (uso interno)</p>
             <div className="mt-2 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4 dark:bg-slate-900/50">
               <Kpi label="Gerenciamento de risco" value={brl(riscoItem)} />
               <Kpi label="Projeto de SPDA" value={brl(projetoItem)} />
@@ -285,7 +281,7 @@ export function SpdaConfigurator({ propostaId }: { propostaId?: string }) {
               <Kpi label="Lucro líquido" value={brl(lucroVal)} />
               <Kpi label="Margem líquida" value={`${nf(margemVal * 100, 1)}%`} destaque />
             </div>
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+            <p className="mt-1 hint">
               Faturamento = risco (por bloco) + projeto (por m²), com piso mínimo. Margem = (faturamento − impostos − custo logístico) / faturamento. Ajuste as taxas em “Parâmetros de preço”.
             </p>
           </div>
@@ -296,26 +292,26 @@ export function SpdaConfigurator({ propostaId }: { propostaId?: string }) {
       <CondicoesPagamento total={totalCliente} value={cond} onChange={setCond} />
 
       {/* Textos */}
-      <details className={sec}>
+      <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Textos da proposta (opcional)</summary>
         <div className="mt-4 space-y-3">
-          <div><label className="field-label">Objeto</label><textarea className={`${inputCls} min-h-[70px]`} value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
-          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className={`${inputCls} min-h-[90px]`} value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
-          <div><label className="field-label">Prazo de execução</label><input className={inputCls} value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
+          <div><label className="field-label">Objeto</label><textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
+          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className="field-input min-h-[90px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
+          <div><label className="field-label">Prazo de execução</label><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
         </div>
       </details>
 
       {/* Parâmetros */}
-      <details className={sec}>
+      <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Parâmetros de preço (R$/bloco, R$/m², piso, impostos)</summary>
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Faturamento = R$/bloco × nº de blocos + R$/m² × área, respeitando o piso mínimo. Ao salvar, valem para todos os próximos cálculos.</p>
+        <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">Faturamento = R$/bloco × nº de blocos + R$/m² × área, respeitando o piso mínimo. Ao salvar, valem para todos os próximos cálculos.</p>
         <div className="mt-4"><SpdaParamsForm onSaved={aplicarParams} /></div>
       </details>
 
       {/* Ações */}
       <div className="flex flex-wrap items-center gap-3">
-        <button className="btn-secondary" onClick={() => salvar(false)} disabled={salvando}>{salvando ? "Salvando..." : savedId ? "Salvar alterações" : "Salvar proposta"}</button>
-        <button className="btn-primary" onClick={gerar} disabled={gerando || valorTotalProjeto <= 0}>{gerando ? "Gerando..." : "Gerar .docx"}</button>
+        <button className="btn-secondary" onClick={() => salvar(false)} disabled={salvando}>{salvando ? "Salvando…" : savedId ? "Salvar alterações" : "Salvar proposta"}</button>
+        <button className="btn-primary" onClick={gerar} disabled={gerando || valorTotalProjeto <= 0}>{gerando ? "Gerando…" : "Gerar .docx"}</button>
         <BaixarPlanilhaButton
           serviceKey="spda"
           nome={`spda-${form.clienteNome || "proposta"}`}

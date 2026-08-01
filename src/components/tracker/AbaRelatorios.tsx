@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { EmptyState, Kpi, KpiGrid, SectionCard } from "@/components/ui";
+import { Alert, EmptyState, Kpi, KpiGrid, Loading, SectionCard } from "@/components/ui";
 import { duracaoMin, formatarDuracao, type TimeEntry } from "@/lib/tracker/types";
 import { addDias, segundaDaSemana, useEntradas, ymdLocal, type Usuario } from "./comum";
 
@@ -75,32 +75,30 @@ export function AbaRelatorios({
     URL.revokeObjectURL(url);
   }
 
-  const inputCls = "field-input";
-
   return (
     <div className="space-y-6">
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       <SectionCard title="Filtros">
         <div className="grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-4">
           <div>
             <label className="field-label" htmlFor="rel-de">De</label>
-            <input id="rel-de" type="date" className={inputCls} value={de} onChange={(e) => setDe(e.target.value)} />
+            <input id="rel-de" type="date" className="field-input" value={de} onChange={(e) => setDe(e.target.value)} />
           </div>
           <div>
             <label className="field-label" htmlFor="rel-ate">Até</label>
-            <input id="rel-ate" type="date" className={inputCls} value={ate} onChange={(e) => setAte(e.target.value)} />
+            <input id="rel-ate" type="date" className="field-input" value={ate} onChange={(e) => setAte(e.target.value)} />
           </div>
           <div>
             <label className="field-label" htmlFor="rel-cliente">Cliente</label>
-            <select id="rel-cliente" className={inputCls} value={fCliente} onChange={(e) => setFCliente(e.target.value)}>
+            <select id="rel-cliente" className="field-input" value={fCliente} onChange={(e) => setFCliente(e.target.value)}>
               <option value="todos">Todos os clientes</option>
               {clientes.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div>
             <label className="field-label" htmlFor="rel-categoria">Categoria</label>
-            <select id="rel-categoria" className={inputCls} value={fCategoria} onChange={(e) => setFCategoria(e.target.value)}>
+            <select id="rel-categoria" className="field-input" value={fCategoria} onChange={(e) => setFCategoria(e.target.value)}>
               <option value="todos">Todas as categorias</option>
               {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -123,14 +121,14 @@ export function AbaRelatorios({
         }
       >
         {carregando ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Carregando…</p>
+          <Loading />
         ) : filtradas.length === 0 ? (
           <EmptyState>Nenhum lançamento com esses filtros.</EmptyState>
         ) : (
           <>
             {/* Tabela no desktop; cartões no celular (convenção do projeto). */}
             <div className="hidden overflow-x-auto md:block">
-              <table className="data-table w-full text-sm">
+              <table className="data-table">
                 <thead>
                   <tr>
                     <th>Data</th>
@@ -146,15 +144,15 @@ export function AbaRelatorios({
                   {filtradas.map((e) => (
                     <tr key={e.id}>
                       <td className="whitespace-nowrap tabular-nums">{fmtData(e.inicio)}</td>
-                      <td className="whitespace-nowrap tabular-nums text-slate-500 dark:text-slate-400">
+                      <td className="whitespace-nowrap tabular-nums text-slate-600 dark:text-slate-400">
                         {fmtHora(e.inicio)}{e.fim ? `–${fmtHora(e.fim)}` : ""}
                       </td>
                       <td>
                         <span className="text-gta-navy dark:text-slate-100">{e.descricao || "(sem descrição)"}</span>
                       </td>
                       {mostrarUsuario && <td className="whitespace-nowrap">{nomeDe(e.usuarioEmail)}</td>}
-                      <td>{e.cliente || <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
-                      <td>{e.categoria || <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
+                      <td>{e.cliente || <span className="sem-valor">—</span>}</td>
+                      <td>{e.categoria || <span className="sem-valor">—</span>}</td>
                       <td className="whitespace-nowrap text-right tabular-nums font-medium">{formatarDuracao(min(e))}</td>
                     </tr>
                   ))}
@@ -168,7 +166,7 @@ export function AbaRelatorios({
                     <span className="min-w-0 font-medium text-gta-navy dark:text-slate-100">{e.descricao || "(sem descrição)"}</span>
                     <span className="shrink-0 text-sm font-medium tabular-nums">{formatarDuracao(min(e))}</span>
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
                     <span className="tabular-nums">{fmtData(e.inicio)} · {fmtHora(e.inicio)}{e.fim ? `–${fmtHora(e.fim)}` : ""}</span>
                     {mostrarUsuario && <span>· {nomeDe(e.usuarioEmail)}</span>}
                     {e.cliente && <span>· {e.cliente}</span>}

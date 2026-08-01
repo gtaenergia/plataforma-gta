@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { EmptyState } from "@/components/ui";
+import { Alert, EmptyState, Loading } from "@/components/ui";
 import { duracaoMin, formatarDuracao, type TimeEntry } from "@/lib/tracker/types";
 import { addDias, DIA_SEMANA_CURTO, fmtCurta, segundaDaSemana, useEntradas } from "./comum";
 
@@ -66,7 +66,7 @@ export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
 
   return (
     <div className="space-y-4">
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -83,13 +83,13 @@ export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
             Esta semana
           </button>
         </div>
-        <span className="text-sm text-slate-500 dark:text-slate-400">
+        <span className="subtitle">
           Total da semana: <strong className="text-gta-navy dark:text-slate-100">{formatarDuracao(totalSemana)}</strong>
         </span>
       </div>
 
       {carregando ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500">Carregando…</p>
+        <Loading />
       ) : entradas.length === 0 ? (
         <EmptyState>Nenhum lançamento nesta semana.</EmptyState>
       ) : (
@@ -101,7 +101,7 @@ export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
               <div className="w-12 shrink-0" aria-hidden>
                 <div className="h-8" />
                 {horas.map((h) => (
-                  <div key={h} className="relative text-[10px] tabular-nums text-slate-400 dark:text-slate-500" style={{ height: PX_POR_HORA }}>
+                  <div key={h} className="relative text-[10px] tabular-nums text-slate-500 dark:text-slate-400" style={{ height: PX_POR_HORA }}>
                     <span className="absolute -top-1.5 right-1">{String(h).padStart(2, "0")}h</span>
                   </div>
                 ))}
@@ -114,7 +114,7 @@ export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
                   .reduce((s, e) => s + duracaoMin(e, agora), 0);
                 return (
                   <div key={i} className="min-w-0 flex-1 border-l border-slate-100 dark:border-slate-800">
-                    <div className={`h-8 px-1 text-center ${ehHoje ? "text-gta-indigo" : "text-slate-500 dark:text-slate-400"}`}>
+                    <div className={`h-8 px-1 text-center ${ehHoje ? "text-gta-indigo" : "text-slate-600 dark:text-slate-400"}`}>
                       <div className="text-[11px] font-semibold">{DIA_SEMANA_CURTO[dia.getDay()]} {fmtCurta(dia)}</div>
                       <div className="text-[10px] tabular-nums">{totalDia > 0 ? formatarDuracao(totalDia) : ""}</div>
                     </div>
@@ -140,7 +140,7 @@ export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
               })}
             </div>
           </div>
-          <p className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
+          <p className="mt-2 flex flex-wrap items-center gap-3 hint">
             <span>Pisca = cronômetro em andamento</span>
           </p>
         </div>

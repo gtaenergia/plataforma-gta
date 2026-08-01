@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ExecSeParamsForm } from "./ExecSeParamsForm";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
-import { Kpi } from "@/components/ui";
+import { Alert, Kpi } from "@/components/ui";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -184,44 +184,40 @@ export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: st
     } finally { setGerando(false); }
   }
 
-  const inputCls = "field-input";
-  const sec = "section-card";
-  const h2 = "section-title";
-
   return (
     <div className="space-y-6">
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       {/* Cliente e local */}
-      <section className={sec}>
-        <h2 className={h2}>Cliente e local</h2>
+      <section className="section-card">
+        <h2 className="section-title">Cliente e local</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3"><label className="field-label">Nome do cliente *</label><ClienteInput className={inputCls} value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></div>
-          <div className="sm:col-span-3"><label className="field-label">Cidade/UF *</label><input className={inputCls} value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></div>
-          <div className="sm:col-span-3"><label className="field-label">Local / obra</label><input className={inputCls} value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Zona rural — GO" /></div>
-          <div className="sm:col-span-1"><label className="field-label">Validade (dias)</label><input type="number" className={inputCls} value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} /></div>
-          <div className="sm:col-span-2"><label className="field-label">Emissão</label><input type="date" className={inputCls} value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></div>
+          <div className="sm:col-span-3"><label className="field-label">Nome do cliente *</label><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></div>
+          <div className="sm:col-span-3"><label className="field-label">Cidade/UF *</label><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></div>
+          <div className="sm:col-span-3"><label className="field-label">Local / obra</label><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Zona rural — GO" /></div>
+          <div className="sm:col-span-1"><label className="field-label">Validade (dias)</label><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} /></div>
+          <div className="sm:col-span-2"><label className="field-label">Emissão</label><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></div>
         </div>
-        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">A referência é gerada automaticamente ao salvar.</p>
+        <p className="mt-2 hint">A referência é gerada automaticamente ao salvar.</p>
       </section>
 
       {/* Custo da execução */}
-      <section className={sec}>
-        <h2 className={h2}>Custo da execução</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Informe o custo do levantamento (BOM). O preço é <strong>custo × Fator K</strong>; o equipamento principal é faturado à parte.</p>
+      <section className="section-card">
+        <h2 className="section-title">Custo da execução</h2>
+        <p className="mt-1 subtitle">Informe o custo do levantamento (BOM). O preço é <strong>custo × Fator K</strong>; o equipamento principal é faturado à parte.</p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-2"><label className="field-label">Potência (kVA)</label><input className={inputCls} inputMode="decimal" value={form.potenciaKva} onChange={(e) => set("potenciaKva", e.target.value)} placeholder="Ex.: 750" /></div>
+          <div className="sm:col-span-2"><label className="field-label">Potência (kVA)</label><input className="field-input" inputMode="decimal" value={form.potenciaKva} onChange={(e) => set("potenciaKva", e.target.value)} placeholder="Ex.: 750" /></div>
           <div className="sm:col-span-2">
             <label className="field-label">Tipo</label>
-            <select className={inputCls} value={form.tipo} onChange={(e) => set("tipo", e.target.value as Form["tipo"])}>
+            <select className="field-input" value={form.tipo} onChange={(e) => set("tipo", e.target.value as Form["tipo"])}>
               <option value="Aérea">Aérea</option>
               <option value="Abrigada">Abrigada</option>
               <option value="Pedestal">Pedestal</option>
             </select>
           </div>
-          <div className="sm:col-span-2"><label className="field-label">Materiais (R$)</label><input className={inputCls} inputMode="decimal" value={form.custoMateriais} onChange={(e) => set("custoMateriais", e.target.value)} placeholder="Ex.: 55.000" /></div>
-          <div className="sm:col-span-2"><label className="field-label">Mão de obra (R$)</label><input className={inputCls} inputMode="decimal" value={form.custoMaoObra} onChange={(e) => set("custoMaoObra", e.target.value)} placeholder="Ex.: 6.000" /></div>
-          <div className="sm:col-span-2"><label className="field-label">Projeto/ART/outros (R$)</label><input className={inputCls} inputMode="decimal" value={form.custoProjetoOutros} onChange={(e) => set("custoProjetoOutros", e.target.value)} placeholder="Ex.: 12.000" /></div>
+          <div className="sm:col-span-2"><label className="field-label">Materiais (R$)</label><input className="field-input" inputMode="decimal" value={form.custoMateriais} onChange={(e) => set("custoMateriais", e.target.value)} placeholder="Ex.: 55.000" /></div>
+          <div className="sm:col-span-2"><label className="field-label">Mão de obra (R$)</label><input className="field-input" inputMode="decimal" value={form.custoMaoObra} onChange={(e) => set("custoMaoObra", e.target.value)} placeholder="Ex.: 6.000" /></div>
+          <div className="sm:col-span-2"><label className="field-label">Projeto/ART/outros (R$)</label><input className="field-input" inputMode="decimal" value={form.custoProjetoOutros} onChange={(e) => set("custoProjetoOutros", e.target.value)} placeholder="Ex.: 12.000" /></div>
         </div>
 
         {preco && (
@@ -235,9 +231,9 @@ export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: st
       </section>
 
       {/* Preço */}
-      <section className={sec}>
+      <section className="section-card">
         <div className="flex items-center justify-between">
-          <h2 className={h2}>Preço</h2>
+          <h2 className="section-title">Preço</h2>
           {preco && precoTocado.current && preco.faturamento > 0 && (
             <button type="button" className="toque text-xs text-gta-indigo hover:underline" onClick={() => { precoTocado.current = false; setForm((f) => ({ ...f, valorServico: nf(preco.faturamento, 2) })); }}>Usar sugerido {brl(preco.faturamento)}</button>
           )}
@@ -245,13 +241,13 @@ export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: st
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div className="sm:col-span-2">
             <label className="field-label">Valor do serviço (R$) *</label>
-            <input className={inputCls} value={form.valorServico} onChange={(e) => { precoTocado.current = true; set("valorServico", e.target.value); }} placeholder="Ex.: 128.790,00" />
-            {preco ? <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">custo {brl(preco.custo)} × Fator K {nf(preco.fatorK, 2)} → sugerido {brl(preco.faturamento)}</p> : null}
+            <input className="field-input" value={form.valorServico} onChange={(e) => { precoTocado.current = true; set("valorServico", e.target.value); }} placeholder="Ex.: 128.790,00" />
+            {preco ? <p className="mt-1 hint">custo {brl(preco.custo)} × Fator K {nf(preco.fatorK, 2)} → sugerido {brl(preco.faturamento)}</p> : null}
           </div>
           <div className="sm:col-span-2">
             <label className="field-label">Equipamento (R$, à parte)</label>
-            <input className={inputCls} value={form.valorEquipamento} onChange={(e) => set("valorEquipamento", e.target.value)} />
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Transformador/cubículo; 0 = por conta do cliente.</p>
+            <input className="field-input" value={form.valorEquipamento} onChange={(e) => set("valorEquipamento", e.target.value)} />
+            <p className="mt-1 hint">Transformador/cubículo; 0 = por conta do cliente.</p>
           </div>
           <div className="sm:col-span-2 flex items-end">
             <div className="w-full rounded-md bg-gta-navy p-2 text-white shadow-sm">
@@ -263,7 +259,7 @@ export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: st
 
         {preco && preco.custo > 0 && (
           <div className="mt-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Composição do faturamento (uso interno)</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Composição do faturamento (uso interno)</p>
             <div className="mt-2 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4 dark:bg-slate-900/50">
               <Kpi label="Custo total" value={brl(preco.custo)} />
               <Kpi label="Fator K (markup)" value={`× ${nf(preco.fatorK, 2)}`} />
@@ -272,7 +268,7 @@ export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: st
               <Kpi label="Lucro líquido" value={brl(preco.lucro)} />
               <Kpi label="Margem líquida" value={`${nf(preco.margem * 100, 1)}%`} destaque />
             </div>
-            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Faturamento = custo × Fator K. Margem = (faturamento − custo − impostos) / faturamento. Ajuste em “Parâmetros de preço”.</p>
+            <p className="mt-1 hint">Faturamento = custo × Fator K. Margem = (faturamento − custo − impostos) / faturamento. Ajuste em “Parâmetros de preço”.</p>
           </div>
         )}
       </section>
@@ -280,26 +276,26 @@ export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: st
       <CondicoesPagamento total={totalCliente} value={cond} onChange={setCond} />
 
       {/* Textos */}
-      <details className={sec}>
+      <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Textos da proposta (opcional)</summary>
         <div className="mt-4 space-y-3">
-          <div><label className="field-label">Objeto</label><textarea className={`${inputCls} min-h-[70px]`} value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
-          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className={`${inputCls} min-h-[90px]`} value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
-          <div><label className="field-label">Prazo de execução</label><input className={inputCls} value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
+          <div><label className="field-label">Objeto</label><textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
+          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className="field-input min-h-[90px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
+          <div><label className="field-label">Prazo de execução</label><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
         </div>
       </details>
 
       {/* Parâmetros */}
-      <details className={sec}>
+      <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Parâmetros de preço (Fator K, impostos)</summary>
-        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Faturamento = custo × Fator K. Padrão de execução da GTA: Fator K 1,7 e NF 6% → margem ≈ 35%.</p>
+        <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">Faturamento = custo × Fator K. Padrão de execução da GTA: Fator K 1,7 e NF 6% → margem ≈ 35%.</p>
         <div className="mt-4"><ExecSeParamsForm onSaved={aplicarParams} /></div>
       </details>
 
       {/* Ações */}
       <div className="flex flex-wrap items-center gap-3">
-        <button className="btn-secondary" onClick={() => salvar(false)} disabled={salvando}>{salvando ? "Salvando..." : savedId ? "Salvar alterações" : "Salvar proposta"}</button>
-        <button className="btn-primary" onClick={gerar} disabled={gerando || valorServico <= 0}>{gerando ? "Gerando..." : "Gerar .docx"}</button>
+        <button className="btn-secondary" onClick={() => salvar(false)} disabled={salvando}>{salvando ? "Salvando…" : savedId ? "Salvar alterações" : "Salvar proposta"}</button>
+        <button className="btn-primary" onClick={gerar} disabled={gerando || valorServico <= 0}>{gerando ? "Gerando…" : "Gerar .docx"}</button>
         <BaixarPlanilhaButton
           serviceKey="execucao-subestacao"
           nome={`execucao-subestacao-${form.clienteNome || "proposta"}`}

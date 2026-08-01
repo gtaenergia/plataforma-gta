@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Construction, HelpCircle } from "lucide-react";
+import { HelpCircle } from "lucide-react";
 import { getService } from "@/services/registry";
 import { SERVICOS_COM_AJUDA } from "@/components/ajuda/disponivel";
 import { AppHeader } from "@/components/AppHeader";
-import { BackLink } from "@/components/ui";
+import { Alert, BackLink } from "@/components/ui";
 import { DynamicForm } from "@/components/DynamicForm";
 import { SolarConfigurator } from "@/components/solar/SolarConfigurator";
 import { SubestacaoConfigurator } from "@/components/subestacao/SubestacaoConfigurator";
@@ -40,26 +40,23 @@ export default async function NovaPropostaPage({
           <div className="flex items-center justify-between gap-2">
             <BackLink href="/">Voltar</BackLink>
             {SERVICOS_COM_AJUDA.has(service.key) && (
-              <Link href={`/ajuda/${service.key}`} target="_blank" className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-sm font-medium text-gta-indigo transition hover:bg-indigo-50 dark:border-slate-700 dark:text-indigo-300 dark:hover:bg-slate-800">
+              <Link href={`/ajuda/${service.key}`} target="_blank" className="btn-ghost">
                 <HelpCircle className="h-4 w-4" />
                 Como precificar
               </Link>
             )}
           </div>
-          <h1 className="mt-2 flex flex-wrap items-center gap-2 text-xl font-bold text-gta-navy sm:gap-2.5 sm:text-2xl dark:text-slate-100">
-            <ServiceIcon serviceKey={service.key} className="h-6 w-6 shrink-0 text-gta-indigo sm:h-7 sm:w-7 dark:text-indigo-300" />
+          <h1 className="page-title mt-2 flex flex-wrap items-center gap-2.5">
+            <ServiceIcon serviceKey={service.key} className="h-7 w-7 shrink-0 text-gta-indigo dark:text-indigo-300" />
             {service.label}
           </h1>
           <p className="mt-1 subtitle">{service.description}</p>
         </div>
 
         {service.emDesenvolvimento && (
-          <div className="mb-6 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-300">
-            <Construction className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-            <p>
-              <strong>Serviço em desenvolvimento.</strong> A precificação automática e o layout da proposta ainda estão sendo ajustados ao padrão da plataforma (como Solar, Carregador e SPDA). O documento é gerado normalmente — confira os valores antes de enviar.
-            </p>
-          </div>
+          <Alert tone="amber" titulo="Serviço em desenvolvimento." className="mb-6">
+            A precificação automática e o layout da proposta ainda estão sendo ajustados ao padrão da plataforma (como Solar, Carregador e SPDA). O documento é gerado normalmente — confira os valores antes de enviar.
+          </Alert>
         )}
 
         {service.key === "solar" ? (

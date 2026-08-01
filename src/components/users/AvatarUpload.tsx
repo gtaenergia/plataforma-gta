@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Avatar } from "../ui";
 
+import { Alert } from "@/components/ui";
 /** Upload/remoção da foto de perfil do usuário logado (usado em /conta). */
 export function AvatarUpload({ avatarUrl: inicial, name }: { avatarUrl: string; name: string }) {
   const [avatarUrl, setAvatarUrl] = useState(inicial);
@@ -52,7 +53,7 @@ export function AvatarUpload({ avatarUrl: inicial, name }: { avatarUrl: string; 
       <div>
         <div className="flex flex-wrap gap-2">
           <button type="button" className="btn-secondary" disabled={enviando} onClick={() => inputRef.current?.click()}>
-            {enviando ? "Enviando..." : "Escolher foto"}
+            {enviando ? "Enviando…" : "Escolher foto"}
           </button>
           {avatarUrl && (
             <button type="button" className="btn-secondary" disabled={enviando} onClick={onRemover}>
@@ -62,7 +63,7 @@ export function AvatarUpload({ avatarUrl: inicial, name }: { avatarUrl: string; 
         </div>
         <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={onFileChange} />
         <p className="mt-1 hint">PNG, JPEG, WEBP ou GIF, até 3 MB.</p>
-        {erro && <p className="field-error">{erro}</p>}
+        {erro && <Alert tone="red">{erro}</Alert>}
       </div>
     </div>
   );

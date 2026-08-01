@@ -10,7 +10,7 @@ import {
   type RegistroValidacao,
 } from "@/lib/orcamentos/types";
 import type { PermissaoKey } from "@/lib/rbac/permissoes";
-import { Badge, BackLink, type Tone } from "@/components/ui";
+import { Alert, BackLink, Badge, type Tone } from "@/components/ui";
 
 const ESTACAO_TONE: Record<string, Tone> = {
   rascunho: "slate",
@@ -321,7 +321,7 @@ export function OrcamentoDetalhe({
           <Badge tone={ESTACAO_TONE[orc.estacao] ?? "slate"}>{estacaoLabel(orc.estacao)}</Badge>
         </div>
         {orc.descricao && <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">{orc.descricao}</p>}
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 subtitle">
           {fmtData(orc.meta?.dataEmissao) && (
             <span>Emissão: <strong className="text-slate-700 dark:text-slate-200">{fmtData(orc.meta?.dataEmissao)}</strong></span>
           )}
@@ -348,7 +348,7 @@ export function OrcamentoDetalhe({
         )}
       </div>
 
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       {/* OneDrive — aparece quando aprovado. Enquanto a integração não estiver
           configurada (env vars), mostra o estado "Em desenvolvimento": botão
@@ -383,7 +383,7 @@ export function OrcamentoDetalhe({
               )}
               {oneDriveAtivo ? (
                 <button className="btn-primary" onClick={enviarOneDrive} disabled={enviandoOneDrive}>
-                  {enviandoOneDrive ? "Enviando..." : orc.oneDrive?.url ? "Reenviar" : "Enviar para o OneDrive"}
+                  {enviandoOneDrive ? "Enviando…" : orc.oneDrive?.url ? "Reenviar" : "Enviar para o OneDrive"}
                 </button>
               ) : (
                 <button
@@ -432,7 +432,7 @@ export function OrcamentoDetalhe({
           </div>
           <div className="mt-3">
             <button type="submit" className="btn-primary" disabled={salvandoAjuste || !ajuste.cliente.trim()}>
-              {salvandoAjuste ? "Salvando..." : "Salvar ajustes"}
+              {salvandoAjuste ? "Salvando…" : "Salvar ajustes"}
             </button>
           </div>
         </form>
@@ -443,7 +443,7 @@ export function OrcamentoDetalhe({
         <h2 className="section-title mb-4">Revisões da proposta</h2>
 
         {revisoes.length === 0 && !podeAnexar && (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Nenhuma revisão.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Nenhuma revisão.</p>
         )}
 
         {revisoes.length > 0 && (
@@ -477,7 +477,7 @@ export function OrcamentoDetalhe({
           <div className="mt-3 space-y-2">
             {!temRev0 ? (
               <div className="rounded-lg border border-dashed border-slate-300 p-3 dark:border-slate-700">
-                <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mb-2 text-xs text-slate-600 dark:text-slate-400">
                   <strong>Revisão 00</strong>
                   {" — "}
                   {orc.propostaId && orc.meta?.regeneravel
@@ -525,7 +525,7 @@ export function OrcamentoDetalhe({
                   disabled={processando || (acaoAberta !== "cancelar" && !parecer.trim())}
                   onClick={() => transicionar(acaoAberta, parecer.trim() || undefined)}
                 >
-                  {processando ? "Processando..." : CONFIRMAR[acaoAberta]}
+                  {processando ? "Processando…" : CONFIRMAR[acaoAberta]}
                 </button>
                 <button className="btn-secondary" onClick={() => setAcaoAberta(null)} disabled={processando}>
                   Voltar
@@ -574,7 +574,7 @@ export function OrcamentoDetalhe({
       <div className="section-card">
         <h2 className="section-title mb-4">Revisão</h2>
         {orc.comentarios.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Nenhum comentário ainda.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Nenhum comentário ainda.</p>
         ) : (
           <ul className="space-y-2">
             {orc.comentarios.map((c) => (
@@ -594,7 +594,7 @@ export function OrcamentoDetalhe({
               className="field-input"
               value={comentario}
               onChange={(e) => setComentario(e.target.value)}
-              placeholder="Escreva um comentário de revisão..."
+              placeholder="Escreva um comentário de revisão…"
             />
             <button className="btn-secondary shrink-0" disabled={enviandoComentario || !comentario.trim()}>
               {enviandoComentario ? "..." : "Comentar"}
@@ -607,7 +607,7 @@ export function OrcamentoDetalhe({
       <div className="section-card">
         <h2 className="section-title mb-4">Histórico</h2>
         {orc.historico.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Sem movimentações.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Sem movimentações.</p>
         ) : (
           <ul className="space-y-2">
             {[...orc.historico].reverse().map((h) => (
@@ -633,7 +633,7 @@ export function OrcamentoDetalhe({
             disabled={excluindo}
             className="text-xs text-red-500 hover:underline disabled:opacity-50 dark:text-red-400"
           >
-            {excluindo ? "Excluindo..." : "Excluir orçamento"}
+            {excluindo ? "Excluindo…" : "Excluir orçamento"}
           </button>
         </div>
       )}

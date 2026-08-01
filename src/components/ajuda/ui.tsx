@@ -2,13 +2,11 @@ import type { ReactNode } from "react";
 
 /** Primitivas visuais compartilhadas pelas páginas de ajuda "Como precificar". */
 
-const card = "section-card";
-
 /** Seção com título (e número opcional, para o passo a passo). */
 export function AjudaSecao({ n, titulo, children }: { n?: number; titulo: string; children: ReactNode }) {
   return (
-    <section className={card}>
-      <h2 className="flex items-center gap-2.5 section-title">
+    <section className="section-card">
+      <h2 className="section-title flex items-center gap-2.5">
         {n != null && (
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gta-indigo text-xs font-bold text-white">{n}</span>
         )}
@@ -24,7 +22,7 @@ export function Formula({ children, nota }: { children: ReactNode; nota?: ReactN
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
       <code className="block whitespace-pre-wrap text-[13px] leading-relaxed text-gta-navy dark:text-indigo-200">{children}</code>
-      {nota && <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">{nota}</p>}
+      {nota && <p className="mt-2 hint">{nota}</p>}
     </div>
   );
 }
@@ -89,10 +87,10 @@ export function RodapeAjuda() {
 export function TabelaAjuda({ colunas, linhas }: { colunas: string[]; linhas: ReactNode[][] }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+      <table className="table-compacta">
         <thead>
-          <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-400 dark:border-slate-700 dark:text-slate-500">
-            {colunas.map((c, i) => <th key={i} className={`py-2 pr-4 font-semibold ${i > 0 ? "" : ""}`}>{c}</th>)}
+          <tr className="border-b border-slate-200 uppercase tracking-wide dark:border-slate-700">
+            {colunas.map((c, i) => <th key={i} className="py-2 pr-4 font-semibold">{c}</th>)}
           </tr>
         </thead>
         <tbody>

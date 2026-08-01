@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ServiceIcon } from "@/components/ServiceIcon";
-import { Badge, EmptyState, type Tone } from "@/components/ui";
+import { Alert, Badge, EmptyState, Loading, type Tone } from "@/components/ui";
 import { usePaginacao, Paginacao } from "@/components/Paginacao";
 import { statusPropostaLabel, STATUS_PROPOSTA, type Proposta } from "@/lib/propostas/types";
 
@@ -134,21 +134,19 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
   const limparFiltros = () => { setBusca(""); setFServico(""); setFStatus(""); setFCriador(""); };
   const temFiltro = busca || fServico || fStatus || fCriador;
 
-  if (loading) return <p className="subtitle">Carregando propostas...</p>;
-
-  const cardCls = "card";
+  if (loading) return <Loading>Carregando propostas…</Loading>;
 
   return (
     <div className="space-y-4">
-      {erro && <p className="field-error">{erro}</p>}
+      {erro && <Alert tone="red">{erro}</Alert>}
 
       {/* Filtros */}
-      <div className={`flex flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-end sm:p-4 ${cardCls}`}>
+      <div className="flex flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-end sm:p-4 card">
         <div className="flex-1 sm:min-w-[200px]">
           <label className="field-label">Buscar cliente / referência</label>
           <input
             className="field-input"
-            placeholder="Digite para filtrar..."
+            placeholder="Digite para filtrar…"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
@@ -183,7 +181,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
         )}
       </div>
 
-      <div className="text-sm text-slate-500 dark:text-slate-400">
+      <div className="subtitle">
         {filtradas.length} de {propostas.length} {propostas.length === 1 ? "proposta" : "propostas"}
       </div>
 
@@ -195,7 +193,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
         {paginados.map((p) => {
           const podeReabrir = serviceMap.get(p.serviceKey)?.usesConfigurator;
           return (
-            <div key={p.id} className={`p-3 ${cardCls}`}>
+            <div key={p.id} className="p-3 card">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="truncate font-medium text-gta-navy dark:text-slate-100">{p.cliente}</div>
@@ -206,7 +204,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
                 </div>
                 <Badge tone={STATUS_TONE[p.status] ?? "slate"} className="shrink-0">{statusPropostaLabel(p.status)}</Badge>
               </div>
-              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
                 {p.referencia && <span className="font-mono">{p.referencia}</span>}
                 <span>{nomeCriador(p)}</span>
                 <span>{fmtData(p.atualizadoEm)}</span>
@@ -218,7 +216,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
                     disabled={enviandoId === p.id}
                     className="btn-primary flex-1 justify-center !py-2 text-xs"
                   >
-                    {enviandoId === p.id ? "Enviando..." : "Enviar p/ aprovação"}
+                    {enviandoId === p.id ? "Enviando…" : "Enviar p/ aprovação"}
                   </button>
                 )}
                 {podeReabrir && (
@@ -232,7 +230,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
                     disabled={duplicandoId === p.id}
                     className="btn-secondary flex-1 justify-center !py-2 text-xs"
                   >
-                    {duplicandoId === p.id ? "Duplicando..." : "Duplicar"}
+                    {duplicandoId === p.id ? "Duplicando…" : "Duplicar"}
                   </button>
                 )}
                 <button onClick={() => excluir(p)} className="btn-danger flex-1 !py-2 text-xs">Excluir</button>
@@ -243,7 +241,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
       </div>
 
       {/* Tabela (desktop) */}
-      <div className={`hidden overflow-x-auto md:block ${cardCls}`}>
+      <div className="hidden overflow-x-auto md:block card">
         <table className="data-table">
           <thead>
             <tr>
@@ -259,7 +257,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
           <tbody>
             {filtradas.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
                   {propostas.length === 0 ? "Nenhuma proposta gerada ainda." : "Nenhuma proposta corresponde aos filtros."}
                 </td>
               </tr>
@@ -276,12 +274,12 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
                       {rotuloServico(p.serviceKey)}
                     </span>
                   </td>
-                  <td className="px-4 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">{p.referencia || "—"}</td>
+                  <td className="px-4 py-2 font-mono text-xs text-slate-600 dark:text-slate-400">{p.referencia || "—"}</td>
                   <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{nomeCriador(p)}</td>
                   <td className="px-4 py-2">
                     <Badge tone={STATUS_TONE[p.status] ?? "slate"}>{statusPropostaLabel(p.status)}</Badge>
                   </td>
-                  <td className="px-4 py-2 text-slate-500 dark:text-slate-400">{fmtData(p.atualizadoEm)}</td>
+                  <td className="px-4 py-2 text-slate-600 dark:text-slate-400">{fmtData(p.atualizadoEm)}</td>
                   <td className="px-4 py-2">
                     <div className="flex items-center justify-end gap-3 whitespace-nowrap text-xs">
                       {podeEnviar && (
@@ -291,7 +289,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
                           title="Enviar para aprovação"
                           className="font-medium text-gta-indigo hover:underline disabled:opacity-50"
                         >
-                          {enviandoId === p.id ? "Enviando..." : "Enviar"}
+                          {enviandoId === p.id ? "Enviando…" : "Enviar"}
                         </button>
                       )}
                       {podeReabrir && (
@@ -306,7 +304,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
                           title="Duplicar em novo rascunho"
                           className="text-gta-indigo hover:underline disabled:opacity-50"
                         >
-                          {duplicandoId === p.id ? "Duplicando..." : "Duplicar"}
+                          {duplicandoId === p.id ? "Duplicando…" : "Duplicar"}
                         </button>
                       )}
                       <button onClick={() => excluir(p)} className="text-red-500 hover:underline dark:text-red-400">

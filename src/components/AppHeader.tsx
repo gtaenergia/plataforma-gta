@@ -143,7 +143,7 @@ export function AppHeader({ userName, isAdmin }: { userName?: string; isAdmin?: 
                 className="absolute right-0 z-20 mt-2 w-56 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-lg border border-slate-200 bg-white text-slate-700 shadow-lg dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
               >
                 <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-700">
-                  <div className="text-xs text-slate-400 dark:text-slate-500">Sessão</div>
+                  <div className="hint">Sessão</div>
                   <div className="truncate text-sm font-semibold text-gta-navy dark:text-slate-100">{userName}</div>
                 </div>
                 <MenuLink href="/conta" onNavigate={() => setMenuAberto(false)}>

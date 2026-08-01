@@ -28,7 +28,7 @@ export function ProjetoBtAjuda() {
           <li><strong>Custo de execução</strong> (opcional). Informando o custo da obra, o app mostra o honorário como <strong>% da execução</strong> — a conferência de sanidade do preço.</li>
           <li><strong>Gere o .docx.</strong> O <strong>objeto se monta sozinho</strong> a partir das disciplinas marcadas; a proposta sai no padrão GTA com itens, memoriais e ART.</li>
         </ol>
-        <p className="text-xs text-slate-400 dark:text-slate-500">Em branco a área, cada disciplina parte do seu <strong>piso</strong> mínimo e você ajusta manualmente. A referência da proposta é gerada automaticamente ao salvar.</p>
+        <p className="hint">Em branco a área, cada disciplina parte do seu <strong>piso</strong> mínimo e você ajusta manualmente. A referência da proposta é gerada automaticamente ao salvar.</p>
       </AjudaSecao>
 
       {/* Preço */}
@@ -54,7 +54,7 @@ export function ProjetoBtAjuda() {
             [<span key="c">Galpão 800 m² (industrial ×1,4)</span>, "11×800×1,4 = 12.320 · 7×800×1,4 = 7.840", <strong key="cv">R$ 20.160</strong>],
           ]}
         />
-        <p className="text-xs text-slate-400 dark:text-slate-500">Na casa de 150 m², as duas disciplinas caem no piso — por isso o total (R$ 4.500) é maior que a conta bruta (18 × 150 = R$ 2.700). O atalho (11+7) só vale acima do piso.</p>
+        <p className="hint">Na casa de 150 m², as duas disciplinas caem no piso — por isso o total (R$ 4.500) é maior que a conta bruta (18 × 150 = R$ 2.700). O atalho (11+7) só vale acima do piso.</p>
       </AjudaSecao>
 
       {/* Disciplinas */}
