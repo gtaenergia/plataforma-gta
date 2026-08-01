@@ -15,12 +15,17 @@ export function ClienteInput({
   onCidadeUf,
   className,
   listId = "clientes-datalist",
+  id,
+  placeholder,
 }: {
   value: string;
   onNome: (v: string) => void;
   onCidadeUf?: (v: string) => void;
   className?: string;
   listId?: string;
+  /** Permite associar um <label htmlFor> — sem isso o rótulo fica órfão. */
+  id?: string;
+  placeholder?: string;
 }) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
 
@@ -34,6 +39,8 @@ export function ClienteInput({
   return (
     <>
       <input
+        id={id}
+        placeholder={placeholder}
         className={className}
         list={listId}
         value={value}
