@@ -20,6 +20,12 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "tracker-2026-08",
+    titulo: "Novidade: Tracker (registro de horas)",
+    mensagem: "Cronômetro ou lançamento manual, vinculado a uma tarefa ou avulso. Nova aba \"Tracker\" no menu.",
+    link: "/tracker",
+  },
+  {
     slug: "foto-perfil-2026-07",
     titulo: "Novidade: foto de perfil",
     mensagem: "Agora você pode adicionar (ou trocar) sua foto de perfil em Minha conta.",

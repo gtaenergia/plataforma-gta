@@ -17,6 +17,7 @@ export const PERMISSOES = {
   "usuarios.administrar": "Gerenciar usuários",
   "cargos.administrar": "Gerenciar cargos e permissões",
   "parametros.editar": "Editar parâmetros e limiares de preço",
+  "tracker.ver_equipe": "Ver o registro de horas de outros usuários",
 } as const;
 
 export type PermissaoKey = keyof typeof PERMISSOES;
@@ -36,6 +37,10 @@ export const PERMISSOES_POR_MODULO: { modulo: string; chaves: PermissaoKey[] }[]
   {
     modulo: "Propostas e serviços",
     chaves: ["servicos.editar", "propostas.gerar"],
+  },
+  {
+    modulo: "Tracker (registro de horas)",
+    chaves: ["tracker.ver_equipe"],
   },
   {
     modulo: "Administração",

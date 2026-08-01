@@ -13,6 +13,7 @@ const NAV = [
   { href: "/aprovacoes", label: "Aprovações" },
   { href: "/clientes", label: "Clientes" },
   { href: "/tarefas", label: "Tarefas" },
+  { href: "/tracker", label: "Tracker" },
 ];
 
 export function AppHeader({ userName, isAdmin }: { userName?: string; isAdmin?: boolean }) {
