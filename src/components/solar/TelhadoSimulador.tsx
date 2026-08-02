@@ -98,17 +98,94 @@ function cota(
   ctx.restore();
 }
 
-function desenhar(
-  canvas: HTMLCanvasElement,
-  r: TelhadoResultado,
-  arranjo: Arranjo | null,
-  larguraM: number,
-  comprimentoM: number,
-  recuoM: number,
+/**
+ * Linha de indicação para cota pequena demais para caber no desenho.
+ *
+ * Recebe o caminho inteiro porque a chamada NÃO pode cruzar a geometria que
+ * não está indicando — um traço por cima dos módulos lê como se o módulo
+ * estivesse partido. As folgas são canais vazios entre módulos, então o
+ * primeiro trecho corre dentro do próprio vão até sair do arranjo.
+ */
+function chamada(
+  ctx: CanvasRenderingContext2D,
+  caminho: { x: number; y: number }[],
+  texto: string,
+  alinhamento: CanvasTextAlign = "left",
 ) {
+  const inicio = caminho[0];
+  const fim = caminho[caminho.length - 1];
+  ctx.strokeStyle = COR.cota;
+  ctx.fillStyle = COR.cota;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(inicio.x, inicio.y);
+  for (const p of caminho.slice(1)) ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+  // Ponto pequeno de propósito: o vão que ele indica tem cerca de 1 px nesta
+  // escala, e um marcador maior invade os módulos vizinhos.
+  ctx.beginPath();
+  ctx.arc(inicio.x, inicio.y, 1.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.font = "600 12px system-ui, sans-serif";
+  ctx.textAlign = alinhamento;
+  ctx.textBaseline = "middle";
+  ctx.fillText(texto, fim.x + (alinhamento === "right" ? -5 : 5), fim.y);
+}
+
+/** Quadro técnico: as cotas que não cabem no desenho ficam tabeladas aqui. */
+function quadro(ctx: CanvasRenderingContext2D, x: number, y: number, larg: number, linhas: [string, string][]) {
+  const alturaLinha = 22;
+  const alt = linhas.length * alturaLinha + 30;
+
+  ctx.strokeStyle = COR.telhadoBorda;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, larg, alt);
+  ctx.fillStyle = "#f8fafc";
+  ctx.fillRect(x, y, larg, 26);
+  ctx.strokeRect(x, y, larg, 26);
+
+  ctx.fillStyle = COR.texto;
+  ctx.font = "700 12px system-ui, sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText("ESPECIFICAÇÕES", x + 12, y + 13);
+
+  linhas.forEach(([rotulo, valor], idx) => {
+    const ly = y + 26 + idx * alturaLinha + alturaLinha / 2;
+    ctx.font = "400 12px system-ui, sans-serif";
+    ctx.fillStyle = COR.textoFraco;
+    ctx.textAlign = "left";
+    ctx.fillText(rotulo, x + 12, ly);
+    ctx.font = "600 12px system-ui, sans-serif";
+    ctx.fillStyle = COR.texto;
+    ctx.textAlign = "right";
+    ctx.fillText(valor, x + larg - 12, ly);
+    if (idx > 0) {
+      ctx.strokeStyle = "#e2e8f0";
+      ctx.beginPath();
+      ctx.moveTo(x + 1, ly - alturaLinha / 2);
+      ctx.lineTo(x + larg - 1, ly - alturaLinha / 2);
+      ctx.stroke();
+    }
+  });
+  return alt;
+}
+
+interface DesenhoInput {
+  potenciaPainelW: number;
+  larguraM: number;
+  comprimentoM: number;
+  recuoMm: number;
+  folgaModulosMm: number;
+  folgaFileirasMm: number;
+  painelCompMm: number;
+  painelLargMm: number;
+}
+
+function desenhar(canvas: HTMLCanvasElement, r: TelhadoResultado, arranjo: Arranjo | null, i: DesenhoInput) {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const W = 1000;
-  const H = 660;
+  const W = 1100;
+  const H = 830;
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   canvas.style.width = "100%";
@@ -120,40 +197,42 @@ function desenhar(
   ctx.fillStyle = COR.fundo;
   ctx.fillRect(0, 0, W, H);
 
-  if (larguraM <= 0 || comprimentoM <= 0) return;
+  if (i.larguraM <= 0 || i.comprimentoM <= 0) return;
 
-  // Área de desenho, deixando fora as cotas e o cabeçalho.
-  const mE = 78, mD = 40, mT = 76, mB = 74;
+  const mE = 96, mD = 96, mT = 100;
+  const yFim = 520;
   const dispW = W - mE - mD;
-  const dispH = H - mT - mB;
-  const escala = Math.min(dispW / larguraM, dispH / comprimentoM);
-  const telW = larguraM * escala;
-  const telH = comprimentoM * escala;
+  const dispH = yFim - mT;
+  const escala = Math.min(dispW / i.larguraM, dispH / i.comprimentoM);
+  const telW = i.larguraM * escala;
+  const telH = i.comprimentoM * escala;
   const x0 = mE + (dispW - telW) / 2;
   const y0 = mT + (dispH - telH) / 2;
 
   // Cabeçalho
   ctx.fillStyle = COR.texto;
-  ctx.font = "700 19px system-ui, sans-serif";
+  ctx.font = "700 20px system-ui, sans-serif";
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
-  ctx.fillText("Ocupação do telhado — vista superior", mE, 32);
+  ctx.fillText("Ocupação do telhado — vista superior", mE, 34);
   ctx.font = "400 13px system-ui, sans-serif";
   ctx.fillStyle = COR.textoFraco;
-  const resumo = arranjo
-    ? `${arranjo.total} módulos · ${arranjo.colunas} por fileira × ${arranjo.fileiras} fileiras · ${arranjo.orientacao}`
-    : "Nenhum módulo cabe com estas medidas";
-  ctx.fillText(resumo, mE, 52);
+  ctx.fillText(
+    arranjo
+      ? `${arranjo.total} módulos · ${arranjo.colunas} por fileira × ${arranjo.fileiras} fileiras · orientação ${arranjo.orientacao}`
+      : "Nenhum módulo comportado com estas medidas",
+    mE,
+    56,
+  );
 
-  // Telhado
+  // Telhado e área útil
   ctx.fillStyle = COR.telhado;
   ctx.fillRect(x0, y0, telW, telH);
   ctx.strokeStyle = COR.telhadoBorda;
   ctx.lineWidth = 2;
   ctx.strokeRect(x0, y0, telW, telH);
 
-  // Área útil (depois do recuo)
-  const rec = recuoM * escala;
+  const rec = (i.recuoMm / 1000) * escala;
   const uW = r.utilLarguraM * escala;
   const uH = r.utilComprimentoM * escala;
   if (uW > 0 && uH > 0) {
@@ -165,56 +244,108 @@ function desenhar(
     ctx.restore();
   }
 
-  // Módulos, centralizados na área útil
+  // Módulos
+  let px0 = 0, py0 = 0, pw = 0, ph = 0, gx = 0, gy = 0;
   if (arranjo && arranjo.total > 0) {
-    const pw = arranjo.painelLarguraM * escala;
-    const ph = arranjo.painelComprimentoM * escala;
-    const gx = arranjo.colunas > 1 ? (arranjo.ocupaLarguraM * escala - arranjo.colunas * pw) / (arranjo.colunas - 1) : 0;
-    const gy = arranjo.fileiras > 1 ? (arranjo.ocupaComprimentoM * escala - arranjo.fileiras * ph) / (arranjo.fileiras - 1) : 0;
-    const ix = x0 + rec + (uW - arranjo.ocupaLarguraM * escala) / 2;
-    const iy = y0 + rec + (uH - arranjo.ocupaComprimentoM * escala) / 2;
+    pw = arranjo.painelLarguraM * escala;
+    ph = arranjo.painelComprimentoM * escala;
+    gx = arranjo.colunas > 1 ? (arranjo.ocupaLarguraM * escala - arranjo.colunas * pw) / (arranjo.colunas - 1) : 0;
+    gy = arranjo.fileiras > 1 ? (arranjo.ocupaComprimentoM * escala - arranjo.fileiras * ph) / (arranjo.fileiras - 1) : 0;
+    px0 = x0 + rec + (uW - arranjo.ocupaLarguraM * escala) / 2;
+    py0 = y0 + rec + (uH - arranjo.ocupaComprimentoM * escala) / 2;
 
     ctx.fillStyle = COR.painel;
     ctx.strokeStyle = COR.painelBorda;
     ctx.lineWidth = 1;
     for (let f = 0; f < arranjo.fileiras; f++) {
       for (let c = 0; c < arranjo.colunas; c++) {
-        const px = ix + c * (pw + gx);
-        const py = iy + f * (ph + gy);
-        ctx.fillRect(px, py, pw, ph);
-        ctx.strokeRect(px, py, pw, ph);
+        ctx.fillRect(px0 + c * (pw + gx), py0 + f * (ph + gy), pw, ph);
+        ctx.strokeRect(px0 + c * (pw + gx), py0 + f * (ph + gy), pw, ph);
       }
     }
   }
 
-  // Cotas: largura embaixo, comprimento à esquerda
-  cota(ctx, { x: x0, y: y0 + telH + 34 }, { x: x0 + telW, y: y0 + telH + 34 }, `${nf(larguraM)} m`, true);
-  cota(ctx, { x: x0 - 34, y: y0 }, { x: x0 - 34, y: y0 + telH }, `${nf(comprimentoM)} m`, false);
-
-  // Cota da área útil, por dentro
+  // Cotas principais
+  cota(ctx, { x: x0, y: y0 + telH + 36 }, { x: x0 + telW, y: y0 + telH + 36 }, `${nf(i.larguraM)} m`, true);
+  cota(ctx, { x: x0 - 36, y: y0 }, { x: x0 - 36, y: y0 + telH }, `${nf(i.comprimentoM)} m`, false);
   if (uW > 0) {
-    cota(ctx, { x: x0 + rec, y: y0 + rec - 14 }, { x: x0 + rec + uW, y: y0 + rec - 14 }, `útil ${nf(r.utilLarguraM)} m`, true);
+    cota(ctx, { x: x0 + rec, y: y0 + rec - 15 }, { x: x0 + rec + uW, y: y0 + rec - 15 }, `útil ${nf(r.utilLarguraM)} m`, true);
+    cota(ctx, { x: x0 + telW + 34, y: y0 + rec }, { x: x0 + telW + 34, y: y0 + rec + uH }, `útil ${nf(r.utilComprimentoM)} m`, false);
   }
 
+  // Recuo — cota curta no canto superior esquerdo
+  if (rec > 3) {
+    cota(ctx, { x: x0, y: y0 + rec / 2 }, { x: x0 + rec, y: y0 + rec / 2 }, `${nf(i.recuoMm, 0)}`, true);
+  }
+
+  // Chamadas para as folgas: pequenas demais na escala do telhado, então
+  // apontam para o vão real e o valor vai fora do desenho.
+  if (arranjo && arranjo.colunas > 1) {
+    // Vão vertical entre a 1ª e a 2ª coluna: sobe DENTRO do vão até sair do
+    // arranjo, e só então dobra para o rótulo.
+    const xVao = px0 + pw + gx / 2;
+    const yVao = py0 + ph / 2;
+    chamada(
+      ctx,
+      [{ x: xVao, y: yVao }, { x: xVao, y: y0 - 12 }, { x: x0 + telW + 40, y: y0 - 30 }],
+      `folga entre módulos ${nf(i.folgaModulosMm, 0)} mm`,
+    );
+  }
+  if (arranjo && arranjo.fileiras > 1) {
+    // Vão horizontal entre a 1ª e a 2ª fileira: sai pela esquerda, pelo vão.
+    const xVao = px0 + pw / 2;
+    const yVao = py0 + ph + gy / 2;
+    chamada(
+      ctx,
+      [{ x: xVao, y: yVao }, { x: x0 - 12, y: yVao }, { x: x0 - 20, y: y0 + telH + 62 }],
+      `folga entre fileiras ${nf(i.folgaFileirasMm, 0)} mm`,
+    );
+  }
+
+  // Quadro técnico
+  const linhas: [string, string][] = [
+    ["Módulo (C × L)", `${nf(i.painelCompMm, 0)} × ${nf(i.painelLargMm, 0)} mm`],
+    ["Orientação", arranjo ? arranjo.orientacao.charAt(0).toUpperCase() + arranjo.orientacao.slice(1) : "—"],
+    ["Disposição", arranjo ? `${arranjo.colunas} por fileira × ${arranjo.fileiras} fileiras` : "—"],
+    ["Folga entre módulos", `${nf(i.folgaModulosMm, 0)} mm`],
+    ["Folga entre fileiras", `${nf(i.folgaFileirasMm, 0)} mm`],
+    ["Recuo das bordas", `${nf(i.recuoMm, 0)} mm`],
+  ];
+  const linhas2: [string, string][] = [
+    ["Água do telhado", `${nf(i.larguraM)} × ${nf(i.comprimentoM)} m`],
+    ["Área do telhado", `${nf(r.areaTelhadoM2, 2)} m²`],
+    ["Área útil", `${nf(r.areaUtilM2, 2)} m²`],
+    ["Ocupação", `${nf(i.larguraM * i.comprimentoM > 0 ? ((arranjo?.total ?? 0) * (i.painelCompMm / 1000) * (i.painelLargMm / 1000) * 100) / r.areaTelhadoM2 : 0, 1)} %`],
+    ["Total de módulos", `${arranjo?.total ?? 0}`],
+    ["Potência do arranjo", arranjo ? `${nf((arranjo.total * i.potenciaPainelW) / 1000, 2)} kWp` : "—"],
+  ];
+  const yQ = 606;
+  const largQ = (W - mE - mD - 24) / 2;
+  quadro(ctx, mE, yQ, largQ, linhas);
+  quadro(ctx, mE + largQ + 24, yQ, largQ, linhas2);
+
   // Legenda
-  const ly = H - 26;
+  const ly = yQ - 18;
   ctx.font = "400 12px system-ui, sans-serif";
   ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
   ctx.fillStyle = COR.painel;
   ctx.fillRect(mE, ly - 9, 14, 10);
   ctx.fillStyle = COR.textoFraco;
-  ctx.fillText("módulo", mE + 20, ly);
+  ctx.fillText("módulo fotovoltaico", mE + 20, ly);
   ctx.save();
   ctx.setLineDash([7, 5]);
   ctx.strokeStyle = COR.util;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(mE + 84, ly - 4);
-  ctx.lineTo(mE + 100, ly - 4);
+  ctx.moveTo(mE + 158, ly - 4);
+  ctx.lineTo(mE + 174, ly - 4);
   ctx.stroke();
   ctx.restore();
   ctx.fillStyle = COR.textoFraco;
-  ctx.fillText(`área útil (recuo de ${nf(recuoM * 1000, 0)} mm)`, mE + 106, ly);
+  ctx.fillText("limite da área útil", mE + 180, ly);
+  ctx.textAlign = "right";
+  ctx.fillText("Cotas em metros, salvo indicação em mm", W - mD, ly);
 }
 
 // ------------------------------------------------------------------ tela
@@ -250,7 +381,6 @@ export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios }: {
 
   const larguraM = num(m.larguraM);
   const comprimentoM = num(m.comprimentoM);
-  const recuoM = num(m.recuoMm) / 1000;
 
   const resultado = useMemo(
     () =>
@@ -271,8 +401,18 @@ export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios }: {
       : resultado.arranjos.find((a) => a.orientacao === orientacaoManual) ?? null;
 
   useEffect(() => {
-    if (canvasRef.current) desenhar(canvasRef.current, resultado, arranjo, larguraM, comprimentoM, recuoM);
-  }, [resultado, arranjo, larguraM, comprimentoM, recuoM]);
+    if (!canvasRef.current) return;
+    desenhar(canvasRef.current, resultado, arranjo, {
+      potenciaPainelW: potenciaPainel,
+      larguraM,
+      comprimentoM,
+      recuoMm: num(m.recuoMm),
+      folgaModulosMm: num(m.espacoPaineisMm),
+      folgaFileirasMm: num(m.espacoFileirasMm),
+      painelCompMm: num(m.painelCompMm),
+      painelLargMm: num(m.painelLargMm),
+    });
+  }, [resultado, arranjo, potenciaPainel, larguraM, comprimentoM, m.recuoMm, m.espacoPaineisMm, m.espacoFileirasMm, m.painelCompMm, m.painelLargMm]);
 
   function baixarPng() {
     const c = canvasRef.current;
@@ -295,8 +435,8 @@ export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios }: {
 
   return (
     <SectionCard
-      title="Cabe no telhado?"
-      subtitle="Medidas de UMA água. Telhado recortado: simule uma água de cada vez e some."
+      title="Ocupação do telhado"
+      subtitle="Medidas de uma água por vez. Em telhado recortado, simule cada água separadamente e some os resultados."
     >
       <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-4">
         <div>
@@ -314,7 +454,7 @@ export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios }: {
         <div>
           <label className="field-label" htmlFor="tel-orient">Orientação</label>
           <select id="tel-orient" className={campo} value={orientacaoManual} onChange={(e) => setOrientacaoManual(e.target.value as typeof orientacaoManual)}>
-            <option value="auto">A que couber mais</option>
+            <option value="auto">Maior capacidade</option>
             <option value="retrato">Retrato</option>
             <option value="paisagem">Paisagem</option>
           </select>
@@ -339,24 +479,23 @@ export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios }: {
       </div>
 
       {!temMedidas ? (
-        <p className="mt-4 subtitle">Informe a largura e o comprimento da água para ver quantos módulos cabem.</p>
+        <p className="mt-4 subtitle">Informe a largura e o comprimento da água para calcular a capacidade.</p>
       ) : (
         <>
           <KpiGrid className="mt-5">
-            <Kpi label="Cabem" value={`${cabem} módulos`} destaque />
-            <Kpi label="Dimensionamento pede" value={`${nPaineisNecessarios} módulos`} />
+            <Kpi label="Capacidade da água" value={`${cabem} módulos`} destaque />
+            <Kpi label="Requerido pelo consumo" value={`${nPaineisNecessarios} módulos`} />
             <Kpi
-              label={falta > 0 ? "Faltam" : "Sobra para"
-              }
-              value={falta > 0 ? `${falta} módulos` : `${-falta} módulos`}
+              label={falta > 0 ? "Déficit" : "Excedente"}
+              value={`${Math.abs(falta)} módulos`}
               tone={falta > 0 ? "red" : "green"}
             />
             <Kpi label="Área útil" value={`${nf(resultado.areaUtilM2, 1)} m²`} />
           </KpiGrid>
 
           {falta > 0 && nPaineisNecessarios > 0 && (
-            <Alert tone="amber" titulo="O telhado não comporta o sistema dimensionado." className="mt-4">
-              Cabem {cabem} dos {nPaineisNecessarios} módulos necessários. Use outra água do telhado, reduza o
+            <Alert tone="amber" titulo="A água não comporta o sistema dimensionado." className="mt-4">
+              Comporta {cabem} dos {nPaineisNecessarios} módulos requeridos. Use outra água do telhado, reduza o
               recuo se a norma local permitir, ou considere um módulo de maior potência para gerar o mesmo com
               menos peças.
             </Alert>
@@ -364,7 +503,7 @@ export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios }: {
 
           {resultado.melhor && orientacaoManual === "auto" && (
             <p className="hint mt-3">
-              {resultado.arranjos.map((a) => `${a.orientacao}: ${a.total}`).join(" · ")} — o desenho usa a que couber mais.
+              {resultado.arranjos.map((a) => `${a.orientacao}: ${a.total}`).join(" · ")} — o desenho adota a de maior capacidade.
             </p>
           )}
 
