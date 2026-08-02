@@ -20,6 +20,12 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "solar-fio-b-lei-14300-2026-08",
+    titulo: "Solar: payback segue a rampa da Lei 14.300",
+    mensagem: "O percentual do Fio B agora acompanha o ano-calendário da lei (60% em 2026, 75% em 2027, 90% em 2028) em vez de um valor fixo. Muda o payback de sistemas com muita injeção — monofásicos e superdimensionados.",
+    link: "/nova/solar",
+  },
+  {
     slug: "solar-cabe-no-telhado-2026-08",
     titulo: "Solar: quantos painéis cabem no telhado",
     mensagem: "Informe as medidas da água e o configurador diz quantos módulos cabem, compara com o que o consumo pede e gera um PNG com o desenho e as cotas para anexar à proposta.",

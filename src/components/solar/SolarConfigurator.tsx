@@ -282,7 +282,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
     form.municipio, form.consumo, form.margemSeguranca, form.tipoConexao, form.potenciaPainel, form.eficiencia,
     form.overloadDesejado, form.nPaineis, form.potenciaInversor, form.qtdInversores,
     form.tipoInversor, form.microPotenciaKw, form.microQtd, form.tipoTelhado, form.kit, form.fator, form.viagens, form.execucaoCivil,
-    form.distribuidora, form.subgrupo, form.tarifaEnergia,
+    form.distribuidora, form.subgrupo, form.tarifaEnergia, form.dataEmissao,
   ]);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -318,6 +318,10 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
             distribuidora: form.distribuidora,
             subgrupo: form.subgrupo,
             tarifaEnergia: form.tarifaEnergia,
+            // Onde a projeção começa na rampa do Fio B: o ano da proposta, não
+            // o de hoje — uma proposta emitida em dezembro entra em operação
+            // no ano seguinte, e a rampa é por ano-calendário.
+            anoInicial: Number(form.dataEmissao.slice(0, 4)) || undefined,
           }),
         });
         if (res.ok) {

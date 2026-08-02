@@ -35,10 +35,15 @@ export const solarParamsSchema = z.object({
   /** Overload desejado no dimensionamento (fração: 0,15 = 15%) */
   overloadDesejado: z.coerce.number().min(0).max(1),
   // ----- Economia / payback -----
-  /** Consumo simultâneo à geração (fração; o resto é injetado e paga Fio B) */
+  /**
+   * Consumo simultâneo à geração (fração; o resto é injetado e paga Fio B).
+   *
+   * O percentual do Fio B em si NÃO é parâmetro: vem da rampa da Lei 14.300
+   * pelo ano-calendário (ver economia.ts). Era ajustável e estava em 0,7, que
+   * não corresponde a ano nenhum da tabela — e envelhecia a cada janeiro sem
+   * ninguém notar.
+   */
   simultaneidade: z.coerce.number().min(0).max(1),
-  /** % do Fio B cobrado no ano corrente (fração; Lei 14.300) */
-  fioBPct: z.coerce.number().min(0).max(1),
   /** Iluminação pública / custo fixo mensal (R$) */
   iluminacaoPublica: z.coerce.number().min(0),
   /** Inflação anual da tarifa de energia (fração: 0,10 = 10%) */
@@ -63,7 +68,6 @@ export const SOLAR_PARAMS_DEFAULT: SolarParams = {
   eficiencia: 0.75,
   overloadDesejado: 0.15,
   simultaneidade: 0.7,
-  fioBPct: 0.7,
   iluminacaoPublica: 4,
   inflacaoTarifa: 0.1,
   degradacao: 0.005,

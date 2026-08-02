@@ -320,7 +320,7 @@ describe("Solar — cadeia completa: sizing → geração → preço → economi
     tarifaEnergia: 0.99,
     fioB: 0.25,
     simultaneidade: 0.7,
-    fioBPctAtual: 0.7,
+    anoInicial: 2026,
     iluminacao: 40,
     investimento: preco.valorTotal,
   });
@@ -370,7 +370,7 @@ describe("Solar — cadeia completa: sizing → geração → preço → economi
     `);
   });
 
-  it("economia e payback (25 anos, Lei 14.300)", () => {
+  it("economia e payback (25 anos, rampa do Fio B a partir de 2026)", () => {
     expect({
       economiaAno1: r4(eco.economiaAno1),
       economiaMensalMedia: r4(eco.economiaMensalMedia),

@@ -47,6 +47,8 @@ const schema = z.object({
   distribuidora: z.string().optional(),
   subgrupo: z.enum(["B1", "B2", "B3"]).default("B1"),
   tarifaEnergia: z.union([z.string(), z.number()]).optional(),
+  /** Ano de entrada em operação — define onde a projeção começa na rampa do Fio B. */
+  anoInicial: z.coerce.number().int().min(2023).max(2100).optional(),
 });
 
 export async function POST(req: Request) {
@@ -154,7 +156,7 @@ export async function POST(req: Request) {
       tarifaEnergia,
       fioB: i.distribuidora ? getFioB(i.distribuidora, i.subgrupo) : 0,
       simultaneidade: params.simultaneidade,
-      fioBPctAtual: params.fioBPct,
+      anoInicial: i.anoInicial ?? new Date().getFullYear(),
       iluminacao: params.iluminacaoPublica,
       investimento: pricing.valorTotal,
       inflacaoTarifa: params.inflacaoTarifa,

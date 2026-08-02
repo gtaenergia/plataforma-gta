@@ -9,7 +9,8 @@
  *   Economia mensal = Gasto SEM − Gasto COM
  *
  * Ao longo dos anos: a tarifa sobe (inflação), a geração cai (degradação do
- * módulo) e o %FioB avança (Lei 14.300: ano 1 informado, ano 2 = 90%, ano 3+ = 100%).
+ * módulo) e o %FioB avança pela rampa da Lei 14.300 — que é por ANO-CALENDÁRIO,
+ * não por ano de projeto.
  *
  * Obs.: a planilha original tem uma célula pontual (dez/ano 2) sobrescrita à mão
  * com um valor inconsistente; aqui usamos a fórmula uniforme das demais 47 células.
@@ -22,7 +23,12 @@ export interface EconomiaInput {
   tarifaEnergia: number; // R$/kWh (tarifa cheia da conta)
   fioB: number; // R$/kWh (DB_Tarifas)
   simultaneidade: number; // fração consumida direto (ex.: 0,7)
-  fioBPctAtual: number; // % do Fio B cobrado no ano corrente (ex.: 0,7)
+  /**
+   * Ano-calendário em que o sistema entra em operação. Define onde a projeção
+   * começa na rampa do Fio B — um sistema que entra em 2026 paga 60% no
+   * primeiro ano, 75% no segundo, e assim por diante.
+   */
+  anoInicial: number;
   iluminacao: number; // R$/mês (custo fixo)
   investimento: number; // R$ (valor total do sistema)
   inflacaoTarifa?: number; // fração a.a. (default 0,10)
@@ -42,11 +48,28 @@ export interface EconomiaResultado {
   economiaHorizonte: number; // soma da economia no horizonte
 }
 
-/** % do Fio B por ano (Lei 14.300, modelo da planilha). */
-function fioBPctAno(ano: number, atual: number): number {
-  if (ano === 1) return atual;
-  if (ano === 2) return 0.9;
-  return 1;
+/**
+ * Rampa de cobrança do Fio B sobre a energia injetada — Lei 14.300/2022.
+ *
+ * É indexada pelo ANO-CALENDÁRIO, não pelo ano do projeto. A versão anterior
+ * usava ano 1 = informado, ano 2 = 90%, ano 3+ = 100%, o que não corresponde à
+ * lei em ano nenhum: comprimia a rampa e encarecia demais os anos 2 e 3.
+ *
+ * Antes de 2023 a compensação era integral (sem Fio B). De 2029 em diante vale
+ * o percentual pleno.
+ */
+export const FIO_B_POR_ANO: Readonly<Record<number, number>> = {
+  2023: 0.15,
+  2024: 0.30,
+  2025: 0.45,
+  2026: 0.60,
+  2027: 0.75,
+  2028: 0.90,
+};
+
+export function fioBPctDoAno(ano: number): number {
+  if (ano < 2023) return 0;
+  return FIO_B_POR_ANO[ano] ?? 1;
 }
 
 export function simularEconomia(i: EconomiaInput): EconomiaResultado {
@@ -62,7 +85,7 @@ export function simularEconomia(i: EconomiaInput): EconomiaResultado {
   for (let Y = 1; Y <= anos; Y++) {
     const tarifaY = i.tarifaEnergia * Math.pow(1 + inflacao, Y - 1);
     const degrY = Math.pow(1 - degr, Y - 1);
-    const pctY = fioBPctAno(Y, i.fioBPctAtual);
+    const pctY = fioBPctDoAno(i.anoInicial + Y - 1);
 
     let econY = 0;
     let semY = 0;
