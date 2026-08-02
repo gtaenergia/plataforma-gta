@@ -20,6 +20,12 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "capacidade-equipe-2026-08",
+    titulo: "Tarefas: indicação de responsável e prazo calculado",
+    mensagem: "Ao abrir uma tarefa, informe a estimativa de duração e a plataforma indica os responsáveis com disponibilidade e a data de entrega de cada um; um clique preenche responsável e prazo operacional. O painel no topo de Tarefas apresenta a carga da equipe. A jornada de trabalho é cadastrada por um administrador em Capacidade da equipe.",
+    link: "/tarefas",
+  },
+  {
     slug: "precos-materiais-2026-08",
     titulo: "Preços de materiais em um lugar só",
     mensagem: "Novo card em Nova proposta: revise o custo unitário dos materiais à mão ou por planilha (baixa preenchida, você atualiza e importa). Ao montar um orçamento, a plataforma avisa se algum material DAQUELA lista está com preço vencido.",

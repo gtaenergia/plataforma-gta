@@ -37,7 +37,8 @@ export function getDbUrl(): string {
   return url ? sanitize(url) : "";
 }
 
-interface Row {
+/** Exportada para o teste: é aqui que produção diverge de desenvolvimento. */
+export interface Row {
   id: string;
   titulo: string;
   descricao: string;
@@ -52,13 +53,15 @@ interface Row {
   prazo_operacional: string;
   hora_comercial: string;
   hora_operacional: string;
+  /** integer, não numeric: `numeric` volta como STRING pelo driver. */
+  estimativa_min: number;
   comentarios: Comentario[];
   criado_por: string;
   criado_em: string;
   atualizado_em: string;
 }
 
-function rowToTask(r: Row): Task {
+export function rowToTask(r: Row): Task {
   return {
     id: r.id,
     titulo: r.titulo,
@@ -74,6 +77,9 @@ function rowToTask(r: Row): Task {
     prazoOperacional: r.prazo_operacional ?? "",
     horaComercial: r.hora_comercial ?? "",
     horaOperacional: r.hora_operacional ?? "",
+    // Linha anterior à coluna existir devolve null; `Number(null)` é 0, mas o
+    // explícito documenta a intenção e cobre um eventual valor textual.
+    estimativaMin: Number(r.estimativa_min ?? 0) || 0,
     comentarios: r.comentarios ?? [],
     criadoPor: r.criado_por,
     criadoEm: new Date(r.criado_em).toISOString(),
@@ -122,6 +128,7 @@ export class PostgresTaskStore implements TaskStore {
         .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS prazo_operacional text NOT NULL DEFAULT ''`)
         .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS hora_comercial text NOT NULL DEFAULT ''`)
         .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS hora_operacional text NOT NULL DEFAULT ''`)
+        .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS estimativa_min integer NOT NULL DEFAULT 0`)
         .then(() => undefined);
     }
     return this.ready;
@@ -147,10 +154,10 @@ export class PostgresTaskStore implements TaskStore {
     const now = new Date().toISOString();
     await this.pool.sql`
       INSERT INTO tasks
-        (id, titulo, descricao, cliente, categoria, demandante, responsavel, status, prioridade, prazo, prazo_comercial, prazo_operacional, hora_comercial, hora_operacional, comentarios, criado_por, criado_em, atualizado_em)
+        (id, titulo, descricao, cliente, categoria, demandante, responsavel, status, prioridade, prazo, prazo_comercial, prazo_operacional, hora_comercial, hora_operacional, estimativa_min, comentarios, criado_por, criado_em, atualizado_em)
       VALUES
         (${id}, ${data.titulo}, ${data.descricao}, ${data.cliente}, ${data.categoria}, ${data.demandante}, ${data.responsavel}, ${data.status},
-         ${data.prioridade}, ${data.prazo}, ${data.prazoComercial}, ${data.prazoOperacional}, ${data.horaComercial}, ${data.horaOperacional}, '[]'::jsonb, ${data.criadoPor}, ${now}, ${now})
+         ${data.prioridade}, ${data.prazo}, ${data.prazoComercial}, ${data.prazoOperacional}, ${data.horaComercial}, ${data.horaOperacional}, ${data.estimativaMin ?? 0}, '[]'::jsonb, ${data.criadoPor}, ${now}, ${now})
     `;
     return { ...data, id, comentarios: [], criadoEm: now, atualizadoEm: now };
   }
@@ -163,6 +170,9 @@ export class PostgresTaskStore implements TaskStore {
     // UPDATE atômico (sem read-then-write): COALESCE mantém o valor atual quando
     // o campo não foi enviado (null), evitando que edições simultâneas se
     // sobrescrevam em campos diferentes. RETURNING devolve a linha final.
+    //
+    // Vale para estimativa_min também: como `0 ?? null` é 0, zerar a estimativa
+    // grava zero de verdade — só o campo AUSENTE do patch preserva o valor.
     const atualizadoEm = new Date().toISOString();
     const { rows } = await this.pool.sql<Row>`
       UPDATE tasks SET
@@ -179,6 +189,7 @@ export class PostgresTaskStore implements TaskStore {
         prazo_operacional = COALESCE(${patch.prazoOperacional ?? null}::text, prazo_operacional),
         hora_comercial = COALESCE(${patch.horaComercial ?? null}::text, hora_comercial),
         hora_operacional = COALESCE(${patch.horaOperacional ?? null}::text, hora_operacional),
+        estimativa_min = COALESCE(${patch.estimativaMin ?? null}::int, estimativa_min),
         atualizado_em = ${atualizadoEm}
       WHERE id = ${id}
       RETURNING *

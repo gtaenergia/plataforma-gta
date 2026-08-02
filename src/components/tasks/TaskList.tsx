@@ -14,6 +14,11 @@ import {
   type Task,
 } from "@/lib/tasks/types";
 import { Alert, Badge, Loading, type Tone } from "@/components/ui";
+import { SugestaoResponsavel } from "./SugestaoResponsavel";
+import { horasParaMin, minParaHoras, useCapacidade } from "@/components/capacidade/comum";
+import { CargaEquipe } from "@/components/capacidade/CargaEquipe";
+import { chaveCategoria } from "@/lib/capacidade/motor";
+import type { ConfigCapacidade } from "@/lib/capacidade/types";
 
 interface Usuario {
   email: string;
@@ -91,9 +96,29 @@ interface FormState {
   prazoOperacional: string;
   horaComercial: string;
   horaOperacional: string;
+  /** Em HORAS (texto). Vira minutos só no envio — ver `paraPayload`. */
+  estimativaHoras: string;
 }
 
-const FORM_VAZIO: FormState = { titulo: "", descricao: "", cliente: "", categoria: "", demandante: "operacional", responsavel: "", prioridade: "media", prazoComercial: "", prazoOperacional: "", horaComercial: "", horaOperacional: "" };
+const FORM_VAZIO: FormState = { titulo: "", descricao: "", cliente: "", categoria: "", demandante: "operacional", responsavel: "", prioridade: "media", prazoComercial: "", prazoOperacional: "", horaComercial: "", horaOperacional: "", estimativaHoras: "" };
+
+/** O formulário fala em horas; a API e o banco falam em minutos. */
+function paraPayload(f: FormState) {
+  const { estimativaHoras, ...resto } = f;
+  return { ...resto, estimativaMin: horasParaMin(estimativaHoras) };
+}
+
+/**
+ * Trocar a categoria traz junto o tempo típico dela — só quando o campo ainda
+ * está vazio, para nunca sobrescrever um número digitado à mão. Sem esse
+ * preenchimento a estimativa fica em branco na prática, a sugestão cai no valor
+ * padrão e o prazo proposto vira ruído.
+ */
+function comCategoria(f: FormState, categoria: string, config: ConfigCapacidade): FormState {
+  const media = config.estimativas[chaveCategoria(categoria)];
+  const estimativaHoras = f.estimativaHoras === "" && media > 0 ? minParaHoras(media) : f.estimativaHoras;
+  return { ...f, categoria, estimativaHoras };
+}
 
 export function TaskList({ currentUserEmail }: { currentUserEmail: string }) {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -120,6 +145,8 @@ export function TaskList({ currentUserEmail }: { currentUserEmail: string }) {
 
   // linha expandida
   const [abertaId, setAbertaId] = useState<string | null>(null);
+
+  const { config: capacidade } = useCapacidade();
 
   useEffect(() => {
     (async () => {
@@ -221,7 +248,7 @@ export function TaskList({ currentUserEmail }: { currentUserEmail: string }) {
       const res = await fetch("/api/tarefas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, status: "afazer" }),
+        body: JSON.stringify({ ...paraPayload(form), status: "afazer" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Falha ao criar a tarefa.");
@@ -297,6 +324,11 @@ export function TaskList({ currentUserEmail }: { currentUserEmail: string }) {
       <datalist id="tarefa-categorias">
         {categorias.map((c) => <option key={c} value={c} />)}
       </datalist>
+
+      {/* Recebe `tasks` em vez de buscar por conta própria: assim a carga
+          acompanha a criação e a conclusão de tarefas na hora, em vez de ficar
+          mostrando o retrato do momento em que a página abriu. */}
+      <CargaEquipe tarefas={tasks} />
 
       {/* toolbar */}
       <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 dark:border-slate-700 dark:bg-slate-800">
@@ -384,7 +416,7 @@ export function TaskList({ currentUserEmail }: { currentUserEmail: string }) {
             </div>
             <div className="sm:col-span-2">
               <label className="field-label">Categoria</label>
-              <input className="field-input" list="tarefa-categorias" value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} placeholder="Ex.: Administrativo, Orçamentos…" />
+              <input className="field-input" list="tarefa-categorias" value={form.categoria} onChange={(e) => setForm(comCategoria(form, e.target.value, capacidade))} placeholder="Ex.: Administrativo, Orçamentos…" />
             </div>
             <div className="sm:col-span-2">
               <label className="field-label">Demandante</label>
@@ -397,6 +429,10 @@ export function TaskList({ currentUserEmail }: { currentUserEmail: string }) {
               </select>
             </div>
             <div className="sm:col-span-2">
+              <label className="field-label">Estimativa (h)</label>
+              <input type="number" min={0} step={0.5} className="field-input" value={form.estimativaHoras} onChange={(e) => setForm({ ...form, estimativaHoras: e.target.value })} placeholder="Ex.: 4" />
+            </div>
+            <div className="sm:col-span-2">
               <label className="field-label">Responsável *</label>
               <select className="field-input" value={form.responsavel} onChange={(e) => setForm({ ...form, responsavel: e.target.value })} required>
                 <option value="">Selecione...</option>
@@ -406,6 +442,17 @@ export function TaskList({ currentUserEmail }: { currentUserEmail: string }) {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="sm:col-span-6">
+              <SugestaoResponsavel
+                config={capacidade}
+                usuarios={usuarios}
+                tarefas={tasks}
+                categoria={form.categoria}
+                estimativaMin={horasParaMin(form.estimativaHoras)}
+                responsavelEscolhido={form.responsavel}
+                onEscolher={(email, prazo) => setForm({ ...form, responsavel: email, prazoOperacional: prazo })}
+              />
             </div>
             <div className="sm:col-span-2">
               <label className="field-label">Prioridade</label>
@@ -473,6 +520,8 @@ export function TaskList({ currentUserEmail }: { currentUserEmail: string }) {
                 onToggle={() => setAbertaId(abertaId === t.id ? null : t.id)}
                 nomeDe={nomeDe}
                 usuarios={usuarios}
+                capacidade={capacidade}
+                tarefas={tasks}
                 onStatus={(s) => atualizar(t.id, { status: s })}
                 onPatch={(patch) => atualizar(t.id, patch)}
                 onExcluir={() => excluir(t.id, t.titulo)}
@@ -535,6 +584,8 @@ function TaskRow({
   onToggle,
   nomeDe,
   usuarios,
+  capacidade,
+  tarefas,
   onStatus,
   onPatch,
   onExcluir,
@@ -545,6 +596,8 @@ function TaskRow({
   onToggle: () => void;
   nomeDe: (email: string) => string;
   usuarios: Usuario[];
+  capacidade: ConfigCapacidade;
+  tarefas: Task[];
   onStatus: (s: StatusTarefa) => void;
   onPatch: (patch: Record<string, unknown>) => void;
   onExcluir: () => void;
@@ -567,6 +620,7 @@ function TaskRow({
     prazoOperacional: prazoOp(t),
     horaComercial: t.horaComercial ?? "",
     horaOperacional: t.horaOperacional ?? "",
+    estimativaHoras: minParaHoras(t.estimativaMin ?? 0),
   });
 
   return (
@@ -667,7 +721,7 @@ function TaskRow({
                 className="grid grid-cols-1 gap-3 sm:grid-cols-6"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  onPatch(edit as unknown as Record<string, unknown>);
+                  onPatch(paraPayload(edit) as unknown as Record<string, unknown>);
                   setEditando(false);
                 }}
               >
@@ -698,6 +752,10 @@ function TaskRow({
                   </select>
                 </div>
                 <div className="sm:col-span-2">
+                  <label className="field-label">Estimativa (h)</label>
+                  <input type="number" min={0} step={0.5} className="field-input" value={edit.estimativaHoras} onChange={(e) => setEdit({ ...edit, estimativaHoras: e.target.value })} placeholder="Ex.: 4" />
+                </div>
+                <div className="sm:col-span-2">
                   <label className="field-label">Responsável</label>
                   <select className="field-input" value={edit.responsavel} onChange={(e) => setEdit({ ...edit, responsavel: e.target.value })}>
                     {!usuarios.some((u) => u.email === edit.responsavel) && edit.responsavel && (
@@ -710,6 +768,22 @@ function TaskRow({
                     ))}
                   </select>
                 </div>
+                {/* Tarefa sem responsável é o que ficou parado — é justamente
+                    onde a sugestão volta a valer, para redistribuir. */}
+                {!edit.responsavel && capacidade && (
+                  <div className="sm:col-span-6">
+                    <SugestaoResponsavel
+                      config={capacidade}
+                      usuarios={usuarios}
+                      tarefas={tarefas}
+                      categoria={edit.categoria}
+                      estimativaMin={horasParaMin(edit.estimativaHoras)}
+                      responsavelEscolhido={edit.responsavel}
+                      ignorarTarefaId={t.id}
+                      onEscolher={(email, prazo) => setEdit({ ...edit, responsavel: email, prazoOperacional: prazo })}
+                    />
+                  </div>
+                )}
                 <div className="sm:col-span-2">
                   <label className="field-label">Prioridade</label>
                   <select className="field-input" value={edit.prioridade} onChange={(e) => setEdit({ ...edit, prioridade: e.target.value as Prioridade })}>

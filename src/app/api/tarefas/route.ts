@@ -4,6 +4,7 @@ import { createTaskSchema } from "@/lib/tasks/types";
 import { getCurrentUser } from "@/lib/session";
 import { notifyTaskAssigned } from "@/lib/email/notifyTask";
 import { notificar } from "@/lib/notificacoes/store";
+import { avisarSeEstourou } from "@/lib/capacidade/aviso-estouro";
 
 export const runtime = "nodejs";
 
@@ -34,6 +35,9 @@ export async function POST(req: Request) {
     );
   }
 
+  // Lista ANTES de criar: é o retrato contra o qual se mede se esta tarefa foi
+  // a que estourou a semana de alguém.
+  const antesDaCriacao = await getTaskStore().list();
   const task = await getTaskStore().create({ ...parsed.data, criadoPor: user.email });
   // Notifica o responsável — in-app sempre; por e-mail se o Resend estiver
   // configurado — após a resposta (best-effort, não bloqueia). Sem sentido
@@ -50,5 +54,6 @@ export async function POST(req: Request) {
     );
     after(() => notifyTaskAssigned(task));
   }
+  after(() => avisarSeEstourou(task, antesDaCriacao));
   return NextResponse.json({ task }, { status: 201 });
 }

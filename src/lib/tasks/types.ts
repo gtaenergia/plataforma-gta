@@ -68,6 +68,12 @@ export interface Task {
   horaComercial: string;
   /** Hora do prazo operacional — HH:mm (opcional). */
   horaOperacional: string;
+  /**
+   * Esforço estimado, em MINUTOS. `0` = não informado (nunca "não dá
+   * trabalho"): sem estimativa a plataforma cai na média da categoria em vez de
+   * tratar a tarefa como instantânea. Ver lib/capacidade/motor.ts.
+   */
+  estimativaMin: number;
   comentarios: Comentario[];
   criadoPor: string;
   criadoEm: string;
@@ -114,6 +120,9 @@ export const createTaskSchema = z.object({
   prazoOperacional: prazoSchema,
   horaComercial: horaSchema,
   horaOperacional: horaSchema,
+  // Teto de 400 h: acima disso é um projeto, não uma tarefa — e um dígito a
+  // mais digitado por engano tomaria a agenda da pessoa por meses.
+  estimativaMin: z.coerce.number().int().min(0).max(400 * 60).default(0),
 });
 
 /** Payload de atualização parcial. */

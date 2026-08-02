@@ -9,13 +9,10 @@
  * conta não sabe. Os avisos aparecem na tela para a decisão ser consciente.
  */
 
-export type NivelAviso = "atencao" | "critico";
-
-export interface AvisoTecnico {
-  nivel: NivelAviso;
-  titulo: string;
-  detalhe: string;
-}
+// O tipo vive em @/lib/avisos (é compartilhado com carregador e capacidade);
+// reexportado aqui para não quebrar quem já importava deste caminho.
+export type { NivelAviso, AvisoTecnico } from "@/lib/avisos";
+import type { AvisoTecnico } from "@/lib/avisos";
 
 /**
  * Limite entre microgeração e minigeração (Lei 14.300/2022): até 75 kW é

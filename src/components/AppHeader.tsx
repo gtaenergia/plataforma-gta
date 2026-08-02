@@ -160,6 +160,11 @@ export function AppHeader({ userName, isAdmin }: { userName?: string; isAdmin?: 
                   </MenuLink>
                 )}
                 {isAdmin && (
+                  <MenuLink href="/admin/capacidade" onNavigate={() => setMenuAberto(false)}>
+                    Capacidade da equipe
+                  </MenuLink>
+                )}
+                {isAdmin && (
                   <MenuLink href="/admin/armazenamento" onNavigate={() => setMenuAberto(false)}>
                     Armazenamento
                   </MenuLink>
