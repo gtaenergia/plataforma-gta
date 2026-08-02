@@ -320,7 +320,7 @@ export function ClientesList() {
                 <td className="px-4 py-2">{c.segmento ? <Badge tone="indigo">{c.segmento}</Badge> : <span className="sem-valor">—</span>}</td>
                 <td className="px-4 py-2">
                   <div className="flex items-center justify-end gap-3 whitespace-nowrap text-xs">
-                    <button onClick={() => abrirEdicao(c)} className="text-gta-indigo hover:underline">Editar</button>
+                    <button onClick={() => abrirEdicao(c)} className="text-gta-indigo dark:text-indigo-300 hover:underline">Editar</button>
                     <button onClick={() => excluir(c)} className="text-red-500 hover:underline dark:text-red-400">Excluir</button>
                   </div>
                 </td>

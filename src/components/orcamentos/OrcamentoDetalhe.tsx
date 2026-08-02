@@ -10,7 +10,7 @@ import {
   type RegistroValidacao,
 } from "@/lib/orcamentos/types";
 import type { PermissaoKey } from "@/lib/rbac/permissoes";
-import { Alert, BackLink, Badge, type Tone } from "@/components/ui";
+import { Alert, BackLink, Badge, Marca, type Tone } from "@/components/ui";
 
 const ESTACAO_TONE: Record<string, Tone> = {
   rascunho: "slate",
@@ -318,7 +318,9 @@ export function OrcamentoDetalhe({
             <h1 className="text-xl font-bold text-gta-navy dark:text-slate-100">{orc.cliente}</h1>
             <p className="hint">{orc.referencia}</p>
           </div>
-          <Badge tone={ESTACAO_TONE[orc.estacao] ?? "slate"}>{estacaoLabel(orc.estacao)}</Badge>
+          {/* Mesmo marcador da lista: o estado tem de ser reconhecível como a
+              mesma coisa nas duas telas. */}
+          <Marca tone={ESTACAO_TONE[orc.estacao] ?? "slate"}>{estacaoLabel(orc.estacao)}</Marca>
         </div>
         {orc.descricao && <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">{orc.descricao}</p>}
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 subtitle">
@@ -455,7 +457,7 @@ export function OrcamentoDetalhe({
                     <span className="shrink-0 rounded bg-gta-navy/10 px-1.5 py-0.5 text-xs font-semibold text-gta-navy dark:bg-white/10 dark:text-slate-200">
                       {revLabel(a.revisao)}
                     </span>
-                    <a href={`/api/orcamentos/${orc.id}/anexos/${a.id}/download`} className="truncate font-medium text-gta-indigo hover:underline">
+                    <a href={`/api/orcamentos/${orc.id}/anexos/${a.id}/download`} className="truncate font-medium text-gta-indigo dark:text-indigo-300 hover:underline">
                       {a.nome}
                     </a>
                   </div>

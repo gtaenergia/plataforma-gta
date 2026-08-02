@@ -235,7 +235,7 @@ export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: st
         <div className="flex items-center justify-between">
           <h2 className="section-title">Preço</h2>
           {preco && precoTocado.current && preco.faturamento > 0 && (
-            <button type="button" className="toque text-xs text-gta-indigo hover:underline" onClick={() => { precoTocado.current = false; setForm((f) => ({ ...f, valorServico: nf(preco.faturamento, 2) })); }}>Usar sugerido {brl(preco.faturamento)}</button>
+            <button type="button" className="toque text-xs text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => { precoTocado.current = false; setForm((f) => ({ ...f, valorServico: nf(preco.faturamento, 2) })); }}>Usar sugerido {brl(preco.faturamento)}</button>
           )}
         </div>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
@@ -314,7 +314,7 @@ export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: st
             aliqImpostos: preco && preco.faturamento > 0 ? preco.impostos / preco.faturamento : 0.06,
           })}
         />
-        <button className="toque text-sm text-gta-indigo hover:underline" onClick={() => router.push("/propostas")}>Ver propostas</button>
+        <button className="toque text-sm text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => router.push("/propostas")}>Ver propostas</button>
         {status && <span className="text-sm text-green-600 dark:text-green-400">{status}</span>}
       </div>
     </div>

@@ -40,7 +40,11 @@ class JsonTaskStore implements TaskStore {
       if (!Array.isArray(parsed)) return [];
       // Tarefa gravada antes de um campo existir volta sem ele. O equivalente
       // no Postgres é o DEFAULT da coluna; aqui é este preenchimento.
-      return (parsed as Task[]).map((t) => ({ ...t, estimativaMin: Number(t.estimativaMin ?? 0) || 0 }));
+      return (parsed as Task[]).map((t) => ({
+        ...t,
+        estimativaMin: Number(t.estimativaMin ?? 0) || 0,
+        tipoDemanda: t.tipoDemanda ?? "",
+      }));
     } catch {
       return []; // arquivo inexistente ou corrompido -> lista vazia
     }

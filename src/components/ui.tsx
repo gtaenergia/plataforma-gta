@@ -38,12 +38,46 @@ const BADGE_TONE: Record<Tone, string> = {
   indigo: "badge-indigo",
 };
 
-/** Pílula de status. */
+/**
+ * Pílula de status.
+ *
+ * Para destaque PONTUAL — um rótulo que aparece uma vez na tela ("Indicado",
+ * "Sem duração"). Numa coluna de tabela, onde o mesmo estado se repete dezenas
+ * de vezes, use `<Marca>`: fundo colorido em toda linha satura a tela e a cor
+ * deixa de significar alguma coisa.
+ */
 export function Badge({ tone = "slate", dot, children, className = "" }: { tone?: Tone; dot?: boolean; children: ReactNode; className?: string }) {
   return (
     <span className={`badge ${BADGE_TONE[tone]} ${className}`}>
       {dot && <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" aria-hidden />}
       {children}
+    </span>
+  );
+}
+
+const MARCA_PONTO: Record<Tone, string> = {
+  slate: "bg-slate-400 dark:bg-slate-500",
+  green: "bg-green-500",
+  amber: "bg-amber-500",
+  red: "bg-red-500",
+  indigo: "bg-gta-indigo dark:bg-indigo-400",
+};
+
+/**
+ * Estado em lista: ponto colorido + texto no tom normal.
+ *
+ * O ponto dá a leitura por varredura; o texto continua legível porque não está
+ * sobre fundo tingido em corpo pequeno. É o formato certo para colunas de
+ * tabela — a cor distingue sem pintar a linha inteira.
+ *
+ * A cor é redundante de propósito: o rótulo sempre acompanha, para quem não
+ * distingue verde de âmbar continuar lendo a informação.
+ */
+export function Marca({ tone = "slate", children, className = "" }: { tone?: Tone; children: ReactNode; className?: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap ${className}`}>
+      <span className={`h-2 w-2 shrink-0 rounded-full ${MARCA_PONTO[tone]}`} aria-hidden />
+      <span className="text-slate-700 dark:text-slate-300">{children}</span>
     </span>
   );
 }

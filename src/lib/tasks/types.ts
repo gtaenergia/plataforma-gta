@@ -52,6 +52,13 @@ export interface Task {
   cliente: string;
   /** Categoria da tarefa (texto livre — ver CATEGORIAS_PADRAO_TAREFA). */
   categoria: string;
+  /**
+   * Tipo de demanda dentro da categoria ("Projeto de SPDA", "Usina solar
+   * residencial"). Guarda o NOME, não um id: sobrevive a mudanças no catálogo,
+   * fica legível no banco e segue o padrão de `cliente` e `categoria`.
+   * O catálogo vive em Planejamento e capacidade.
+   */
+  tipoDemanda: string;
   /** De onde veio a demanda: operacional ou comercial. */
   demandante: Demandante;
   /** E-mail do responsável (usuário cadastrado na plataforma). */
@@ -111,6 +118,7 @@ export const createTaskSchema = z.object({
   descricao: z.string().trim().max(4000).default(""),
   cliente: z.string().trim().max(200).default(""),
   categoria: z.string().trim().max(60).default(""),
+  tipoDemanda: z.string().trim().max(120).default(""),
   demandante: z.enum(["operacional", "comercial"]).or(z.literal("")).default(""),
   responsavel: z.string().trim().min(1, "Informe o responsável"),
   status: statusEnum.default("afazer"),

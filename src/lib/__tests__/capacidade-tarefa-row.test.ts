@@ -17,6 +17,7 @@ const linha = (over: Partial<Row> = {}): Row => ({
   descricao: "",
   cliente: "",
   categoria: "Orçamentos",
+  tipo_demanda: "Usina solar residencial",
   demandante: "comercial",
   responsavel: "ana@gta.com",
   status: "afazer",
@@ -55,6 +56,18 @@ describe("estimativa vinda do banco", () => {
 
   it("lixo no lugar do número vira 0 em vez de NaN", () => {
     expect(rowToTask(linha({ estimativa_min: "abc" as never })).estimativaMin).toBe(0);
+  });
+});
+
+describe("tipo de demanda vindo do banco", () => {
+  it("o texto atravessa intacto", () => {
+    expect(rowToTask(linha()).tipoDemanda).toBe("Usina solar residencial");
+  });
+
+  it("linha anterior à coluna (null) vira string vazia, não 'null'", () => {
+    // `String(null)` daria "null" na tela e nunca casaria com o catálogo.
+    expect(rowToTask(linha({ tipo_demanda: null as never })).tipoDemanda).toBe("");
+    expect(rowToTask(linha({ tipo_demanda: undefined as never })).tipoDemanda).toBe("");
   });
 });
 

@@ -21,7 +21,7 @@ export function ProjetoBtAjuda() {
 
       {/* Passo a passo */}
       <AjudaSecao n={1} titulo="Passo a passo (como montar o orçamento)">
-        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo">
+        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo dark:marker:text-indigo-300">
           <li><strong>Área construída (m²) + tipo.</strong> A área dirige a sugestão de preço de cada disciplina; o tipo (<Destaque>Residencial / Comercial</Destaque> ou <Destaque>Industrial</Destaque>) aplica o multiplicador de complexidade.</li>
           <li><strong>Marque as disciplinas.</strong> Força e iluminação são separáveis — marcar as duas equivale ao <strong>projeto predial completo</strong>. Cada marcada vira um item na proposta.</li>
           <li><strong>Confira / ajuste os valores.</strong> Cada disciplina traz a sugestão (área × taxa) já preenchida e <strong>editável</strong>. Mexeu à mão? O botão <Destaque>usar</Destaque> volta à sugestão automática.</li>

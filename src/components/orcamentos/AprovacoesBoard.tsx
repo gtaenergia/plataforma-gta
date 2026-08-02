@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ESTACOES, estacaoLabel, type Estacao, type Orcamento } from "@/lib/orcamentos/types";
-import { Alert, Badge, EmptyState, Loading, type Tone } from "@/components/ui";
+import { Alert, Badge, EmptyState, Loading, Marca, type Tone } from "@/components/ui";
 import { usePaginacao, Paginacao } from "@/components/Paginacao";
 import { formatBRL } from "@/lib/format";
 
@@ -124,7 +124,7 @@ export function AprovacoesBoard() {
                     <div className="truncate font-medium text-gta-navy dark:text-slate-100">{o.cliente}</div>
                     <div className="truncate hint">{o.referencia}</div>
                   </div>
-                  <Badge tone={ESTACAO_TONE[o.estacao]} className="shrink-0">{estacaoLabel(o.estacao)}</Badge>
+                  <Marca tone={ESTACAO_TONE[o.estacao]} className="shrink-0">{estacaoLabel(o.estacao)}</Marca>
                 </div>
 
                 {temLinhaInfo && (
@@ -132,14 +132,20 @@ export function AprovacoesBoard() {
                     {o.valor != null && o.valor > 0 && (
                       <span className="text-sm font-semibold text-gta-navy dark:text-slate-100">{formatBRL(o.valor)}</span>
                     )}
+                    {/* Pílula colorida SÓ no que exige ação. "Parado" e "vencida"
+                        são alertas; um prazo distante é informação de rotina e
+                        vira texto — se tudo virasse pílula, o alerta se perderia
+                        no meio. */}
                     {parado != null && (
                       <Badge tone={parado > 14 ? "red" : "amber"}>{parado <= 0 ? "parado hoje" : `parado há ${parado}d`}</Badge>
                     )}
                     {vence != null &&
                       (vence < 0 ? (
                         <Badge tone="red">vencida há {-vence}d</Badge>
+                      ) : vence <= 7 ? (
+                        <Badge tone="amber">vence em {vence}d</Badge>
                       ) : (
-                        <Badge tone={vence <= 7 ? "amber" : "slate"}>vence em {vence}d</Badge>
+                        <span className="hint">vence em {vence}d</span>
                       ))}
                   </div>
                 )}

@@ -44,6 +44,7 @@ export interface Row {
   descricao: string;
   cliente: string;
   categoria: string;
+  tipo_demanda: string;
   demandante: string;
   responsavel: string;
   status: string;
@@ -68,6 +69,7 @@ export function rowToTask(r: Row): Task {
     descricao: r.descricao,
     cliente: r.cliente ?? "",
     categoria: r.categoria ?? "",
+    tipoDemanda: r.tipo_demanda ?? "",
     demandante: (r.demandante ?? "") as Task["demandante"],
     responsavel: r.responsavel,
     status: r.status as Task["status"],
@@ -129,6 +131,7 @@ export class PostgresTaskStore implements TaskStore {
         .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS hora_comercial text NOT NULL DEFAULT ''`)
         .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS hora_operacional text NOT NULL DEFAULT ''`)
         .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS estimativa_min integer NOT NULL DEFAULT 0`)
+        .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS tipo_demanda text NOT NULL DEFAULT ''`)
         .then(() => undefined);
     }
     return this.ready;
@@ -154,9 +157,9 @@ export class PostgresTaskStore implements TaskStore {
     const now = new Date().toISOString();
     await this.pool.sql`
       INSERT INTO tasks
-        (id, titulo, descricao, cliente, categoria, demandante, responsavel, status, prioridade, prazo, prazo_comercial, prazo_operacional, hora_comercial, hora_operacional, estimativa_min, comentarios, criado_por, criado_em, atualizado_em)
+        (id, titulo, descricao, cliente, categoria, tipo_demanda, demandante, responsavel, status, prioridade, prazo, prazo_comercial, prazo_operacional, hora_comercial, hora_operacional, estimativa_min, comentarios, criado_por, criado_em, atualizado_em)
       VALUES
-        (${id}, ${data.titulo}, ${data.descricao}, ${data.cliente}, ${data.categoria}, ${data.demandante}, ${data.responsavel}, ${data.status},
+        (${id}, ${data.titulo}, ${data.descricao}, ${data.cliente}, ${data.categoria}, ${data.tipoDemanda ?? ""}, ${data.demandante}, ${data.responsavel}, ${data.status},
          ${data.prioridade}, ${data.prazo}, ${data.prazoComercial}, ${data.prazoOperacional}, ${data.horaComercial}, ${data.horaOperacional}, ${data.estimativaMin ?? 0}, '[]'::jsonb, ${data.criadoPor}, ${now}, ${now})
     `;
     return { ...data, id, comentarios: [], criadoEm: now, atualizadoEm: now };
@@ -180,6 +183,7 @@ export class PostgresTaskStore implements TaskStore {
         descricao = COALESCE(${patch.descricao ?? null}::text, descricao),
         cliente = COALESCE(${patch.cliente ?? null}::text, cliente),
         categoria = COALESCE(${patch.categoria ?? null}::text, categoria),
+        tipo_demanda = COALESCE(${patch.tipoDemanda ?? null}::text, tipo_demanda),
         demandante = COALESCE(${patch.demandante ?? null}::text, demandante),
         responsavel = COALESCE(${patch.responsavel ?? null}::text, responsavel),
         status = COALESCE(${patch.status ?? null}::text, status),

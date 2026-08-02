@@ -149,6 +149,9 @@ export function AppHeader({ userName, isAdmin }: { userName?: string; isAdmin?: 
                 <MenuLink href="/conta" onNavigate={() => setMenuAberto(false)}>
                   Minha conta
                 </MenuLink>
+                <MenuLink href="/calendario" onNavigate={() => setMenuAberto(false)}>
+                  Calendário
+                </MenuLink>
                 {isAdmin && (
                   <MenuLink href="/admin/usuarios" onNavigate={() => setMenuAberto(false)}>
                     Gerenciar usuários
@@ -160,8 +163,8 @@ export function AppHeader({ userName, isAdmin }: { userName?: string; isAdmin?: 
                   </MenuLink>
                 )}
                 {isAdmin && (
-                  <MenuLink href="/admin/capacidade" onNavigate={() => setMenuAberto(false)}>
-                    Capacidade da equipe
+                  <MenuLink href="/admin/planejamento" onNavigate={() => setMenuAberto(false)}>
+                    Planejamento e capacidade
                   </MenuLink>
                 )}
                 {isAdmin && (

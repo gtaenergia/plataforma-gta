@@ -95,7 +95,7 @@ export function NotificacoesSino() {
       >
         <Bell className="h-4.5 w-4.5" style={{ width: 18, height: 18 }} />
         {naoLidas > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-gta-orange px-1 text-[10px] font-bold leading-none text-white">
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-gta-orangeTexto px-1 text-[10px] font-bold leading-none text-white">
             {naoLidas > 9 ? "9+" : naoLidas}
           </span>
         )}
@@ -116,7 +116,7 @@ export function NotificacoesSino() {
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 dark:border-slate-700">
             <span className="text-sm font-semibold text-gta-navy dark:text-slate-100">Notificações</span>
             {naoLidas > 0 && (
-              <button onClick={marcarTodas} className="text-xs font-medium text-gta-indigo hover:underline">
+              <button onClick={marcarTodas} className="text-xs font-medium text-gta-indigo dark:text-indigo-300 hover:underline">
                 Marcar todas como lidas
               </button>
             )}

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ServiceIcon } from "@/components/ServiceIcon";
-import { Alert, Badge, EmptyState, Loading, type Tone } from "@/components/ui";
+import { Alert, EmptyState, Loading, Marca, type Tone } from "@/components/ui";
 import { usePaginacao, Paginacao } from "@/components/Paginacao";
 import { statusPropostaLabel, STATUS_PROPOSTA, type Proposta } from "@/lib/propostas/types";
 
@@ -202,7 +202,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
                     <span className="truncate">{rotuloServico(p.serviceKey)}</span>
                   </div>
                 </div>
-                <Badge tone={STATUS_TONE[p.status] ?? "slate"} className="shrink-0">{statusPropostaLabel(p.status)}</Badge>
+                <Marca tone={STATUS_TONE[p.status] ?? "slate"} className="shrink-0">{statusPropostaLabel(p.status)}</Marca>
               </div>
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
                 {p.referencia && <span className="font-mono">{p.referencia}</span>}
@@ -277,7 +277,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
                   <td className="px-4 py-2 font-mono text-xs text-slate-600 dark:text-slate-400">{p.referencia || "—"}</td>
                   <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{nomeCriador(p)}</td>
                   <td className="px-4 py-2">
-                    <Badge tone={STATUS_TONE[p.status] ?? "slate"}>{statusPropostaLabel(p.status)}</Badge>
+                    <Marca tone={STATUS_TONE[p.status] ?? "slate"}>{statusPropostaLabel(p.status)}</Marca>
                   </td>
                   <td className="px-4 py-2 text-slate-600 dark:text-slate-400">{fmtData(p.atualizadoEm)}</td>
                   <td className="px-4 py-2">
@@ -287,13 +287,13 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
                           onClick={() => enviarParaAprovacao(p)}
                           disabled={enviandoId === p.id}
                           title="Enviar para aprovação"
-                          className="font-medium text-gta-indigo hover:underline disabled:opacity-50"
+                          className="btn-link text-xs"
                         >
                           {enviandoId === p.id ? "Enviando…" : "Enviar"}
                         </button>
                       )}
                       {podeReabrir && (
-                        <Link href={`/nova/${p.serviceKey}?proposta=${p.id}`} className="text-gta-indigo hover:underline">
+                        <Link href={`/nova/${p.serviceKey}?proposta=${p.id}`} className="btn-link text-xs">
                           Abrir
                         </Link>
                       )}
@@ -302,12 +302,16 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
                           onClick={() => duplicar(p)}
                           disabled={duplicandoId === p.id}
                           title="Duplicar em novo rascunho"
-                          className="text-gta-indigo hover:underline disabled:opacity-50"
+                          className="btn-link text-xs"
                         >
                           {duplicandoId === p.id ? "Duplicando…" : "Duplicar"}
                         </button>
                       )}
-                      <button onClick={() => excluir(p)} className="text-red-500 hover:underline dark:text-red-400">
+                      {/* `.btn-link` e não `text-gta-indigo` solto: a classe do
+                          sistema traz a variante de tema escuro. Sem ela, o
+                          índigo da marca sobre o cartão escuro dava 2,41:1 —
+                          azul quase invisível no azul escuro. */}
+                      <button onClick={() => excluir(p)} className="btn-link text-xs !text-red-600 dark:!text-red-400">
                         Excluir
                       </button>
                     </div>

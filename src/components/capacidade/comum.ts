@@ -7,10 +7,14 @@ import { fimJanelaCurta, fimJanelaLonga, ymd, type Ymd } from "@/lib/capacidade/
 /** Ponte entre a tela e o motor de capacidade (que é puro e não faz fetch). */
 
 /**
- * Configuração vigente da equipe.
+ * Parâmetros de planejamento vigentes.
  *
- * Falha vira o padrão em vez de erro na tela: a sugestão é um auxílio: se o
- * fetch cair, criar tarefa tem que continuar funcionando.
+ * Falha vira o padrão em vez de erro na tela: a indicação de responsável é um
+ * auxílio, e abrir uma tarefa precisa continuar funcionando mesmo sem ela.
+ *
+ * Em compensação, a falha é REGISTRADA no console. Sem isso, uma rota renomeada
+ * degrada em silêncio — a tela continua de pé, mas com o catálogo vazio e as
+ * durações perdidas, e ninguém descobre até um prazo sair errado.
  */
 export function useCapacidade() {
   const [config, setConfig] = useState<ConfigCapacidade>(CONFIG_CAPACIDADE_PADRAO);
@@ -18,12 +22,17 @@ export function useCapacidade() {
 
   useEffect(() => {
     let vivo = true;
-    fetch("/api/capacidade")
-      .then((r) => r.json())
+    fetch("/api/planejamento")
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((d) => {
         if (vivo && d?.config) setConfig(d.config);
       })
-      .catch(() => {})
+      .catch((e) => {
+        console.error("Planejamento: falha ao carregar os parâmetros, usando o padrão —", e);
+      })
       .finally(() => {
         if (vivo) setCarregando(false);
       });
@@ -32,7 +41,9 @@ export function useCapacidade() {
     };
   }, []);
 
-  return { config, carregando };
+  // `setConfig` sai daqui para a tela poder refletir um cadastro feito no meio
+  // do caminho (um tipo de demanda novo, por exemplo) sem recarregar tudo.
+  return { config, carregando, setConfig };
 }
 
 /**

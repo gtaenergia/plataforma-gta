@@ -43,8 +43,10 @@ export function usePaginacao<T>(itens: T[], porPaginaInicial = 20): { paginados:
   };
 }
 
+/* 36px é o padrão de ação-ícone da plataforma (`.icon-btn`); aqui a borda é
+   necessária porque o botão fica solto no rodapé, sem cartão em volta. */
 const btnCls =
-  "inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700";
+  "inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700";
 
 export function Paginacao({ total, inicio, fim, pagina, totalPaginas, porPagina, setPagina, setPorPagina }: PaginacaoControles) {
   if (total === 0) return null;
@@ -54,7 +56,12 @@ export function Paginacao({ total, inicio, fim, pagina, totalPaginas, porPagina,
         <span className="text-slate-600 dark:text-slate-400">
           {inicio}–{fim} de {total}
         </span>
-        <select className="field-input !w-auto !py-1 text-xs" value={porPagina} onChange={(e) => setPorPagina(Number(e.target.value))}>
+        <select
+          aria-label="Itens por página"
+          className="field-input !w-auto !py-1 text-xs"
+          value={porPagina}
+          onChange={(e) => setPorPagina(Number(e.target.value))}
+        >
           {[10, 20, 50, 100].map((n) => (
             <option key={n} value={n}>{n} por página</option>
           ))}

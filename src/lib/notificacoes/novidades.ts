@@ -20,9 +20,15 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "calendario-tarefas-2026-08",
+    titulo: "Novidade: calendário de prazos",
+    mensagem: "Veja os prazos das suas tarefas distribuídos no mês, com prioridade e situação, e alterne para a visão da equipe. Fica em Calendário, no menu do perfil.",
+    link: "/calendario",
+  },
+  {
     slug: "capacidade-equipe-2026-08",
     titulo: "Tarefas: indicação de responsável e prazo calculado",
-    mensagem: "Ao abrir uma tarefa, informe a estimativa de duração e a plataforma indica os responsáveis com disponibilidade e a data de entrega de cada um; um clique preenche responsável e prazo operacional. O painel no topo de Tarefas apresenta a carga da equipe. A jornada de trabalho é cadastrada por um administrador em Capacidade da equipe.",
+    mensagem: "Ao abrir uma tarefa, escolha a categoria e o tipo de demanda: a plataforma traz a duração média, indica os responsáveis com disponibilidade e calcula a data de entrega de cada um. Um clique preenche responsável e prazo operacional. O catálogo de demandas e a jornada de trabalho são cadastrados por um administrador em Planejamento e capacidade.",
     link: "/tarefas",
   },
   {

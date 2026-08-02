@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { Badge, Loading, SectionCard, Segmented } from "@/components/ui";
 import {
   agruparPorResponsavel,
@@ -129,7 +128,7 @@ export function CargaEquipe({ tarefas }: { tarefas: Task[] }) {
               ))}
               {linhas.length > RESUMO_MAX && (
                 <button type="button" className="btn-link text-xs" onClick={() => setAberto(true)}>
-                  e mais {linhas.length - RESUMO_MAX}
+                  Mais {linhas.length - RESUMO_MAX}
                 </button>
               )}
             </>
@@ -155,10 +154,7 @@ export function CargaEquipe({ tarefas }: { tarefas: Task[] }) {
         </ul>
       )}
       <p className="hint mt-3">
-        Calculado a partir da estimativa de duração de cada tarefa.{" "}
-        <Link href="/admin/capacidade" className="btn-link">
-          Configurar a capacidade da equipe
-        </Link>
+        Calculado a partir da estimativa de duração de cada tarefa e do catálogo de demandas.
       </p>
     </SectionCard>
   );
@@ -166,7 +162,7 @@ export function CargaEquipe({ tarefas }: { tarefas: Task[] }) {
 
 function Barra({ pct }: { pct: number | null }) {
   if (pct === null) {
-    return <span className="sem-valor text-xs">sem jornada cadastrada</span>;
+    return <span className="sem-valor text-xs">Sem jornada cadastrada</span>;
   }
   const tom = tomDaOcupacao(pct);
   const cor =

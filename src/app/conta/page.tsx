@@ -58,7 +58,7 @@ export default async function ContaPage() {
           <p className="hint mt-3">
             Jornada considerada pela plataforma no cálculo de prazos e na indicação de responsáveis.
             {user.role === "admin"
-              ? " Configurável em Capacidade da equipe, no menu do perfil."
+              ? " Configurável em Planejamento e capacidade, no menu do perfil."
               : " Alterações devem ser solicitadas a um administrador."}
           </p>
         </section>

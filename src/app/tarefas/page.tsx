@@ -12,7 +12,7 @@ export default async function TarefasPage() {
       <main className="app-container py-8">
         <PageHeader title="Tarefas" subtitle="Organize e acompanhe as tarefas da equipe GTA." />
         <div className="mt-6">
-          <TaskList currentUserEmail={user.email} />
+          <TaskList />
         </div>
       </main>
     </div>

@@ -85,7 +85,10 @@ body {
 /* Travessão de "campo sem valor" numa lista/tabela. Fica de propósito mais
    apagado que o texto — é ausência de dado, não dado — mas não tão apagado a
    ponto de sumir (o slate-300 anterior dava 1,9:1 no fundo claro). */
-.sem-valor { @apply text-slate-400 dark:text-slate-600; }
+/* Marcador de campo vazio ("—"). Precisa ser DISCRETO, não ilegível: em
+   slate-600 sobre o cartão escuro dava 1,93:1 — abaixo do mínimo de 4,5 da
+   WCAG AA — e o traço praticamente sumia em 40 células de uma só tela. */
+.sem-valor { @apply text-slate-500 dark:text-slate-400; }
 
 .field-label {
   @apply block text-sm font-medium text-gta-navy/80 mb-1 dark:text-slate-300;
@@ -104,19 +107,40 @@ body {
   background-color: #1e293b; /* slate-800 */
   color: #f1f5f9; /* slate-100 */
 }
-/* Seta própria do <select>, com mais respiro da borda direita que a seta
-   nativa do navegador (que fica colada nela). */
-select.field-input {
+/* ---- Indicador de lista ---------------------------------------------------
+   UM símbolo para tudo que abre opções. Conviviam três affordances na mesma
+   tela: seta própria no <select>, seta nativa do navegador no status da lista
+   (colada na borda) e NENHUMA nos campos com sugestões — nada indicava que
+   Cliente, Categoria e Tipo de demanda tinham lista.
+
+   `input[list]` pega qualquer campo com datalist por atributo, sem depender de
+   alguém lembrar de somar uma classe. */
+select.field-input,
+input[list].field-input,
+.select-pilula {
   appearance: none;
   -webkit-appearance: none;
   background-repeat: no-repeat;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M5 7.5L10 12.5L15 7.5'/%3E%3C/svg%3E");
+}
+.dark select.field-input,
+.dark input[list].field-input,
+.dark .select-pilula {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M5 7.5L10 12.5L15 7.5'/%3E%3C/svg%3E");
+}
+/* Campo de tamanho normal: mais respiro da borda que a seta nativa dava. */
+select.field-input,
+input[list].field-input {
   background-position: right 0.65rem center;
   background-size: 1rem 1rem;
   padding-right: 2.25rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M5 7.5L10 12.5L15 7.5'/%3E%3C/svg%3E");
 }
-.dark select.field-input {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M5 7.5L10 12.5L15 7.5'/%3E%3C/svg%3E");
+/* Pílula compacta (o status dentro da lista de tarefas): mesma seta, escala
+   proporcional. O padding fica com o utilitário no elemento, para o `!py-1` e
+   companhia continuarem funcionando. */
+.select-pilula {
+  background-position: right 0.3rem center;
+  background-size: 0.8rem 0.8rem;
 }
 /* Mensagem presa a UM campo. Falha de operação (não salvou, não carregou) usa
    o componente <Alert tone="red">, que tem caixa e ícone. */
@@ -167,6 +191,21 @@ select.field-input {
          focus-visible:ring-red-400/40 dark:hover:bg-red-900/20;
 }
 
+/* Alternador de dia da semana: quadrado com a inicial, ligado/desligado por
+   `aria-pressed`. Existe como classe porque aparece em dois contextos de
+   densidade diferente (jornada da equipe e tabela por profissional) e tinha
+   divergido em tamanho entre eles. Precisa vir ANTES da media query de toque,
+   senão a regra base vence por ordem e o alvo de 44px não se aplica. */
+.dia-toggle {
+  @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-sm font-medium transition
+         border-slate-300 text-slate-500 hover:bg-slate-50
+         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gta-indigo/40
+         dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-700;
+}
+.dia-toggle[aria-pressed="true"] {
+  @apply border-gta-indigo bg-gta-indigo text-white hover:bg-gta-indigo;
+}
+
 /* Rolagem sem a barra visível. Para faixas que só precisam rolar em tela
    estreita (abas, filtros): no desktop cabe tudo, mas o `overflow-*-auto`
    ainda reserva a barra e deixa um traço inútil sob o conteúdo. */
@@ -190,6 +229,10 @@ select.field-input {
   .btn-secondary,
   .btn-danger,
   .segmented-item { @apply min-h-[44px]; }
+  /* Sete quadrados de 44px mais os espaços somam 332px — cabem nos 343px úteis
+     de uma tela de 375px. Quadrado fixo, e não `flex-1`, para não variar de
+     largura entre a jornada da equipe e a tabela por profissional. */
+  .dia-toggle { @apply h-11 w-11; }
   /* Anula os !py-1/!py-1.5 usados para compactar botões no desktop. */
   .btn-primary.\!py-1, .btn-secondary.\!py-1,
   .btn-primary.\!py-1\.5, .btn-secondary.\!py-1\.5 { @apply !py-2; }

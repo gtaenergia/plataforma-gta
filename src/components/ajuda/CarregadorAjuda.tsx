@@ -19,7 +19,7 @@ export function CarregadorAjuda() {
 
       {/* Passo a passo */}
       <AjudaSecao n={1} titulo="Passo a passo (como montar o orçamento)">
-        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo">
+        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo dark:marker:text-indigo-300">
           <li><strong>Potência + alimentação.</strong> Informe a potência do carregador (kW) e se é monofásico (220 V) ou trifásico (380 V). Há atalhos de 3,7 / 7,4 kW mono e 11 / 22 kW tri. <em>O carregador em si é do cliente</em> — aqui você orça a infraestrutura.</li>
           <li><strong>Distância e nº de pontos.</strong> A distância do quadro até a vaga define o comprimento e a <Destaque>queda de tensão</Destaque> do cabo; o nº de pontos multiplica materiais e mão de obra.</li>
           <li><strong>Proteção diferencial (NBR 17019).</strong> Diga se o carregador tem detecção de 6 mA CC integrada (a maioria dos WallBox tem → DR Tipo A) ou não (→ DR Tipo B obrigatório).</li>

@@ -12,6 +12,7 @@ import {
   proporPrazo,
   simularFila,
   sugerirResponsaveis,
+  tiposDaCategoria,
   type TarefaCapacidade,
 } from "@/lib/capacidade/motor";
 import { CONFIG_CAPACIDADE_PADRAO, type ConfigCapacidade } from "@/lib/capacidade/types";
@@ -33,9 +34,14 @@ const tarefa = (o: Partial<TarefaCapacidade> & { id: string }): TarefaCapacidade
   responsavel: "ana@gta.com",
   status: "afazer",
   categoria: "",
+  tipoDemanda: "",
   estimativaMin: 0,
   ...o,
 });
+
+/** Catálogo enxuto para os testes — o de fábrica nasce com duração zero. */
+const tipos = (...t: { categoria: string; nome: string; minutos: number }[]) =>
+  t.map((x, i) => ({ ...x, id: `t${i}` }));
 
 const janelas = (hoje: string) => ({ fimSemana: fimJanelaCurta(hoje), fimMes: fimJanelaLonga(hoje) });
 
@@ -51,44 +57,90 @@ describe("normalização de categoria", () => {
     expect(chaveCategoria("Projeto   Elétrico")).toBe("projeto eletrico");
   });
 
-  it("a estimativa é encontrada mesmo com a categoria escrita de outro jeito", () => {
-    const c = config({ estimativas: { orcamentos: 180 } });
-    expect(estimativaDaTarefa({ categoria: "ORÇAMENTOS", estimativaMin: 0 }, c).minutos).toBe(180);
+  it("o tipo é encontrado mesmo com categoria e nome escritos de outro jeito", () => {
+    const c = config({ tipos: tipos({ categoria: "Orçamentos", nome: "Usina solar residencial", minutos: 180 }) });
+    expect(
+      estimativaDaTarefa(
+        { categoria: "ORÇAMENTOS", tipoDemanda: "usina solar residencial", estimativaMin: 0 },
+        c,
+      ).minutos,
+    ).toBe(180);
   });
 });
 
 describe("de onde vem a estimativa", () => {
-  const c = config({ estimativas: { projetos: 600 }, estimativaPadraoMin: 120 });
-
-  it("a da tarefa vence a da categoria", () => {
-    expect(estimativaDaTarefa({ categoria: "Projetos", estimativaMin: 90 }, c)).toEqual({
-      minutos: 90,
-      origem: "tarefa",
-    });
+  const c = config({
+    tipos: tipos(
+      { categoria: "Projetos", nome: "Projeto de subestação", minutos: 600 },
+      { categoria: "Projetos", nome: "Memorial descritivo", minutos: 120 },
+      { categoria: "Orçamentos", nome: "SPDA", minutos: 240 },
+    ),
+    estimativaPadraoMin: 120,
   });
 
-  it("sem a da tarefa, usa a da categoria", () => {
-    expect(estimativaDaTarefa({ categoria: "Projetos", estimativaMin: 0 }, c)).toEqual({
-      minutos: 600,
-      origem: "categoria",
-    });
+  it("a da tarefa vence a do catálogo", () => {
+    const t = { categoria: "Projetos", tipoDemanda: "Projeto de subestação", estimativaMin: 90 };
+    expect(estimativaDaTarefa(t, c)).toEqual({ minutos: 90, origem: "tarefa" });
   });
 
-  it("categoria desconhecida cai no padrão", () => {
-    expect(estimativaDaTarefa({ categoria: "Visita técnica", estimativaMin: 0 }, c)).toEqual({
-      minutos: 120,
-      origem: "padrao",
+  it("sem a da tarefa, usa a duração do tipo", () => {
+    const t = { categoria: "Projetos", tipoDemanda: "Projeto de subestação", estimativaMin: 0 };
+    expect(estimativaDaTarefa(t, c)).toEqual({ minutos: 600, origem: "tipo" });
+  });
+
+  it("dois tipos da MESMA categoria têm durações diferentes", () => {
+    // É a razão de existir o tipo: "Projetos" vai de um memorial de 2 h a uma
+    // subestação de 10 h, e uma média só erraria nos dois casos.
+    const subestacao = estimativaDaTarefa(
+      { categoria: "Projetos", tipoDemanda: "Projeto de subestação", estimativaMin: 0 },
+      c,
+    );
+    const memorial = estimativaDaTarefa(
+      { categoria: "Projetos", tipoDemanda: "Memorial descritivo", estimativaMin: 0 },
+      c,
+    );
+    expect(subestacao.minutos).toBe(600);
+    expect(memorial.minutos).toBe(120);
+  });
+
+  it("o tipo não vaza entre categorias", () => {
+    // "SPDA" existe em Orçamentos; pedido dentro de Projetos, não vale.
+    const t = { categoria: "Projetos", tipoDemanda: "SPDA", estimativaMin: 0 };
+    expect(estimativaDaTarefa(t, c)).toEqual({ minutos: 120, origem: "padrao" });
+  });
+
+  it("tipo fora do catálogo cai no padrão", () => {
+    const t = { categoria: "Projetos", tipoDemanda: "Algo que não existe", estimativaMin: 0 };
+    expect(estimativaDaTarefa(t, c)).toEqual({ minutos: 120, origem: "padrao" });
+  });
+
+  it("tipo cadastrado SEM duração cai no padrão", () => {
+    // É o estado do catálogo de fábrica: nomes prontos, durações zeradas.
+    const semDuracao = config({
+      tipos: tipos({ categoria: "Projetos", nome: "Comissionamento", minutos: 0 }),
+      estimativaPadraoMin: 120,
     });
+    const t = { categoria: "Projetos", tipoDemanda: "Comissionamento", estimativaMin: 0 };
+    expect(estimativaDaTarefa(t, semDuracao)).toEqual({ minutos: 120, origem: "padrao" });
   });
 
   it("estimativa zero significa NÃO INFORMADO, nunca 'não dá trabalho'", () => {
     // Se zero fosse aceito como duração, a tarefa entraria na fila sem ocupar
     // ninguém e a entrega proposta seria hoje.
-    const semPadrao = config({ estimativas: {}, estimativaPadraoMin: 0 });
-    expect(estimativaDaTarefa({ categoria: "", estimativaMin: 0 }, semPadrao)).toEqual({
+    const semPadrao = config({ tipos: [], estimativaPadraoMin: 0 });
+    expect(estimativaDaTarefa({ categoria: "", tipoDemanda: "", estimativaMin: 0 }, semPadrao)).toEqual({
       minutos: 0,
       origem: "ausente",
     });
+  });
+
+  it("os tipos de uma categoria saem na ordem cadastrada", () => {
+    expect(tiposDaCategoria(c, "projetos").map((t) => t.nome)).toEqual([
+      "Projeto de subestação",
+      "Memorial descritivo",
+    ]);
+    expect(tiposDaCategoria(c, "Inexistente")).toEqual([]);
+    expect(tiposDaCategoria(c, "")).toEqual([]);
   });
 });
 
@@ -211,6 +263,10 @@ describe("a fila", () => {
       realizadoPorTarefa: { a: 5000 },
     });
     expect(f.totalMin).toBe(120);
+    // O item também precisa vir com piso em zero: a soma destes minutos
+    // alimenta o prazo, e um negativo aqui viraria crédito de tempo.
+    expect(f.itens.every((i) => i.minutos >= 0)).toBe(true);
+    expect(f.itens.reduce((s, i) => s + i.minutos, 0)).toBe(f.totalMin);
   });
 
   it("pessoa sem jornada tem fila vazia, não fila infinita", () => {
@@ -224,7 +280,7 @@ describe("a fila", () => {
     expect(f).toMatchObject({ totalMin: 0, livreEm: null, truncada: false });
   });
 
-  it("a ordem da fila é o prazo, com desempate estável", () => {
+  it("a ordem é prioridade, depois prazo, com desempate estável", () => {
     const r = ordenarFila([
       tarefa({ id: "c" }),
       tarefa({ id: "a", prazoOperacional: "2026-08-20" }),
@@ -232,6 +288,39 @@ describe("a fila", () => {
       tarefa({ id: "d", prazo: "2026-08-05" }),
     ]).map((t) => t.id);
     expect(r).toEqual(["b", "d", "a", "c"]);
+  });
+
+  it("prioridade vence o prazo — foi a regra escolhida", () => {
+    // Uma Baixa vencendo amanhã fica atrás de uma Alta de vencimento distante.
+    const r = ordenarFila([
+      tarefa({ id: "baixa-urgente", prioridade: "baixa", prazoOperacional: "2026-08-04" }),
+      tarefa({ id: "alta-distante", prioridade: "alta", prazoOperacional: "2026-12-01" }),
+      tarefa({ id: "media", prioridade: "media", prazoOperacional: "2026-08-10" }),
+    ]).map((t) => t.id);
+    expect(r).toEqual(["alta-distante", "media", "baixa-urgente"]);
+  });
+
+  it("Alta SEM prazo não afunda para o fim da fila", () => {
+    // Era o pior caso do modelo anterior: "sem prazo" ordenava por último, e
+    // urgente-sem-data é o formato mais comum do pedido de verdade.
+    const r = ordenarFila([
+      tarefa({ id: "media-com-prazo", prioridade: "media", prazoOperacional: "2026-08-05" }),
+      tarefa({ id: "alta-sem-prazo", prioridade: "alta" }),
+    ]).map((t) => t.id);
+    expect(r[0]).toBe("alta-sem-prazo");
+  });
+
+  it("prioridade ausente ou inválida vale como média, nunca como urgente", () => {
+    const r = ordenarFila([
+      tarefa({ id: "z-invalida", prioridade: "urgentissima" }),
+      tarefa({ id: "a-alta", prioridade: "alta" }),
+      tarefa({ id: "m-ausente" }),
+      tarefa({ id: "b-baixa", prioridade: "baixa" }),
+    ]).map((t) => t.id);
+    expect(r[0]).toBe("a-alta");
+    expect(r[r.length - 1]).toBe("b-baixa");
+    // As duas "médias" ficam no meio, desempatadas por id.
+    expect(r.slice(1, 3)).toEqual(["m-ausente", "z-invalida"]);
   });
 
   it("só entram na fila os status abertos", () => {
@@ -281,6 +370,73 @@ describe("o prazo proposto", () => {
     // 5 dias de fila + 1 de trabalho = sexta seguinte não; termina na segunda.
     expect(p.data).toBe("2026-08-10");
     expect(p.diasUteis).toBe(6);
+  });
+
+  it("a tarefa ALTA não espera o trabalho de prioridade menor", () => {
+    // O caso que motivou a mudança. 16 h de trabalho Média na frente:
+    // como última da fila seriam 16 + 4 = 20 h (3 dias); passando à frente,
+    // a espera é só o buffer de 4 h, e são 8 h (1 dia).
+    const cap = capacidadeDe(config(), "ana@gta.com");
+    const entradas = [
+      { tarefaId: "x", minutos: 480, prioridade: "media" },
+      { tarefaId: "y", minutos: 480, prioridade: "media" },
+    ];
+    const base = { hoje: SEGUNDA, capacidade: cap, config: config(), entradas, trabalhoMin: 240 };
+
+    const alta = proporPrazo({ ...base, prioridade: "alta" });
+    const media = proporPrazo({ ...base, prioridade: "media" });
+
+    expect(alta.esperaFilaMin).toBe(0);
+    expect(alta.diasUteis).toBe(1);
+    expect(alta.data).toBe("2026-08-03");
+
+    expect(media.esperaFilaMin).toBe(960);
+    expect(media.diasUteis).toBe(3);
+    expect(media.data).toBe("2026-08-05");
+  });
+
+  it("empate de prioridade conta como estar à frente — quem chega entra atrás", () => {
+    const cap = capacidadeDe(config(), "ana@gta.com");
+    const p = proporPrazo({
+      hoje: SEGUNDA,
+      capacidade: cap,
+      config: config(),
+      entradas: [{ tarefaId: "x", minutos: 480, prioridade: "alta" }],
+      trabalhoMin: 240,
+      prioridade: "alta",
+    });
+    expect(p.esperaFilaMin).toBe(480);
+  });
+
+  it("a BAIXA espera tudo, inclusive o que é média", () => {
+    const cap = capacidadeDe(config(), "ana@gta.com");
+    const p = proporPrazo({
+      hoje: SEGUNDA,
+      capacidade: cap,
+      config: config(),
+      entradas: [
+        { tarefaId: "x", minutos: 480, prioridade: "alta" },
+        { tarefaId: "y", minutos: 480, prioridade: "media" },
+      ],
+      trabalhoMin: 240,
+      prioridade: "baixa",
+    });
+    expect(p.esperaFilaMin).toBe(960);
+  });
+
+  it("prioridade não muda a OCUPAÇÃO, só a ordem", () => {
+    // Carga é volume de trabalho; prioridade é sequência. Confundir os dois
+    // faria a semana parecer mais vazia só porque a tarefa é urgente.
+    const pessoas = [{ email: "ana@gta.com", nome: "Ana" }];
+    const tarefas = [tarefa({ id: "1", responsavel: "ana@gta.com", estimativaMin: 480 })];
+    const comum = { hoje: SEGUNDA, config: config(), pessoas, tarefas, trabalhoMin: 240, ...janelas(SEGUNDA) };
+    const alta = sugerirResponsaveis({ ...comum, prioridade: "alta" })[0];
+    const baixa = sugerirResponsaveis({ ...comum, prioridade: "baixa" })[0];
+
+    expect(alta.semana.comprometidoMin).toBe(baixa.semana.comprometidoMin);
+    expect(alta.ocupacaoComTarefaPct).toBe(baixa.ocupacaoComTarefaPct);
+    // Já a entrega muda, que é o efeito pretendido.
+    expect(alta.prazo.esperaFilaMin).toBeLessThan(baixa.prazo.esperaFilaMin);
   });
 
   it("o feriado empurra a data sem mudar o esforço", () => {
@@ -378,7 +534,7 @@ describe("sugestão de responsável", () => {
   ];
   const base = {
     hoje: SEGUNDA,
-    config: config({ estimativas: { orcamentos: 240 } }),
+    config: config({ tipos: tipos({ categoria: "Orçamentos", nome: "SPDA", minutos: 240 }) }),
     pessoas,
     trabalhoMin: 240,
     ...janelas(SEGUNDA),
@@ -459,8 +615,10 @@ describe("sugestão de responsável", () => {
     expect(ignorando.semana.comprometidoMin).toBe(0);
   });
 
-  it("a tarefa sem estimativa própria usa a média da categoria", () => {
-    const tarefas = [tarefa({ id: "1", responsavel: "ana@gta.com", categoria: "Orçamentos" })];
+  it("a tarefa sem estimativa própria usa a duração do tipo", () => {
+    const tarefas = [
+      tarefa({ id: "1", responsavel: "ana@gta.com", categoria: "Orçamentos", tipoDemanda: "SPDA" }),
+    ];
     const ana = sugerirResponsaveis({ ...base, tarefas }).find((c) => c.nome === "Ana")!;
     expect(ana.semana.comprometidoMin).toBe(240);
   });

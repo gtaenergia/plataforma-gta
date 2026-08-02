@@ -16,6 +16,7 @@ import {
   type ConfigCapacidade,
   type Folga,
   type PrazoProposto,
+  type TipoDemanda,
 } from "./types";
 
 /**
@@ -47,9 +48,28 @@ export interface TarefaCapacidade {
   responsavel: string;
   status: string;
   categoria: string;
+  /** Tipo dentro da categoria — ver `TIPOS_PADRAO`. Vazio = não classificado. */
+  tipoDemanda?: string;
+  /** "alta" | "media" | "baixa". Ausente é tratado como "media". */
+  prioridade?: string;
   estimativaMin: number;
   prazoOperacional?: string;
   prazo?: string;
+}
+
+/**
+ * Peso da prioridade na fila: menor number corre primeiro.
+ *
+ * A prioridade vence a data de vencimento. É uma decisão de negócio, não uma
+ * consequência técnica: uma tarefa Baixa com prazo curto pode ficar atrás de
+ * várias Altas de vencimento distante. Em troca, o que a operação classificou
+ * como urgente recebe a data que corresponde a esse tratamento.
+ */
+const PESO_PRIORIDADE: Record<string, number> = { alta: 0, media: 1, baixa: 2 };
+
+/** Prioridade ausente ou desconhecida vale como "media" — nunca como urgente. */
+export function pesoPrioridade(p: string | undefined): number {
+  return PESO_PRIORIDADE[p ?? ""] ?? PESO_PRIORIDADE.media;
 }
 
 export interface PessoaDaEquipe {
@@ -102,23 +122,48 @@ export function capacidadeDe(config: ConfigCapacidade, email: string): Capacidad
   };
 }
 
-export type OrigemEstimativa = "tarefa" | "categoria" | "padrao" | "ausente";
+export type OrigemEstimativa = "tarefa" | "tipo" | "padrao" | "ausente";
+
+/** Localiza o tipo de demanda no catálogo, tolerando acento e caixa. */
+export function acharTipo(
+  config: ConfigCapacidade,
+  categoria: string,
+  nome: string,
+): TipoDemanda | undefined {
+  const c = chaveCategoria(categoria);
+  const n = chaveCategoria(nome);
+  if (!n) return undefined;
+  return config.tipos?.find(
+    (t) => chaveCategoria(t.nome) === n && (!c || chaveCategoria(t.categoria) === c),
+  );
+}
+
+/** Os tipos de uma categoria, na ordem cadastrada. */
+export function tiposDaCategoria(config: ConfigCapacidade, categoria: string): TipoDemanda[] {
+  const c = chaveCategoria(categoria);
+  if (!c) return [];
+  return (config.tipos ?? []).filter((t) => chaveCategoria(t.categoria) === c);
+}
 
 /**
  * Quanto tempo a tarefa consome. A estimativa digitada na tarefa vence; sem
- * ela, a média da categoria; sem categoria conhecida, o padrão.
+ * ela, a duração do tipo de demanda; sem tipo cadastrado, o padrão.
+ *
+ * A resolução passa pelo TIPO e não pela categoria porque a categoria é grossa
+ * demais para virar prazo: "Projetos" abrange desde um memorial de duas horas
+ * até um projeto de subestação de duas semanas.
  *
  * `estimativaMin: 0` significa "não informado", nunca "não dá trabalho" — uma
  * tarefa de zero minuto entraria na fila sem ocupar ninguém e o prazo proposto
  * seria hoje.
  */
 export function estimativaDaTarefa(
-  t: Pick<TarefaCapacidade, "categoria" | "estimativaMin">,
+  t: Pick<TarefaCapacidade, "categoria" | "estimativaMin"> & { tipoDemanda?: string },
   config: ConfigCapacidade,
 ): { minutos: number; origem: OrigemEstimativa } {
   if (t.estimativaMin > 0) return { minutos: t.estimativaMin, origem: "tarefa" };
-  const daCategoria = config.estimativas?.[chaveCategoria(t.categoria)];
-  if (daCategoria && daCategoria > 0) return { minutos: daCategoria, origem: "categoria" };
+  const tipo = acharTipo(config, t.categoria, t.tipoDemanda ?? "");
+  if (tipo && tipo.minutos > 0) return { minutos: tipo.minutos, origem: "tipo" };
   if (config.estimativaPadraoMin > 0) return { minutos: config.estimativaPadraoMin, origem: "padrao" };
   return { minutos: 0, origem: "ausente" };
 }
@@ -132,12 +177,15 @@ function calendarioDe(cap: CapacidadePessoa, config: ConfigCapacidade): Calendar
 export interface EntradaFila {
   tarefaId: string;
   minutos: number;
+  /** Ausente vale como "media" — ver `pesoPrioridade`. */
+  prioridade?: string;
 }
 
 export interface ItemAgendado {
   tarefaId: string;
-  /** Minutos ainda por fazer (já descontado o que foi apontado). */
+  /** Minutos ainda por fazer (já descontado o apontado, com piso em zero). */
   minutos: number;
+  prioridade?: string;
   inicio: Ymd;
   fim: Ymd;
 }
@@ -201,8 +249,10 @@ export function simularFila(e: {
     let restante = Math.max(0, entrada.minutos - feito);
     totalMin += restante;
 
+    const porFazer = restante;
+
     if (restante === 0) {
-      itens.push({ tarefaId: entrada.tarefaId, minutos: 0, inicio: dia, fim: dia });
+      itens.push({ tarefaId: entrada.tarefaId, minutos: 0, prioridade: entrada.prioridade, inicio: dia, fim: dia });
       continue;
     }
     if (!abrirEspaco()) {
@@ -220,7 +270,10 @@ export function simularFila(e: {
       restante -= usa;
       restanteNoDia -= usa;
     }
-    itens.push({ tarefaId: entrada.tarefaId, minutos: entrada.minutos - feito, inicio, fim: dia });
+    // `porFazer` já vem com piso em zero. `entrada.minutos - feito` seria
+    // NEGATIVO quando o apontado ultrapassa a estimativa, e agora que a soma
+    // destes itens alimenta o prazo, isso viraria crédito de tempo.
+    itens.push({ tarefaId: entrada.tarefaId, minutos: porFazer, prioridade: entrada.prioridade, inicio, fim: dia });
     if (truncada) break;
   }
 
@@ -251,10 +304,19 @@ export function agruparPorResponsavel(
   return mapa;
 }
 
-/** Ordem de execução da fila: prazo mais próximo primeiro, sem prazo por último. */
+/**
+ * Ordem de execução da fila: prioridade, depois prazo, depois id.
+ *
+ * Sem a prioridade aqui, uma tarefa Alta sem prazo cadastrado ia para o fim
+ * absoluto da fila — "sem prazo" ordena por último —, que é exatamente o
+ * formato do pedido urgente mais comum na prática.
+ */
 export function ordenarFila(tarefas: TarefaCapacidade[]): TarefaCapacidade[] {
   const prazoDe = (t: TarefaCapacidade) => t.prazoOperacional || t.prazo || "";
   return [...tarefas].sort((a, b) => {
+    const peso = pesoPrioridade(a.prioridade) - pesoPrioridade(b.prioridade);
+    if (peso !== 0) return peso;
+
     const pa = prazoDe(a);
     const pb = prazoDe(b);
     if (pa !== pb) {
@@ -305,6 +367,8 @@ export function proporPrazo(e: {
   config: ConfigCapacidade;
   entradas: EntradaFila[];
   trabalhoMin: number;
+  /** Prioridade da tarefa nova. Ausente vale como "media". */
+  prioridade?: string;
   realizadoPorTarefa?: Record<string, number>;
 }): PrazoProposto {
   const { capacidade, config } = e;
@@ -314,7 +378,16 @@ export function proporPrazo(e: {
   if (e.trabalhoMin <= 0) return SEM_PRAZO("sem_estimativa");
 
   const fila = simularFila(e);
-  const esperaFilaMin = fila.totalMin;
+  // Só o trabalho que REALMENTE corre antes conta como espera. Somar a fila
+  // inteira tratava toda tarefa nova como se fosse a última da fila, e uma
+  // demanda urgente recebia a data de quem entrou no fim — justamente o caso
+  // em que a data importa mais.
+  //
+  // Empate conta como "na frente": quem chega agora entra atrás dos iguais.
+  const meuPeso = pesoPrioridade(e.prioridade);
+  const esperaFilaMin = fila.itens
+    .filter((i) => pesoPrioridade(i.prioridade) <= meuPeso)
+    .reduce((s, i) => s + i.minutos, 0);
   const esperaOlharMin = capacidade.atrasoInicioMin;
   const totalMin = Math.max(esperaOlharMin, esperaFilaMin) + e.trabalhoMin;
   const diasUteis = Math.max(1, Math.ceil(totalMin / capacidade.minutosPorDia));
@@ -409,6 +482,8 @@ export function sugerirResponsaveis(e: {
   tarefas: TarefaCapacidade[];
   /** Estimativa da tarefa nova, em minutos. */
   trabalhoMin: number;
+  /** Prioridade da tarefa nova — define o que corre na frente dela. */
+  prioridade?: string;
   /** Ao re-sugerir para uma tarefa que já existe, para ela não contar duas vezes. */
   ignorarTarefaId?: string;
   realizadoPorTarefa?: Record<string, number>;
@@ -426,6 +501,7 @@ export function sugerirResponsaveis(e: {
       const entradas: EntradaFila[] = ordenarFila(minhas.filter((t) => entraNaFila(t.status))).map((t) => ({
         tarefaId: t.id,
         minutos: estimativaDaTarefa(t, config).minutos,
+        prioridade: t.prioridade,
       }));
       const fila = simularFila({ hoje, capacidade, config, entradas, realizadoPorTarefa: e.realizadoPorTarefa });
       const prazo = proporPrazo({
@@ -434,6 +510,7 @@ export function sugerirResponsaveis(e: {
         config,
         entradas,
         trabalhoMin: e.trabalhoMin,
+        prioridade: e.prioridade,
         realizadoPorTarefa: e.realizadoPorTarefa,
       });
 
@@ -484,7 +561,7 @@ export function avisosDeCapacidade(e: {
       titulo: "Tarefa sem estimativa de duração",
       detalhe:
         "Sem estimativa não é possível calcular o prazo de entrega nem comparar a carga dos responsáveis. " +
-        "Informe as horas ou cadastre a duração média da categoria em Capacidade da equipe.",
+        "Informe as horas ou cadastre a duração do tipo de demanda em Planejamento e capacidade.",
     });
     return avisos;
   }

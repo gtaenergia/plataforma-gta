@@ -17,7 +17,7 @@ export function SolarAjuda() {
 
       {/* Passo a passo */}
       <AjudaSecao n={1} titulo="Passo a passo (como montar o orçamento)">
-        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo">
+        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo dark:marker:text-indigo-300">
           <li><strong>Cidade + consumo dos 12 meses.</strong> A cidade define a irradiação solar (HSP) da base oficial; o consumo médio dimensiona o sistema.</li>
           <li><strong>Margem de segurança</strong> (opcional). Uma folga em % sobre o consumo para <strong>superdimensionar</strong> o sistema — ex.: <Destaque>10%</Destaque> dimensiona para 110% do consumo médio. Útil quando o cliente vai aumentar o consumo (ar-condicionado, carro elétrico, expansão). 0 = sem folga.</li>
           <li><strong>Tipo de ligação</strong> (mono/bi/tri). Define a energia mínima de disponibilidade que a concessionária sempre cobra.</li>

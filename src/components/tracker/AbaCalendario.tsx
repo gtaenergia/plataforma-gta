@@ -79,7 +79,7 @@ export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
           <button type="button" className="icon-btn" onClick={() => setSemanaBase((d) => addDias(d, 7))} aria-label="Próxima semana">
             <ChevronRight className="h-4 w-4" aria-hidden />
           </button>
-          <button type="button" className="toque text-xs text-gta-indigo hover:underline" onClick={() => setSemanaBase(segundaDaSemana(new Date()))}>
+          <button type="button" className="toque text-xs text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => setSemanaBase(segundaDaSemana(new Date()))}>
             Esta semana
           </button>
         </div>
@@ -114,7 +114,7 @@ export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
                   .reduce((s, e) => s + duracaoMin(e, agora), 0);
                 return (
                   <div key={i} className="min-w-0 flex-1 border-l border-slate-100 dark:border-slate-800">
-                    <div className={`h-8 px-1 text-center ${ehHoje ? "text-gta-indigo" : "text-slate-600 dark:text-slate-400"}`}>
+                    <div className={`h-8 px-1 text-center ${ehHoje ? "text-gta-indigo dark:text-indigo-300" : "text-slate-600 dark:text-slate-400"}`}>
                       <div className="text-[11px] font-semibold">{DIA_SEMANA_CURTO[dia.getDay()]} {fmtCurta(dia)}</div>
                       <div className="text-[10px] tabular-nums">{totalDia > 0 ? formatarDuracao(totalDia) : ""}</div>
                     </div>

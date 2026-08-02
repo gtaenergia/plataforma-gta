@@ -217,7 +217,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
                 )}
               </div>
               <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                <button className={`text-gta-indigo ${acaoCls}`} onClick={() => resetar(u)}>Resetar senha</button>
+                <button className={`text-gta-indigo dark:text-indigo-300 ${acaoCls}`} onClick={() => resetar(u)}>Resetar senha</button>
                 <button className={`text-slate-600 dark:text-slate-300 ${acaoCls}`} disabled={eu} onClick={() => patch(u.id, { role: u.role === "admin" ? "member" : "admin" })}>
                   {u.role === "admin" ? "Tornar membro" : "Tornar admin"}
                 </button>
@@ -284,7 +284,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex flex-wrap gap-2 text-xs">
-                      <button className="text-gta-indigo hover:underline" onClick={() => resetar(u)}>
+                      <button className="text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => resetar(u)}>
                         Resetar senha
                       </button>
                       <button

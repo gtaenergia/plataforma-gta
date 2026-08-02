@@ -16,7 +16,12 @@ export default async function PropostasPage() {
         <div className="mb-6">
           <PageHeader
             title="Propostas geradas"
-            subtitle="Todas as propostas geradas na plataforma, de qualquer serviço. Filtre por cliente, serviço, criador ou status; as de Solar podem ser reabertas para continuar."
+            /* Não citar serviço específico: reabrir é liberado por
+               `usesConfigurator`, hoje verdadeiro para os doze serviços. A
+               frase anterior nomeava só o Solar — resquício de quando ele era
+               o único configurador — e levava a crer que as demais propostas
+               não podiam ser retomadas. */
+            subtitle="Todas as propostas geradas na plataforma. Filtre por cliente, serviço, criador ou status, e reabra uma proposta para continuar de onde parou."
             actions={
               <Link href="/" className="btn-primary whitespace-nowrap">
                 + Nova proposta

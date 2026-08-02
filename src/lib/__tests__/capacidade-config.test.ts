@@ -23,7 +23,8 @@ describe("configuração de capacidade", () => {
     for (const lixo of [
       { padrao: { minutosPorDia: "muito" } },
       { pessoas: "não é objeto" },
-      { estimativas: { orcamentos: -5 } },
+      { tipos: [{ id: "x", categoria: "Projetos", nome: "Y", minutos: -5 }] },
+      { tipos: [{ categoria: "Projetos", nome: "Sem id", minutos: 60 }] },
       { feriados: "2026-08-04" },
       { padrao: { diasUteis: [9] } },
       { padrao: { minutosPorDia: 99_999 } },
@@ -49,12 +50,38 @@ describe("configuração de capacidade", () => {
     const r = normalizarConfig({
       padrao: { minutosPorDia: "300", diasUteis: [1, 2], atrasoInicioMin: "60" },
       estimativaPadraoMin: "90",
-      estimativas: { orcamentos: "240" },
+      tipos: [{ id: "a", categoria: "Projetos", nome: "SPDA", minutos: "240" }],
     } as never);
     expect(r.padrao.minutosPorDia).toBe(300);
     expect(r.padrao.atrasoInicioMin).toBe(60);
     expect(r.estimativaPadraoMin).toBe(90);
-    expect(r.estimativas.orcamentos).toBe(240);
+    expect(r.tipos[0].minutos).toBe(240);
+  });
+
+  it("o catálogo de fábrica vem com nomes prontos e durações zeradas", () => {
+    // Nome inventado é palpite de quem conhece o negócio; duração inventada
+    // viraria prazo prometido a cliente sem ninguém ter conferido.
+    const r = normalizarConfig(null);
+    expect(r.tipos.length).toBeGreaterThan(10);
+    expect(r.tipos.every((t) => t.nome.trim() !== "")).toBe(true);
+    expect(r.tipos.every((t) => t.minutos === 0)).toBe(true);
+    expect(new Set(r.tipos.map((t) => t.id)).size).toBe(r.tipos.length);
+    // As três categorias base precisam estar cobertas.
+    const cats = new Set(r.tipos.map((t) => t.categoria));
+    expect(cats).toEqual(new Set(["Administrativo", "Orçamentos", "Projetos"]));
+  });
+
+  it("o catálogo salvo substitui o de fábrica, sem mesclar", () => {
+    // Mesclar traria de volta os tipos que o administrador removeu de propósito.
+    const r = normalizarConfig({
+      tipos: [{ id: "unico", categoria: "Manutenção", nome: "Termografia", minutos: 120 }],
+    } as never);
+    expect(r.tipos).toHaveLength(1);
+    expect(r.tipos[0].nome).toBe("Termografia");
+  });
+
+  it("catálogo vazio é estado válido — o administrador pode zerar a lista", () => {
+    expect(normalizarConfig({ tipos: [] } as never).tipos).toEqual([]);
   });
 
   it("ajuste individual parcial sobrevive à normalização", () => {

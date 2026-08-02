@@ -380,7 +380,7 @@ export function AbaTracker({
         <button type="button" className="icon-btn" onClick={() => setSemanaBase((d) => addDias(d, 7))} aria-label="Próxima semana">
           <ChevronRight className="h-4 w-4" aria-hidden />
         </button>
-        <button type="button" className="toque text-xs text-gta-indigo hover:underline" onClick={() => setSemanaBase(segundaDaSemana(new Date()))}>
+        <button type="button" className="toque text-xs text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => setSemanaBase(segundaDaSemana(new Date()))}>
           Esta semana
         </button>
       </div>
@@ -499,7 +499,7 @@ function LinhaLancamento({
         </span>
         <span className="text-sm font-medium tabular-nums text-slate-600 dark:text-slate-300">{formatarDuracao(min)}</span>
         {podeRetomar && (
-          <button type="button" className="icon-btn hover:!bg-indigo-50 hover:!text-gta-indigo dark:hover:!bg-indigo-900/20" onClick={onRetomar} aria-label="Retomar esta atividade" title="Retomar esta atividade">
+          <button type="button" className="icon-btn hover:!bg-indigo-50 hover:!text-gta-indigo dark:text-indigo-300 dark:hover:!bg-indigo-900/20" onClick={onRetomar} aria-label="Retomar esta atividade" title="Retomar esta atividade">
             <Play className="h-4 w-4" aria-hidden />
           </button>
         )}

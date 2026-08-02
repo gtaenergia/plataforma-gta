@@ -32,7 +32,7 @@ function PermissoesEditor({
                   <input
                     id={id}
                     type="checkbox"
-                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-gta-indigo focus:ring-gta-indigo dark:border-slate-600 dark:bg-slate-700"
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-gta-indigo dark:text-indigo-300 focus:ring-gta-indigo dark:border-slate-600 dark:bg-slate-700"
                     checked={selecionadas.has(chave)}
                     onChange={(e) => onToggle(chave, e.target.checked)}
                   />

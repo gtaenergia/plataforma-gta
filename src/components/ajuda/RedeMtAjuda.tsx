@@ -20,7 +20,7 @@ export function RedeMtAjuda() {
 
       {/* Passo a passo */}
       <AjudaSecao n={1} titulo="Passo a passo (como montar o orçamento)">
-        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo">
+        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo dark:marker:text-indigo-300">
           <li><strong>Escolha os componentes.</strong> Marque <Destaque>projeto</Destaque>, <Destaque>execução</Destaque> ou os dois — conforme o que a GTA vai entregar neste contrato.</li>
           <li><strong>Monte a lista de custos (a automação).</strong> Em vez de digitar um valor fechado, você lança as linhas de custo numa <strong>tabela editável</strong>: cada linha tem <Destaque>etapa</Destaque> (projeto ou execução), descrição, <strong>quantidade</strong> e <strong>valor unitário</strong>. Adicione, edite ou remova linhas à vontade — o total de cada linha (qtd × valor) é calculado ao vivo.</li>
           <li><strong>O app soma por etapa e alimenta o Fator K.</strong> Ele agrupa as linhas de <Destaque>projeto</Destaque> e as de <Destaque>execução</Destaque>, soma cada grupo e usa essas somas como o <strong>custo</strong> de cada componente — sem você digitar o custo total à mão. Mexeu numa linha, o faturamento e a margem recalculam.</li>

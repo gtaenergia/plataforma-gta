@@ -309,7 +309,7 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
               <div key={d.id} className={`rounded-lg border p-3 transition ${on ? "border-gta-indigo/40 bg-indigo-50/40 dark:border-indigo-400/30 dark:bg-indigo-500/10" : "border-slate-200 dark:border-slate-700"}`}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <label className="flex flex-1 cursor-pointer items-start gap-2.5">
-                    <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-gta-indigo focus:ring-gta-indigo" checked={on} onChange={() => toggle(d.id)} />
+                    <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-gta-indigo dark:text-indigo-300 focus:ring-gta-indigo" checked={on} onChange={() => toggle(d.id)} />
                     <span>
                       <span className="block text-sm font-medium text-gta-navy dark:text-slate-100">{d.nome}</span>
                       <span className="block hint">{d.ajuda}</span>
@@ -323,7 +323,7 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
                     {on && (
                       <p className="mt-1 flex items-center justify-end gap-1.5 text-right text-[11px] text-slate-500 dark:text-slate-400">
                         <span>{areaM2 > 0 ? `${brl(taxa)}/m² × ${nf(areaM2, 0)}${mult !== 1 ? ` × ${nf(mult, 1)}` : ""} → ` : `piso `}{brl(sug)}</span>
-                        {editado && <button type="button" className="text-gta-indigo hover:underline" onClick={() => { valoresTocados.current.delete(d.id); set(`v_${d.id}`, nf(sug, 2)); }}>usar</button>}
+                        {editado && <button type="button" className="text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => { valoresTocados.current.delete(d.id); set(`v_${d.id}`, nf(sug, 2)); }}>usar</button>}
                       </p>
                     )}
                   </div>
@@ -356,7 +356,7 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
             <div className="flex items-center justify-between">
               <label className="field-label">Objeto <span className="font-normal text-slate-500 dark:text-slate-400">(gerado a partir das disciplinas)</span></label>
               {objetoTocado.current && (
-                <button type="button" className="toque text-xs text-gta-indigo hover:underline" onClick={() => { objetoTocado.current = false; setForm((f) => ({ ...f, objeto: montarObjeto(idsSelecionados ? idsSelecionados.split(",") : []) })); }}>Recompor automático</button>
+                <button type="button" className="toque text-xs text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => { objetoTocado.current = false; setForm((f) => ({ ...f, objeto: montarObjeto(idsSelecionados ? idsSelecionados.split(",") : []) })); }}>Recompor automático</button>
               )}
             </div>
             <textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => { objetoTocado.current = true; set("objeto", e.target.value); }} />
@@ -389,7 +389,7 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
             piso: params[`piso${cap(d.id)}`] ?? d.piso,
           })),
         })} />
-        <button className="toque text-sm text-gta-indigo hover:underline" onClick={() => router.push("/propostas")}>Ver propostas</button>
+        <button className="toque text-sm text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => router.push("/propostas")}>Ver propostas</button>
         {statusMsg && <span className="text-sm text-green-600 dark:text-green-400">{statusMsg}</span>}
       </div>
     </div>

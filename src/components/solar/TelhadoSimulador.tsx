@@ -536,7 +536,7 @@ export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios, onTextoP
           <label className="toque mt-4 flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
             <input
               type="checkbox"
-              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-gta-indigo focus:ring-gta-indigo dark:border-slate-600 dark:bg-slate-700"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-gta-indigo dark:text-indigo-300 focus:ring-gta-indigo dark:border-slate-600 dark:bg-slate-700"
               checked={incluirNaProposta}
               onChange={(e) => setIncluirNaProposta(e.target.checked)}
               disabled={!arranjo || arranjo.total === 0}

@@ -33,6 +33,8 @@ export function SugestaoResponsavel({
   usuarios,
   tarefas,
   categoria,
+  tipoDemanda,
+  prioridade,
   estimativaMin,
   responsavelEscolhido,
   ignorarTarefaId,
@@ -42,6 +44,9 @@ export function SugestaoResponsavel({
   usuarios: { email: string; name: string }[];
   tarefas: TarefaCapacidade[];
   categoria: string;
+  tipoDemanda: string;
+  /** Define o que corre na frente desta tarefa na fila do responsável. */
+  prioridade: string;
   estimativaMin: number;
   responsavelEscolhido: string;
   ignorarTarefaId?: string;
@@ -51,7 +56,7 @@ export function SugestaoResponsavel({
   const hoje = hojeYmd();
 
   const { candidatos, origem, trabalhoMin } = useMemo(() => {
-    const est = estimativaDaTarefa({ categoria, estimativaMin }, config);
+    const est = estimativaDaTarefa({ categoria, tipoDemanda, estimativaMin }, config);
     if (usuarios.length === 0 || est.minutos <= 0) {
       return { candidatos: [] as Candidato[], origem: est.origem, trabalhoMin: est.minutos };
     }
@@ -62,13 +67,14 @@ export function SugestaoResponsavel({
         pessoas: usuarios.map((u) => ({ email: u.email, nome: u.name })),
         tarefas,
         trabalhoMin: est.minutos,
+        prioridade,
         ignorarTarefaId,
         ...janelasDe(hoje),
       }),
       origem: est.origem,
       trabalhoMin: est.minutos,
     };
-  }, [config, usuarios, tarefas, categoria, estimativaMin, ignorarTarefaId, hoje]);
+  }, [config, usuarios, tarefas, categoria, tipoDemanda, prioridade, estimativaMin, ignorarTarefaId, hoje]);
 
   const disponiveis = candidatos.filter((c) => c.prazo.data);
   const escolhido = candidatos.find((c) => c.email === responsavelEscolhido) ?? null;
@@ -84,7 +90,7 @@ export function SugestaoResponsavel({
   if (trabalhoMin <= 0) {
     return (
       <p className="hint">
-        Informe a categoria ou a estimativa de horas para visualizar os responsáveis com disponibilidade.
+        Informe o tipo de demanda ou a estimativa de horas para visualizar os responsáveis com disponibilidade.
       </p>
     );
   }
@@ -93,7 +99,7 @@ export function SugestaoResponsavel({
     return (
       <Alert tone="amber" titulo="Nenhum responsável disponível.">
         Não há jornada de trabalho cadastrada para os usuários ativos. Configure em{" "}
-        <strong>Capacidade da equipe</strong>, no menu do perfil.
+        <strong>Planejamento e capacidade</strong>, no menu do perfil.
       </Alert>
     );
   }
@@ -106,8 +112,10 @@ export function SugestaoResponsavel({
         </span>
         <span className="hint">
           Estimativa de {fmtHoras(trabalhoMin)}
-          {origem === "categoria" && " (duração média da categoria)"}
-          {origem === "padrao" && " (duração padrão — categoria sem cadastro)"}
+          {origem === "tipo" && " (duração média do tipo de demanda)"}
+          {origem === "padrao" && " (duração padrão — tipo sem cadastro)"}
+          {prioridade === "alta" && " · Prioridade alta: passa à frente das demais"}
+          {prioridade === "baixa" && " · Prioridade baixa: entra atrás das demais"}
         </span>
       </div>
 
@@ -153,15 +161,17 @@ function LinhaCandidato({
       }`}
     >
       <span className="font-medium text-gta-navy dark:text-slate-100">{c.nome}</span>
-      {principal && <Badge tone="indigo">indicado</Badge>}
-      {c.capacidade.origem === "padrao" && <span className="hint">jornada padrão</span>}
+      {principal && <Badge tone="indigo">Indicado</Badge>}
+      {c.capacidade.origem === "padrao" && <span className="hint">Jornada padrão</span>}
 
       <span className="text-slate-700 dark:text-slate-300">
-        entrega em <strong>{fmtData(c.prazo.data as string)}</strong>
+        Entrega em <strong>{fmtData(c.prazo.data as string)}</strong>
         <span className="hint">
           {" "}
           ({c.prazo.diasUteis === 1 ? "1 dia útil" : `${c.prazo.diasUteis} dias úteis`}
-          {c.prazo.esperaFilaMin > 0 && ` · ${fmtHoras(c.prazo.esperaFilaMin)} em fila`})
+          {/* "à frente" e não "em fila": com a prioridade valendo, o que pesa
+              não é a fila inteira, e sim o que corre antes desta tarefa. */}
+          {c.prazo.esperaFilaMin > 0 && ` · ${fmtHoras(c.prazo.esperaFilaMin)} à frente`})
         </span>
       </span>
 

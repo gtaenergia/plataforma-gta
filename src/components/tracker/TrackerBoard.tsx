@@ -58,7 +58,7 @@ export function TrackerBoard({ meEmail, podeVerEquipe }: { meEmail: string; pode
               aria-current={aba === id ? "page" : undefined}
               className={`toque -mb-px shrink-0 gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition ${
                 aba === id
-                  ? "border-gta-indigo text-gta-indigo"
+                  ? "border-gta-indigo text-gta-indigo dark:border-indigo-400 dark:text-indigo-300"
                   : "border-transparent text-slate-500 hover:border-slate-300 hover:text-gta-navy dark:text-slate-400 dark:hover:text-slate-200"
               }`}
             >
