@@ -13,7 +13,8 @@ import {
 export const PRECOS_KEY = "precos:materiais";
 
 interface Salvo {
-  precos: Pick<MaterialPreco, "id" | "preco">[];
+  /** `atualizadoEm` é opcional para ler o que foi salvo antes do carimbo por item. */
+  precos: { id: string; preco: number; atualizadoEm?: string }[];
   atualizadoEm: string;
   atualizadoPor: string;
 }
@@ -26,15 +27,18 @@ interface Salvo {
  * banco está vazio esconderia exatamente o problema que o alerta existe para
  * mostrar.
  */
-export async function getPrecos(): Promise<TabelaPrecos & { revisaoPendente: boolean }> {
+export async function getPrecos(): Promise<TabelaPrecos & { revisaoPendente: boolean; totalPendentes: number }> {
   const salvo = await getSettingsStore().get<Salvo>(PRECOS_KEY);
-  const itens = mesclarCatalogo(salvo?.precos);
   const atualizadoEm = salvo?.atualizadoEm ?? DATA_CALIBRACAO_PADRAO;
+  const itens = mesclarCatalogo(salvo?.precos, atualizadoEm);
   return {
     itens,
     atualizadoEm,
     atualizadoPor: salvo?.atualizadoPor ?? "levantamento inicial",
-    revisaoPendente: precisaRevisao(atualizadoEm),
+    // Pendente quando QUALQUER item está vencido — o card geral chama para a
+    // revisão ampla; o aviso dentro da proposta é que olha só o que ela usa.
+    revisaoPendente: itens.some((i) => precisaRevisao(i.atualizadoEm)),
+    totalPendentes: itens.filter((i) => precisaRevisao(i.atualizadoEm)).length,
   };
 }
 
@@ -54,7 +58,11 @@ export async function salvarPrecos(
 ): Promise<{ atualizados: number; ignorados: string[] }> {
   const store = getSettingsStore();
   const salvo = await store.get<Salvo>(PRECOS_KEY);
-  const atual = new Map((salvo?.precos ?? []).map((p) => [p.id, p.preco]));
+  const herdada = salvo?.atualizadoEm;
+  const atual = new Map(
+    (salvo?.precos ?? []).map((p) => [p.id, { preco: p.preco, atualizadoEm: p.atualizadoEm ?? herdada }]),
+  );
+  const agora = new Date().toISOString();
   const validos = new Set(CATALOGO_PADRAO.map((p) => p.id));
 
   const ignorados: string[] = [];
@@ -63,15 +71,16 @@ export async function salvarPrecos(
     // Id fora do catálogo entraria como lixo permanente no banco.
     if (!validos.has(n.id)) { ignorados.push(n.id); continue; }
     if (!Number.isFinite(n.preco) || n.preco < 0) { ignorados.push(n.id); continue; }
-    atual.set(n.id, n.preco);
+    // Carimbo por item: revisar o cabo não rejuvenesce o DR.
+    atual.set(n.id, { preco: n.preco, atualizadoEm: agora });
     atualizados++;
   }
 
   await store.set(
     PRECOS_KEY,
     {
-      precos: [...atual.entries()].map(([id, preco]) => ({ id, preco })),
-      atualizadoEm: new Date().toISOString(),
+      precos: [...atual.entries()].map(([id, v]) => ({ id, preco: v.preco, atualizadoEm: v.atualizadoEm })),
+      atualizadoEm: agora,
       atualizadoPor: usuario,
     } satisfies Salvo,
     usuario,

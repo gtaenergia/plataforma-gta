@@ -156,16 +156,21 @@ const CABO_PRECO: Record<number, number> = { 2.5: 5, 4: 6.5, 6: 8, 10: 12, 16: 1
 /** Disjuntor (base bipolar). Tetrapolar ≈ ×1,9. */
 const DISJ_PRECO: Record<number, number> = { 16: 45, 20: 48, 25: 52, 32: 56, 40: 60, 50: 70, 63: 90, 80: 120, 100: 150, 125: 190, 160: 240 };
 /** DR Tipo A (base bipolar). Tetrapolar ≈ ×1,8; Tipo B ≈ ×3,5 (dispositivo especial). */
-const DR_PRECO: Record<number, number> = { 40: 350, 63: 420, 80: 520, 100: 620, 125: 750, 160: 900 };
+const DR_PRECO: Record<number, number> = { 25: 300, 40: 350, 50: 380, 63: 420, 80: 520, 100: 620, 125: 750, 160: 900 };
 /** Quadro de distribuição IP65 por porte (mono menor / tri maior). */
 const QUADRO_PRECO = { mono: 80, tri: 140 };
 
-const precoDe = (tabela: Record<number, number>, k: number) => tabela[k] ?? tabela[menorMaiorIgual(Object.keys(tabela).map(Number).sort((a, b) => a - b), k)] ?? 0;
+/** Chave da tabela que atende `k` — exata, ou a menor acima dela. */
+const chaveDe = (tabela: Record<number, number>, k: number) =>
+  k in tabela ? k : menorMaiorIgual(Object.keys(tabela).map(Number).sort((a, b) => a - b), k);
+const precoDe = (tabela: Record<number, number>, k: number) => tabela[chaveDe(tabela, k)] ?? 0;
 
 /** Formata a seção (mm²) em pt-BR: 2,5 · 10 · 16. */
 const secFmt = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
 
 export interface BomItemEV {
+  /** Id no catálogo de preços — permite avisar sobre o que ESTA lista usa. */
+  precoId?: string;
   categoria: string;
   descricao: string;
   unidade: string;
@@ -196,14 +201,14 @@ export function gerarBomEV(
   };
   const ed = chaveEletroduto(eletroduto.nome);
 
-  const item = (categoria: string, descricao: string, unidade: string, qtdLiquida: number, precoUnit: number): BomItemEV => {
+  const item = (categoria: string, descricao: string, unidade: string, qtdLiquida: number, precoUnit: number, precoId?: string): BomItemEV => {
     const q = Math.ceil(qtdLiquida);
-    return { categoria, descricao, unidade, qtd: q, precoUnit, precoTotal: q * precoUnit };
+    return { precoId, categoria, descricao, unidade, qtd: q, precoUnit, precoTotal: q * precoUnit };
   };
 
-  const precoDisj = Math.round(P(`disjuntor.${s.disjuntorA}`, precoDe(DISJ_PRECO, s.disjuntorA)) * (tri ? 1.9 : 1));
+  const precoDisj = Math.round(P(`disjuntor.${chaveDe(DISJ_PRECO, s.disjuntorA)}`, precoDe(DISJ_PRECO, s.disjuntorA)) * (tri ? 1.9 : 1));
   const drTipoB = s.drTipo === "B";
-  const precoDr = Math.round(P(`dr.${s.disjuntorA}`, precoDe(DR_PRECO, s.disjuntorA)) * (tri ? 1.8 : 1) * (drTipoB ? 3.5 : 1));
+  const precoDr = Math.round(P(`dr.${chaveDe(DR_PRECO, s.disjuntorA)}`, precoDe(DR_PRECO, s.disjuntorA)) * (tri ? 1.8 : 1) * (drTipoB ? 3.5 : 1));
   const drDescricao = drTipoB
     ? `Interruptor DR Tipo B ${s.disjuntorA} A / 30 mA (${s.polos}P) — proteção CC (NBR 17019)`
     : `Interruptor DR Tipo A ${s.disjuntorA} A / 30 mA (${s.polos}P) — carregador com RDC-DD 6 mA integrado`;
@@ -213,22 +218,22 @@ export function gerarBomEV(
   // DR e DPS multiplicavam: uma obra de 4 pontos era orçada com o cabo e o
   // eletroduto de UM, subfaturando a instalação.
   const itens: BomItemEV[] = [
-    item("Infraestrutura", `Eletroduto galvanizado pesado ${eletroduto.nome} (barra 3 m)`, "barra", barras * n, P(`eletroduto.${ed}.barra`, eletroduto.barra)),
-    item("Infraestrutura", `Luva galvanizada ${eletroduto.nome}`, "un", barras * n, P(`eletroduto.${ed}.luva`, eletroduto.luva)),
-    item("Infraestrutura", `Curva galvanizada ${eletroduto.nome} 90º`, "un", 4 * n, P(`eletroduto.${ed}.curva`, eletroduto.curva)),
-    item("Infraestrutura", `Abraçadeira tipo D / Unistrut ${eletroduto.nome}`, "un", Math.ceil(L * 0.75) * n, P("abracadeira", PRECOS_BASE.abracadeira)),
-    item("Infraestrutura", `Bucha e arruela de alumínio ${eletroduto.nome}`, "par", 4 * n, P("buchaArruela", PRECOS_BASE.buchaArruela)),
-    item("Cabeamento", `Cabo flexível HEPR ${secFmt(s.secaoMm2)} mm² (${tri ? "3F+N+T" : "F+N+T"})`, "m", L * s.nCondutores * n, P(`cabo.${s.secaoMm2}`, precoDe(CABO_PRECO, s.secaoMm2))),
-    item("Proteção", `Quadro de distribuição IP65 (${tri ? "12 DIN" : "6 a 8 DIN"})`, "un", n, tri ? P("quadro.tri", QUADRO_PRECO.tri) : P("quadro.mono", QUADRO_PRECO.mono)),
-    item("Proteção", `Disjuntor termomagnético ${s.disjuntorA} A curva C (${s.polos}P)`, "un", n, precoDisj),
-    item("Proteção", drDescricao, "un", n, precoDr),
-    item("Proteção", `Protetor de surto (DPS) Classe II 275 V / 40 kA`, "un", s.nDps * n, P("dps", PRECOS_BASE.dps)),
-    item("Aterramento", 'Haste de aterramento cobreada 5/8" x 2,40 m', "un", n, P("haste", PRECOS_BASE.haste)),
-    item("Aterramento", "Caixa de inspeção de solo", "un", n, P("caixaInspecao", PRECOS_BASE.caixaInspecao)),
-    item("Aterramento", "Conector tipo cunha / grampo", "un", n, P("conectorAterr", PRECOS_BASE.conectorAterr)),
-    item("Acessórios", `Terminal tubular (ilhós) ${secFmt(s.secaoMm2)} mm²`, "un", s.nCondutores * 2 * n, P("terminal", PRECOS_BASE.terminal)),
-    item("Acessórios", "Fita isolante alta qualidade (rolo 20 m)", "un", n, P("fitaIsolante", PRECOS_BASE.fitaIsolante)),
-    item("Acessórios", "Fita de autofusão (emendas externas)", "un", n, P("fitaAutofusao", PRECOS_BASE.fitaAutofusao)),
+    item("Infraestrutura", `Eletroduto galvanizado pesado ${eletroduto.nome} (barra 3 m)`, "barra", barras * n, P(`eletroduto.${ed}.barra`, eletroduto.barra), `carregador.eletroduto.${ed}.barra`),
+    item("Infraestrutura", `Luva galvanizada ${eletroduto.nome}`, "un", barras * n, P(`eletroduto.${ed}.luva`, eletroduto.luva), `carregador.eletroduto.${ed}.luva`),
+    item("Infraestrutura", `Curva galvanizada ${eletroduto.nome} 90º`, "un", 4 * n, P(`eletroduto.${ed}.curva`, eletroduto.curva), `carregador.eletroduto.${ed}.curva`),
+    item("Infraestrutura", `Abraçadeira tipo D / Unistrut ${eletroduto.nome}`, "un", Math.ceil(L * 0.75) * n, P("abracadeira", PRECOS_BASE.abracadeira), "carregador.abracadeira"),
+    item("Infraestrutura", `Bucha e arruela de alumínio ${eletroduto.nome}`, "par", 4 * n, P("buchaArruela", PRECOS_BASE.buchaArruela), "carregador.buchaArruela"),
+    item("Cabeamento", `Cabo flexível HEPR ${secFmt(s.secaoMm2)} mm² (${tri ? "3F+N+T" : "F+N+T"})`, "m", L * s.nCondutores * n, P(`cabo.${chaveDe(CABO_PRECO, s.secaoMm2)}`, precoDe(CABO_PRECO, s.secaoMm2)), `carregador.cabo.${chaveDe(CABO_PRECO, s.secaoMm2)}`),
+    item("Proteção", `Quadro de distribuição IP65 (${tri ? "12 DIN" : "6 a 8 DIN"})`, "un", n, tri ? P("quadro.tri", QUADRO_PRECO.tri) : P("quadro.mono", QUADRO_PRECO.mono), tri ? "carregador.quadro.tri" : "carregador.quadro.mono"),
+    item("Proteção", `Disjuntor termomagnético ${s.disjuntorA} A curva C (${s.polos}P)`, "un", n, precoDisj, `carregador.disjuntor.${chaveDe(DISJ_PRECO, s.disjuntorA)}`),
+    item("Proteção", drDescricao, "un", n, precoDr, `carregador.dr.${chaveDe(DR_PRECO, s.disjuntorA)}`),
+    item("Proteção", `Protetor de surto (DPS) Classe II 275 V / 40 kA`, "un", s.nDps * n, P("dps", PRECOS_BASE.dps), "carregador.dps"),
+    item("Aterramento", 'Haste de aterramento cobreada 5/8" x 2,40 m', "un", n, P("haste", PRECOS_BASE.haste), "carregador.haste"),
+    item("Aterramento", "Caixa de inspeção de solo", "un", n, P("caixaInspecao", PRECOS_BASE.caixaInspecao), "carregador.caixaInspecao"),
+    item("Aterramento", "Conector tipo cunha / grampo", "un", n, P("conectorAterr", PRECOS_BASE.conectorAterr), "carregador.conectorAterr"),
+    item("Acessórios", `Terminal tubular (ilhós) ${secFmt(s.secaoMm2)} mm²`, "un", s.nCondutores * 2 * n, P("terminal", PRECOS_BASE.terminal), "carregador.terminal"),
+    item("Acessórios", "Fita isolante alta qualidade (rolo 20 m)", "un", n, P("fitaIsolante", PRECOS_BASE.fitaIsolante), "carregador.fitaIsolante"),
+    item("Acessórios", "Fita de autofusão (emendas externas)", "un", n, P("fitaAutofusao", PRECOS_BASE.fitaAutofusao), "carregador.fitaAutofusao"),
   ];
   const custoMateriais = itens.reduce((sum, it) => sum + it.precoTotal, 0);
   return { itens, custoMateriais };

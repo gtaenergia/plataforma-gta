@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { gerarCsv, lerCsv } from "@/lib/precos/csv";
-import { CATALOGO_PADRAO, indicePorId, mesclarCatalogo, precisaRevisao, DIAS_PARA_REVISAO } from "@/lib/precos/catalogo";
+import { CATALOGO_PADRAO, indicePorId, mesclarCatalogo, pendentesEntre, precisaRevisao, DIAS_PARA_REVISAO } from "@/lib/precos/catalogo";
 import { dimensionarEV, gerarBomEV } from "@/services/carregador/engine";
 
 describe("catálogo de preços", () => {
@@ -115,5 +115,53 @@ describe("os preços revisados chegam ao orçamento", () => {
     const idx = { ...indicePorId(CATALOGO_PADRAO), "carregador.dps": 111 };
     const item = gerarBomEV(s, 20, 1, idx).itens.find((i) => /DPS/.test(i.descricao))!;
     expect(item.precoUnit).toBe(111);
+  });
+});
+
+describe("aviso por proposta — só o que a lista usa", () => {
+  const s = dimensionarEV({ potenciaKw: 7.4, fase: "mono", distanciaM: 20 });
+  const bom = gerarBomEV(s, 20, 1, indicePorId(CATALOGO_PADRAO));
+  const idsUsados = bom.itens.map((i) => i.precoId).filter((x): x is string => Boolean(x));
+
+  it("cada linha da lista sabe de qual preço veio", () => {
+    expect(idsUsados.length).toBe(bom.itens.length);
+    for (const id of idsUsados) {
+      expect(CATALOGO_PADRAO.some((c) => c.id === id)).toBe(true);
+    }
+  });
+
+  it("uma proposta usa uma fração do catálogo — é o motivo do aviso ser filtrado", () => {
+    expect(new Set(idsUsados).size).toBeLessThan(CATALOGO_PADRAO.length / 2);
+  });
+
+  // Datas explícitas: o teste não pode depender de a conferência de fábrica
+  // estar velha ou nova no dia em que roda.
+  const vencido = new Date(Date.now() - (DIAS_PARA_REVISAO + 30) * 86_400_000).toISOString();
+  const hoje = new Date().toISOString();
+  const tudoVencido = CATALOGO_PADRAO.map((c) => ({ ...c, atualizadoEm: vencido }));
+
+  it("material fora da lista não entra no aviso, mesmo vencido", () => {
+    const pendentes = pendentesEntre(tudoVencido, idsUsados);
+    expect(pendentes.length).toBe(new Set(idsUsados).size);
+    // O cabo de 70 mm² não entra num 7,4 kW mono.
+    expect(pendentes.some((p) => p.id === "carregador.cabo.70")).toBe(false);
+  });
+
+  it("revisar UM material tira só ele do aviso — o carimbo é por item", () => {
+    const comUmRevisado = tudoVencido.map((c) =>
+      c.id === "carregador.dps" ? { ...c, atualizadoEm: hoje } : c,
+    );
+    const antes = pendentesEntre(tudoVencido, idsUsados).length;
+    const depois = pendentesEntre(comUmRevisado, idsUsados);
+    expect(depois.length).toBe(antes - 1);
+    expect(depois.some((p) => p.id === "carregador.dps")).toBe(false);
+  });
+
+  it("conferência recente não gera aviso nenhum", () => {
+    expect(pendentesEntre(CATALOGO_PADRAO, idsUsados)).toEqual([]);
+  });
+
+  it("com tudo revisado, não sobra aviso", () => {
+    expect(pendentesEntre(CATALOGO_PADRAO.map((c) => ({ ...c, atualizadoEm: hoje })), idsUsados)).toEqual([]);
   });
 });

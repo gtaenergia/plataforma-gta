@@ -229,17 +229,17 @@ describe("Carregador EV — NBR 5410/17019: sizing → BOM → preço", () => {
       preco: digest(preco),
     }).toMatchInlineSnapshot(`
       {
-        "custoMateriais": 3363.3,
+        "custoMateriais": 3223.3,
         "itens": 16,
         "preco": {
-          "custoGeral": 4163.3,
-          "custoMateriais": 3363.3,
+          "custoGeral": 4023.3,
+          "custoMateriais": 3223.3,
           "fatorK": 1.65,
-          "impostos": 481.587,
-          "lucro": 2225.113,
+          "impostos": 465.464,
+          "lucro": 2151.236,
           "maoObra": 800,
-          "margem": 0.3239,
-          "preco": 6870,
+          "margem": 0.324,
+          "preco": 6640,
         },
         "sizing": {
           "acimaDoCatalogo": false,
@@ -270,16 +270,16 @@ describe("Carregador EV — NBR 5410/17019: sizing → BOM → preço", () => {
       preco: digest(preco),
     }).toMatchInlineSnapshot(`
       {
-        "custoMateriais": 9354,
+        "custoMateriais": 9210,
         "preco": {
-          "custoGeral": 10954,
-          "custoMateriais": 9354,
+          "custoGeral": 10810,
+          "custoMateriais": 9210,
           "fatorK": 1.65,
-          "impostos": 1266.707,
-          "lucro": 5849.293,
+          "impostos": 1250.584,
+          "lucro": 5779.416,
           "maoObra": 1600,
-          "margem": 0.3237,
-          "preco": 18070,
+          "margem": 0.324,
+          "preco": 17840,
         },
         "sizing": {
           "acimaDoCatalogo": false,

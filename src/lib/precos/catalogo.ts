@@ -24,6 +24,12 @@ export interface MaterialPreco {
   descricao: string;
   unidade: string;
   preco: number;
+  /**
+   * ISO — quando ESTE preço foi revisado. Por item, não da tabela: a maior
+   * parte do catálogo não entra numa proposta qualquer, e avisar sobre
+   * material que não será usado treina o usuário a ignorar o aviso.
+   */
+  atualizadoEm: string;
 }
 
 /** Quanto tempo até a lista pedir revisão. */
@@ -31,7 +37,7 @@ export const DIAS_PARA_REVISAO = 120;
 
 export interface TabelaPrecos {
   itens: MaterialPreco[];
-  /** ISO — quando os preços foram revisados pela última vez. */
+  /** ISO — revisão mais recente de qualquer item. */
   atualizadoEm: string;
   atualizadoPor: string;
 }
@@ -39,32 +45,45 @@ export interface TabelaPrecos {
 // --------------------------------------------------------------- padrões
 
 /**
- * Padrão de fábrica, espelhando as tabelas do motor do carregador (calibradas
- * por cotações reais Megaluz/KG/Schneider, 2025). Alterar aqui muda só o ponto
- * de partida — o que o usuário salvar tem precedência.
+ * Última conferência dos preços padrão com o fornecedor.
+ *
+ * É o ponto de partida da contagem de validade: enquanto ninguém revisar pela
+ * plataforma, é esta a data que vale. Ao refazer a conferência das cotações,
+ * atualize aqui junto com os valores — senão a lista envelhece no relógio sem
+ * ter envelhecido de fato.
+ */
+export const DATA_CALIBRACAO_PADRAO = "2026-07-03T00:00:00.000Z";
+
+/**
+ * Padrão de fábrica, espelhando as tabelas do motor do carregador (cotações
+ * reais Megaluz/KG/Schneider). Alterar aqui muda só o ponto de partida — o que
+ * o usuário salvar tem precedência.
  */
 const cabo = (mm2: number, preco: number): MaterialPreco => ({
   id: `carregador.cabo.${mm2}`, servico: "carregador", categoria: "Cabeamento",
   descricao: `Cabo flexível HEPR ${mm2.toLocaleString("pt-BR")} mm²`, unidade: "m", preco,
+  atualizadoEm: DATA_CALIBRACAO_PADRAO,
 });
 const disjuntor = (a: number, preco: number): MaterialPreco => ({
   id: `carregador.disjuntor.${a}`, servico: "carregador", categoria: "Proteção",
   descricao: `Disjuntor termomagnético ${a} A curva C (bipolar)`, unidade: "un", preco,
+  atualizadoEm: DATA_CALIBRACAO_PADRAO,
 });
 const dr = (a: number, preco: number): MaterialPreco => ({
   id: `carregador.dr.${a}`, servico: "carregador", categoria: "Proteção",
   descricao: `Interruptor DR Tipo A ${a} A / 30 mA (bipolar)`, unidade: "un", preco,
+  atualizadoEm: DATA_CALIBRACAO_PADRAO,
 });
 const eletroduto = (bitola: string, chave: string, o: { barra: number; luva: number; curva: number }): MaterialPreco[] => [
   { id: `carregador.eletroduto.${chave}.barra`, servico: "carregador", categoria: "Infraestrutura",
-    descricao: `Eletroduto galvanizado pesado ${bitola} (barra 3 m)`, unidade: "barra", preco: o.barra },
+    descricao: `Eletroduto galvanizado pesado ${bitola} (barra 3 m)`, unidade: "barra", preco: o.barra, atualizadoEm: DATA_CALIBRACAO_PADRAO },
   { id: `carregador.eletroduto.${chave}.luva`, servico: "carregador", categoria: "Infraestrutura",
-    descricao: `Luva galvanizada ${bitola}`, unidade: "un", preco: o.luva },
+    descricao: `Luva galvanizada ${bitola}`, unidade: "un", preco: o.luva, atualizadoEm: DATA_CALIBRACAO_PADRAO },
   { id: `carregador.eletroduto.${chave}.curva`, servico: "carregador", categoria: "Infraestrutura",
-    descricao: `Curva galvanizada ${bitola} 90º`, unidade: "un", preco: o.curva },
+    descricao: `Curva galvanizada ${bitola} 90º`, unidade: "un", preco: o.curva, atualizadoEm: DATA_CALIBRACAO_PADRAO },
 ];
 const avulso = (id: string, categoria: string, descricao: string, unidade: string, preco: number): MaterialPreco =>
-  ({ id: `carregador.${id}`, servico: "carregador", categoria, descricao, unidade, preco });
+  ({ id: `carregador.${id}`, servico: "carregador", categoria, descricao, unidade, preco, atualizadoEm: DATA_CALIBRACAO_PADRAO });
 
 export const CATALOGO_PADRAO: MaterialPreco[] = [
   ...eletroduto('1"', "1", { barra: 45, luva: 5, curva: 15 }),
@@ -83,7 +102,7 @@ export const CATALOGO_PADRAO: MaterialPreco[] = [
   disjuntor(50, 70), disjuntor(63, 90), disjuntor(80, 120), disjuntor(100, 150),
   disjuntor(125, 190), disjuntor(160, 240),
 
-  dr(40, 350), dr(63, 420), dr(80, 520), dr(100, 620), dr(125, 750), dr(160, 900),
+  dr(25, 300), dr(40, 350), dr(50, 380), dr(63, 420), dr(80, 520), dr(100, 620), dr(125, 750), dr(160, 900),
 
   avulso("quadro.mono", "Proteção", "Quadro de distribuição IP65 (6 a 8 DIN)", "un", 80),
   avulso("quadro.tri", "Proteção", "Quadro de distribuição IP65 (12 DIN)", "un", 140),
@@ -97,9 +116,6 @@ export const CATALOGO_PADRAO: MaterialPreco[] = [
   avulso("fitaIsolante", "Acessórios", "Fita isolante alta qualidade (rolo 20 m)", "un", 15),
   avulso("fitaAutofusao", "Acessórios", "Fita de autofusão (emendas externas)", "un", 25),
 ];
-
-/** Data do levantamento que originou os padrões acima. */
-export const DATA_CALIBRACAO_PADRAO = "2025-06-01T00:00:00.000Z";
 
 // --------------------------------------------------------------- helpers
 
@@ -122,12 +138,23 @@ export function precisaRevisao(atualizadoEm: string): boolean {
  * revisões de preço já feitas, e um item removido do código some da lista em
  * vez de ficar de fantasma.
  */
-export function mesclarCatalogo(salvos: Pick<MaterialPreco, "id" | "preco">[] | null | undefined): MaterialPreco[] {
-  const porId = new Map((salvos ?? []).map((s) => [s.id, s.preco]));
+export function mesclarCatalogo(
+  salvos: { id: string; preco: number; atualizadoEm?: string }[] | null | undefined,
+  /** Data de quem foi salvo antes de existir carimbo por item. */
+  fallbackData = DATA_CALIBRACAO_PADRAO,
+): MaterialPreco[] {
+  const porId = new Map((salvos ?? []).map((s) => [s.id, s]));
   return CATALOGO_PADRAO.map((p) => {
-    const preco = porId.get(p.id);
-    return preco != null && Number.isFinite(preco) && preco >= 0 ? { ...p, preco } : p;
+    const s = porId.get(p.id);
+    if (!s || !Number.isFinite(s.preco) || s.preco < 0) return p;
+    return { ...p, preco: s.preco, atualizadoEm: s.atualizadoEm ?? fallbackData };
   });
+}
+
+/** Os itens (de uma lista de ids) cujo preço passou do prazo de revisão. */
+export function pendentesEntre(itens: MaterialPreco[], ids: string[]): MaterialPreco[] {
+  const usados = new Set(ids);
+  return itens.filter((i) => usados.has(i.id) && precisaRevisao(i.atualizadoEm));
 }
 
 /** Índice id → preço, que é o formato que os motores consomem. */

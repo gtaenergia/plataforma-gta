@@ -22,7 +22,7 @@ export const NOVIDADES: Novidade[] = [
   {
     slug: "precos-materiais-2026-08",
     titulo: "Preços de materiais em um lugar só",
-    mensagem: "Novo card em Nova proposta: revise o custo unitário dos materiais à mão ou por planilha (baixa preenchida, você atualiza e importa). A plataforma avisa todo mundo quando a lista fica velha demais.",
+    mensagem: "Novo card em Nova proposta: revise o custo unitário dos materiais à mão ou por planilha (baixa preenchida, você atualiza e importa). Ao montar um orçamento, a plataforma avisa se algum material DAQUELA lista está com preço vencido.",
     link: "/precos",
   },
   {

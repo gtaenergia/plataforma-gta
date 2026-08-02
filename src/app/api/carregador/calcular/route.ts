@@ -4,7 +4,8 @@ import { getCurrentUser } from "@/lib/session";
 import { dimensionarEV, gerarBomEV, precoEV } from "@/services/carregador/engine";
 import { getCarregadorParams } from "@/services/carregador/params";
 import { avaliarEV } from "@/services/carregador/avisos";
-import { getIndicePrecos } from "@/lib/precos/store";
+import { getPrecos } from "@/lib/precos/store";
+import { indicePorId, pendentesEntre, diasDesde } from "@/lib/precos/catalogo";
 
 export const runtime = "nodejs";
 
@@ -34,11 +35,30 @@ export async function POST(req: Request) {
 
   const params = await getCarregadorParams();
   const sizing = dimensionarEV(i);
-  const bom = gerarBomEV(sizing, i.distanciaM, i.qtdPontos, await getIndicePrecos());
+  const precos = await getPrecos();
+  const bom = gerarBomEV(sizing, i.distanciaM, i.qtdPontos, indicePorId(precos.itens));
   const preco = precoEV(bom.custoMateriais, i.qtdPontos, params);
 
   // Travas técnicas: saturação do catálogo, faixa CA, queda e múltiplos pontos.
   const avisos = avaliarEV({ potenciaKw: i.potenciaKw, qtdPontos: i.qtdPontos, sizing });
+
+  // Preço vencido, mas só dos materiais QUE ESTA LISTA USA. O catálogo tem
+  // dezenas de itens e a maioria não entra numa proposta qualquer — avisar
+  // sobre material que não será usado ensina o usuário a ignorar o aviso.
+  const idsUsados = bom.itens.map((it) => it.precoId).filter((x): x is string => Boolean(x));
+  const vencidos = pendentesEntre(precos.itens, idsUsados);
+  if (vencidos.length > 0) {
+    const maisAntigo = Math.max(...vencidos.map((v) => diasDesde(v.atualizadoEm)));
+    const lista = vencidos.slice(0, 4).map((v) => v.descricao).join("; ");
+    avisos.push({
+      nivel: "atencao",
+      titulo: `${vencidos.length} ${vencidos.length === 1 ? "material desta lista está" : "materiais desta lista estão"} com preço desatualizado`,
+      detalhe:
+        `${lista}${vencidos.length > 4 ? ` e mais ${vencidos.length - 4}` : ""}. ` +
+        `O mais antigo não é revisado há ${maisAntigo} dias. O custo alimenta a margem desta proposta — ` +
+        `revise em Nova proposta → Preços de materiais antes de fechar.`,
+    });
+  }
 
   return NextResponse.json({ sizing, avisos, bom, preco, params });
 }
