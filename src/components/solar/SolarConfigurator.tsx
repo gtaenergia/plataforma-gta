@@ -133,6 +133,8 @@ const FORM_INICIAL: Form = {
 
 interface Calc {
   sizing: { consumoMedio: number; hspMedia: number; disponibilidade: number; kwpNecessaria: number; nPlacasSugerido: number; inversorSugerido: number };
+  /** Travas do projeto real (limite de microgeração, ligação, overload). */
+  avisos: { nivel: "atencao" | "critico"; titulo: string; detalhe: string }[];
   aplicado: { nPaineis: number; potenciaInversor: number; qtdInversores: number; eficiencia: number; overloadDesejado: number };
   inversorSugerido: number;
   kwpTotal: number;
@@ -691,6 +693,18 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
             </button>
           </div>
         )}
+
+        {/* Avisos técnicos: nada bloqueia o orçamento, mas o que reprovaria na
+            distribuidora (ou sairia errado na proposta) aparece aqui. */}
+        {calc?.avisos?.length ? (
+          <div className="mt-3 space-y-2">
+            {calc.avisos.map((av) => (
+              <Alert key={av.titulo} tone={av.nivel === "critico" ? "red" : "amber"} titulo={av.titulo}>
+                {av.detalhe}
+              </Alert>
+            ))}
+          </div>
+        ) : null}
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div className="sm:col-span-2">

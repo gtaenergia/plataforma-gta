@@ -12,13 +12,16 @@ import { getSolarParams } from "@/services/solar/params";
 import { DISPONIBILIDADE } from "@/services/solar/sizing";
 import { getFioB } from "@/services/solar/tarifas";
 import { simularEconomia } from "@/services/solar/economia";
+import { avaliarSistema } from "@/services/solar/avisos";
 import { parseNumber } from "@/lib/format";
 
 export const runtime = "nodejs";
 
 const schema = z.object({
   municipio: z.string(),
-  consumo: z.array(z.coerce.number()).length(12),
+  // .min(0): consumo negativo (um "-500" colado por engano) era aceito e
+  // contaminava dimensionamento, geração, preço e payback de uma vez.
+  consumo: z.array(z.coerce.number().min(0, "Consumo não pode ser negativo")).length(12),
   /** Margem de segurança (%): superdimensiona aumentando o consumo mensal. */
   margemSeguranca: z.coerce.number().min(0).max(200).default(0),
   tipoConexao: z.enum(["mono", "bi", "tri"]).default("tri"),
@@ -160,8 +163,20 @@ export async function POST(req: Request) {
     });
   }
 
+  // Travas do projeto real (limite de microgeração, potência × tipo de ligação,
+  // overload, consumo que não paga a disponibilidade). Só avisam — não bloqueiam.
+  const avisos = avaliarSistema({
+    consumoMedio: sizing.consumoMedio,
+    disponibilidade: sizing.disponibilidade,
+    tipoConexao: i.tipoConexao,
+    kwpTotal: kwp,
+    potenciaInversor,
+    overload,
+  });
+
   return NextResponse.json({
     sizing,
+    avisos,
     // o que foi de fato usado no cálculo (preenche o formulário quando "auto")
     aplicado: { nPaineis, potenciaInversor, qtdInversores, eficiencia, overloadDesejado },
     inversorSugerido,

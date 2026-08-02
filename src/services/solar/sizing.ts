@@ -37,7 +37,15 @@ export function dimensionar(i: SizingInput): SizingResult {
   const disponibilidade = DISPONIBILIDADE[i.tipoConexao];
 
   // kWp = ((consumoMédio − disponibilidade)/30 / HSP / eficiência) × 1,15
-  const kwpNecessaria = ((consumoMedio - disponibilidade) / 30 / hsp / i.eficiencia) * 1.15;
+  //
+  // O piso em zero não é cosmético. Consumo médio abaixo da disponibilidade dá
+  // resultado NEGATIVO, e isso acontece o tempo todo em uso normal: enquanto os
+  // 12 meses estão sendo preenchidos, a média parcial é baixa e a tela chegava a
+  // mostrar "necessidade calculada: −0,98 kWp" e "−1 placas". Divisor zerado
+  // (município sem HSP, eficiência 0) daria Infinity/NaN pelo mesmo caminho.
+  // Quem avisa que o consumo não justifica o sistema é `avaliarSistema`.
+  const divisor = 30 * hsp * i.eficiencia;
+  const kwpNecessaria = divisor > 0 ? Math.max(0, ((consumoMedio - disponibilidade) / divisor) * 1.15) : 0;
 
   const nPlacasSugerido = Math.ceil((kwpNecessaria * 1000) / i.potenciaPainel);
   const inversorSugerido = kwpNecessaria / (1 + i.overloadDesejado);

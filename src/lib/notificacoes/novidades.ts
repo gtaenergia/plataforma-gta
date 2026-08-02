@@ -20,6 +20,12 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "solar-avisos-tecnicos-2026-08",
+    titulo: "Solar: avisos técnicos no dimensionamento",
+    mensagem: "O configurador agora avisa quando o sistema passa de microgeração, quando a potência não combina com o tipo de ligação e quando o consumo não justifica o investimento — antes de a proposta sair.",
+    link: "/nova/solar",
+  },
+  {
     slug: "admin-armazenamento-2026-08",
     titulo: "Novidade: painel de armazenamento",
     mensagem: "Administradores agora veem quanto o banco e os arquivos estão ocupando — e qual tabela ou pasta está puxando o espaço. Fica no menu do perfil, em Armazenamento.",
