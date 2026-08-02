@@ -9,6 +9,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
+import { POTENCIAS_CA, acharPotencia } from "@/services/carregador/potencias";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -20,14 +21,6 @@ const parseBR = (s: string) => {
 };
 
 const HOJE = new Date().toISOString().slice(0, 10);
-
-/** Classes comerciais de carregadores AC (mono ≤ 7,4 kW; tri 11/22 kW). */
-const PRESETS: { label: string; kw: string; fase: "mono" | "tri" }[] = [
-  { label: "3,7 kW mono", kw: "3.7", fase: "mono" },
-  { label: "7,4 kW mono", kw: "7.4", fase: "mono" },
-  { label: "11 kW tri", kw: "11", fase: "tri" },
-  { label: "22 kW tri", kw: "22", fase: "tri" },
-];
 
 interface Form {
   clienteNome: string;
@@ -91,6 +84,8 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
   const [params, setParams] = useState<Params | null>(null);
   const [recalcNonce, setRecalcNonce] = useState(0);
   const [avisos, setAvisos] = useState<AvisoTec[]>([]);
+  /** true quando a potência foi digitada à mão (fora do catálogo). */
+  const [potenciaCustom, setPotenciaCustom] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -109,6 +104,11 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
   const bomNaEdicao = useRef("");
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
+
+  // Casa a potência atual com o catálogo. Mudar a alimentação à mão pode tirar
+  // a combinação da lista — aí o seletor cai em "Outra potência…" sozinho.
+  const potenciaAtual = acharPotencia(parseBR(form.potenciaKw), form.fase);
+  const potenciaSelecionada = potenciaCustom || !potenciaAtual ? "outra" : `${potenciaAtual.kw}|${potenciaAtual.fase}`;
   const aplicarParams = () => { precoTocado.current = false; setRecalcNonce((n) => n + 1); };
 
   useEffect(() => {
@@ -280,15 +280,32 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
       <section className="section-card">
         <h2 className="section-title">Carregador e infraestrutura</h2>
         <p className="mt-1 subtitle">O sistema dimensiona a proteção e o cabo (NBR 5410) e sugere a lista de materiais.</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {PRESETS.map((p) => (
-            <button key={p.label} type="button" className="btn-secondary !py-2 text-xs sm:!py-1.5" onClick={() => setForm((f) => ({ ...f, potenciaKw: p.kw, fase: p.fase }))}>
-              {p.label}
-            </button>
-          ))}
-        </div>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-2"><label className="field-label">Potência (kW) *</label><input className="field-input" inputMode="decimal" value={form.potenciaKw} onChange={(e) => set("potenciaKw", e.target.value)} placeholder="Ex.: 7,4 / 11 / 22" /></div>
+          <div className="sm:col-span-4">
+            <label className="field-label" htmlFor="ev-potencia">Potência de recarga *</label>
+            <select
+              id="ev-potencia"
+              className="field-input"
+              value={potenciaSelecionada}
+              onChange={(e) => {
+                if (e.target.value === "outra") { setPotenciaCustom(true); return; }
+                const [kw, fase] = e.target.value.split("|");
+                setPotenciaCustom(false);
+                setForm((f) => ({ ...f, potenciaKw: kw, fase: fase as Form["fase"] }));
+              }}
+            >
+              {POTENCIAS_CA.map((p) => (
+                <option key={`${p.kw}|${p.fase}`} value={`${p.kw}|${p.fase}`}>{p.rotulo}</option>
+              ))}
+              <option value="outra">Outra potência…</option>
+            </select>
+          </div>
+          {potenciaCustom && (
+            <div className="sm:col-span-2">
+              <label className="field-label" htmlFor="ev-potencia-livre">Potência (kW) *</label>
+              <input id="ev-potencia-livre" className="field-input" inputMode="decimal" value={form.potenciaKw} onChange={(e) => set("potenciaKw", e.target.value)} placeholder="Ex.: 9,6" />
+            </div>
+          )}
           <div className="sm:col-span-2">
             <label className="field-label">Alimentação</label>
             <select className="field-input" value={form.fase} onChange={(e) => set("fase", e.target.value as Form["fase"])}>
@@ -298,6 +315,25 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
           </div>
           <div className="sm:col-span-1"><label className="field-label">Distância (m)</label><input className="field-input" inputMode="decimal" value={form.distanciaM} onChange={(e) => set("distanciaM", e.target.value)} /></div>
           <div className="sm:col-span-1"><label className="field-label">Nº de pontos</label><input type="number" className="field-input" value={form.qtdPontos} onChange={(e) => set("qtdPontos", Number(e.target.value))} /></div>
+        </div>
+
+        {/* A quem a potência escolhida serve. Em CA quem limita é o carregador
+            de bordo do carro — vender 22 kW para um carro de 7 kW é gastar
+            infraestrutura à toa, e é o erro mais comum da categoria. */}
+        {potenciaAtual && (
+          <div className="mt-3 subcard">
+            <p className="text-sm font-semibold text-gta-navy dark:text-slate-100">
+              {potenciaAtual.rotulo} · recupera cerca de {potenciaAtual.kmPorHora} km por hora
+            </p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{potenciaAtual.atende}</p>
+            <p className="hint mt-2">
+              Em corrente alternada quem limita a potência é o carregador de bordo do veículo, não o ponto de
+              recarga: um carro de 7 kW ligado a um ponto de 22 kW continua puxando 7 kW.
+            </p>
+          </div>
+        )}
+
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div className="sm:col-span-6">
             <label className="field-label">Proteção diferencial (NBR 17019)</label>
             <select className="field-input" value={form.protecaoCcIntegrada ? "sim" : "nao"} onChange={(e) => set("protecaoCcIntegrada", e.target.value === "sim")}>
