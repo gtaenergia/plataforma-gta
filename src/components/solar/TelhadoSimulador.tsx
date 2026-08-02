@@ -424,8 +424,8 @@ export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios, onTextoP
   useEffect(() => {
     if (!onTextoProposta) return;
     const valido = incluirNaProposta && arranjo && arranjo.total > 0 && larguraM > 0 && comprimentoM > 0;
-    onTextoProposta(valido ? textoParaProposta(entrada, resultado, arranjo, potenciaPainel) : "");
-  }, [onTextoProposta, incluirNaProposta, arranjo, entrada, resultado, potenciaPainel, larguraM, comprimentoM]);
+    onTextoProposta(valido ? textoParaProposta(entrada, resultado, arranjo, potenciaPainel, nPaineisNecessarios) : "");
+  }, [onTextoProposta, incluirNaProposta, arranjo, entrada, resultado, potenciaPainel, nPaineisNecessarios, larguraM, comprimentoM]);
 
   function baixarPng() {
     const c = canvasRef.current;
@@ -554,7 +554,7 @@ export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios, onTextoP
             <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
               <p className="hint mb-1.5">Texto que entrará na proposta</p>
               <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-                {textoParaProposta(entrada, resultado, arranjo, potenciaPainel)}
+                {textoParaProposta(entrada, resultado, arranjo, potenciaPainel, nPaineisNecessarios)}
               </p>
             </div>
           )}

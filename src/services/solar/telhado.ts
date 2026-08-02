@@ -111,23 +111,36 @@ export function textoParaProposta(
   r: TelhadoResultado,
   arranjo: Arranjo,
   potenciaPainelW: number,
+  /** Módulos que esta proposta vende — não confundir com a capacidade da água. */
+  nPaineisPropostos: number,
 ): string {
   const n = (v: number, d = 2) =>
     v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
   /** Milímetro é cota: vai sem separador de milhar, senão "2.279 mm" lê como decimal. */
   const mm = (v: number) => String(Math.round(v));
 
-  const kwp = (arranjo.total * potenciaPainelW) / 1000;
+  const kwpPropostos = (nPaineisPropostos * potenciaPainelW) / 1000;
+  const cabe = arranjo.total >= nPaineisPropostos;
+
+  // A capacidade da água e o sistema vendido são números diferentes, e o texto
+  // precisa deixar claro qual é qual. Antes ele descrevia só a capacidade
+  // ("são acomodados 30 módulos... 21,00 kWp") numa proposta de 18 módulos /
+  // 12,60 kWp — o cliente lia um sistema que não é o que está comprando.
+  const veredito = cabe
+    ? `comportando os ${nPaineisPropostos} módulos previstos nesta proposta ` +
+      `(${n(kwpPropostos)} kWp).`
+    : `insuficiente para os ${nPaineisPropostos} módulos previstos nesta proposta ` +
+      `(${n(kwpPropostos)} kWp): o restante depende de outra água da cobertura.`;
 
   return (
     `O estudo de ocupação da cobertura considerou uma água de ${n(i.larguraM)} m × ` +
     `${n(i.comprimentoM)} m, com recuo de ${mm(i.recuoBordaMm)} mm nas bordas, ` +
     `resultando em ${n(r.areaUtilM2)} m² de área útil. ` +
-    `Nessa área são acomodados ${arranjo.total} módulos de ` +
-    `${mm(i.painel.comprimentoMm)} mm × ${mm(i.painel.larguraMm)} mm em orientação ` +
-    `${arranjo.orientacao}, dispostos em ${arranjo.colunas} por fileira × ${arranjo.fileiras} ` +
-    `${arranjo.fileiras > 1 ? "fileiras" : "fileira"}, com folga de ${mm(i.espacoEntrePaineisMm)} mm ` +
-    `entre módulos e ${mm(i.espacoEntreFileirasMm)} mm entre fileiras, totalizando ${n(kwp)} kWp. ` +
+    `Com módulos de ${mm(i.painel.comprimentoMm)} mm × ${mm(i.painel.larguraMm)} mm em orientação ` +
+    `${arranjo.orientacao}, folga de ${mm(i.espacoEntrePaineisMm)} mm entre módulos e ` +
+    `${mm(i.espacoEntreFileirasMm)} mm entre fileiras, essa área acomoda até ${arranjo.total} módulos ` +
+    `(${arranjo.colunas} por fileira × ${arranjo.fileiras} ` +
+    `${arranjo.fileiras > 1 ? "fileiras" : "fileira"}), ${veredito} ` +
     `O estudo é geométrico: não considera obstruções da cobertura (chaminés, reservatórios, ` +
     `platibandas e demais interferências) nem sombreamento, que devem ser confirmados em visita técnica. `
   );

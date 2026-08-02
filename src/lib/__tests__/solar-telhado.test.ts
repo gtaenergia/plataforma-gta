@@ -107,24 +107,35 @@ describe("dimensaoDoPainel", () => {
 
 describe("textoParaProposta", () => {
   const r = simularTelhado(base);
-  const texto = textoParaProposta(base, r, r.melhor!, 550);
+  // 24 cabem; a proposta vende 18.
+  const texto = textoParaProposta(base, r, r.melhor!, 550, 18);
 
   it("traz as medidas, a área útil e a disposição", () => {
     expect(texto).toContain("10,00 m × 8,00 m");
     expect(texto).toContain("300 mm nas bordas");
     expect(texto).toContain("69,56 m² de área útil");
-    expect(texto).toContain(`${r.melhor!.total} módulos`);
     expect(texto).toContain("2279 mm × 1134 mm");
+  });
+
+  it("separa a CAPACIDADE do telhado do sistema VENDIDO", () => {
+    // O erro que o teste ponta a ponta pegou: o texto descrevia a capacidade
+    // máxima como se fosse o sistema proposto — "30 módulos, 21 kWp" numa
+    // proposta de 18 módulos.
+    expect(texto).toContain(`acomoda até ${r.melhor!.total} módulos`);
+    expect(texto).toContain("18 módulos previstos nesta proposta");
+    expect(texto).toContain("9,90 kWp"); // 18 × 550 W, e não 24 × 550
+    expect(texto).toContain("comportando");
+  });
+
+  it("quando não cabe, diz que depende de outra água", () => {
+    const t = textoParaProposta(base, r, r.melhor!, 550, 40);
+    expect(t).toContain("insuficiente para os 40 módulos");
+    expect(t).toContain("outra água da cobertura");
   });
 
   it("traz as duas folgas — o que faltava no desenho", () => {
     expect(texto).toContain("20 mm entre módulos");
     expect(texto).toContain("20 mm entre fileiras");
-  });
-
-  it("declara a potência do arranjo", () => {
-    // 24 módulos × 550 W = 13,2 kWp
-    expect(texto).toContain("13,20 kWp");
   });
 
   it("declara o que o método NÃO cobre — senão vira promessa", () => {
@@ -135,8 +146,8 @@ describe("textoParaProposta", () => {
 
   it("concorda o singular quando há uma só fileira", () => {
     const rr = simularTelhado({ ...base, comprimentoM: 3 });
-    const t = textoParaProposta({ ...base, comprimentoM: 3 }, rr, rr.melhor!, 550);
+    const t = textoParaProposta({ ...base, comprimentoM: 3 }, rr, rr.melhor!, 550, 5);
     expect(rr.melhor!.fileiras).toBe(1);
-    expect(t).toContain("× 1 fileira,");
+    expect(t).toContain("× 1 fileira)");
   });
 });
