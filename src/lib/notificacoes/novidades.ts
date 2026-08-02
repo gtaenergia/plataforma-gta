@@ -20,6 +20,12 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "solar-cabe-no-telhado-2026-08",
+    titulo: "Solar: quantos painéis cabem no telhado",
+    mensagem: "Informe as medidas da água e o configurador diz quantos módulos cabem, compara com o que o consumo pede e gera um PNG com o desenho e as cotas para anexar à proposta.",
+    link: "/nova/solar",
+  },
+  {
     slug: "solar-avisos-tecnicos-2026-08",
     titulo: "Solar: avisos técnicos no dimensionamento",
     mensagem: "O configurador agora avisa quando o sistema passa de microgeração, quando a potência não combina com o tipo de ligação e quando o consumo não justifica o investimento — antes de a proposta sair.",

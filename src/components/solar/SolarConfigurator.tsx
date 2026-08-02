@@ -14,6 +14,7 @@ import { SolarParamsForm } from "@/components/admin/SolarParamsForm";
 import { CopyButton } from "@/components/CopyButton";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
+import { TelhadoSimulador } from "./TelhadoSimulador";
 import { Alert, Kpi } from "@/components/ui";
 
 /** Formatação pt-BR local (sem depender de libs de servidor). */
@@ -921,6 +922,13 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
           </div>
         </details>
       </section>
+
+      {/* Cabe no telhado? — a resposta que a observação padrão da proposta
+          hoje transfere ao cliente ("telhado com área útil compatível"). */}
+      <TelhadoSimulador
+        potenciaPainel={form.potenciaPainel}
+        nPaineisNecessarios={form.nPaineis > 0 ? form.nPaineis : Math.max(0, calc?.sizing.nPlacasSugerido ?? 0)}
+      />
 
       {/* Geração + gráfico */}
       {calc?.geracao && (
