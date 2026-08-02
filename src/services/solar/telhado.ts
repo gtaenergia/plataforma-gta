@@ -93,6 +93,46 @@ function quantosCabem(disponivel: number, tamanho: number, folga: number): numbe
   return Math.max(0, Math.floor((disponivel + folga) / (tamanho + folga)));
 }
 
+/**
+ * Parágrafo técnico da simulação para entrar na proposta.
+ *
+ * Vai como prefixo da observação técnica, que hoje apenas RESSALVA a área
+ * ("é necessário que o telhado possua área útil compatível"). Com a simulação
+ * a ressalva vira afirmação: a área deixa de ser um risco transferido ao
+ * cliente e passa a ser um dado do documento. A parte sobre orientação
+ * continua valendo, por isso o texto padrão é mantido depois deste.
+ *
+ * Fecha com o que a simulação NÃO cobre — obstruções e sombreamento — porque
+ * uma afirmação de área sem esse limite seria uma promessa que o método não
+ * sustenta.
+ */
+export function textoParaProposta(
+  i: TelhadoInput,
+  r: TelhadoResultado,
+  arranjo: Arranjo,
+  potenciaPainelW: number,
+): string {
+  const n = (v: number, d = 2) =>
+    v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+  /** Milímetro é cota: vai sem separador de milhar, senão "2.279 mm" lê como decimal. */
+  const mm = (v: number) => String(Math.round(v));
+
+  const kwp = (arranjo.total * potenciaPainelW) / 1000;
+
+  return (
+    `O estudo de ocupação da cobertura considerou uma água de ${n(i.larguraM)} m × ` +
+    `${n(i.comprimentoM)} m, com recuo de ${mm(i.recuoBordaMm)} mm nas bordas, ` +
+    `resultando em ${n(r.areaUtilM2)} m² de área útil. ` +
+    `Nessa área são acomodados ${arranjo.total} módulos de ` +
+    `${mm(i.painel.comprimentoMm)} mm × ${mm(i.painel.larguraMm)} mm em orientação ` +
+    `${arranjo.orientacao}, dispostos em ${arranjo.colunas} por fileira × ${arranjo.fileiras} ` +
+    `${arranjo.fileiras > 1 ? "fileiras" : "fileira"}, com folga de ${mm(i.espacoEntrePaineisMm)} mm ` +
+    `entre módulos e ${mm(i.espacoEntreFileirasMm)} mm entre fileiras, totalizando ${n(kwp)} kWp. ` +
+    `O estudo é geométrico: não considera obstruções da cobertura (chaminés, reservatórios, ` +
+    `platibandas e demais interferências) nem sombreamento, que devem ser confirmados em visita técnica. `
+  );
+}
+
 export function simularTelhado(i: TelhadoInput): TelhadoResultado {
   const larguraM = Math.max(0, i.larguraM);
   const comprimentoM = Math.max(0, i.comprimentoM);

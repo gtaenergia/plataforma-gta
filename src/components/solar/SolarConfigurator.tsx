@@ -187,6 +187,8 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
   const [salvando, setSalvando] = useState(false);
   const [gerando, setGerando] = useState(false);
   const [savedId, setSavedId] = useState<string | undefined>(propostaId);
+  /** Parágrafo da simulação de telhado. "" = o usuário não marcou incluir. */
+  const [textoTelhado, setTextoTelhado] = useState("");
   const [painelCustom, setPainelCustom] = useState(false);
   const [invCustom, setInvCustom] = useState(false);
   const [microCustom, setMicroCustom] = useState(false);
@@ -463,9 +465,14 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
         energia: nf(l.energia, 2),
         consumo: nf(l.consumo, 2),
       })),
-      textoObservacao: (form.margemSeguranca > 0
-        ? `O dimensionamento inclui uma margem de segurança de ${form.margemSeguranca}%, considerando um consumo médio de ${nf(calc.sizing.consumoMedio, 0)} kWh/mês. `
-        : "") + form.textoObservacao,
+      // Ordem: margem de segurança, estudo do telhado, texto padrão. O padrão
+      // fica por último porque trata da ORIENTAÇÃO, que a simulação não cobre.
+      textoObservacao:
+        (form.margemSeguranca > 0
+          ? `O dimensionamento inclui uma margem de segurança de ${form.margemSeguranca}%, considerando um consumo médio de ${nf(calc.sizing.consumoMedio, 0)} kWh/mês. `
+          : "") +
+        textoTelhado +
+        form.textoObservacao,
       materiais: materiais.filter((m) => m.descricao.trim()).map((m) => ({ qtde: m.qtde, descricao: m.descricao })),
       distribuidor: form.distribuidor,
       distribuidorNome: form.distribuidorNome,
@@ -624,8 +631,9 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-6">
           {MESES.map((mes, i) => (
             <div key={mes}>
-              <label className="field-label">{mes.slice(0, 3)}</label>
+              <label className="field-label uppercase tracking-wide" htmlFor={`consumo-${i}`}>{mes}</label>
               <input
+                id={`consumo-${i}`}
                 className="field-input"
                 inputMode="numeric"
                 value={form.consumo[i]}
@@ -655,15 +663,16 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
             />
             <p className="mt-1 hint">Folga p/ superdimensionar (ex.: +10%). 0 = sem folga.</p>
           </div>
-          <div className="flex items-end sm:col-span-2">
+          <div className="sm:col-span-2">
+            <label className="field-label">Preenchimento rápido</label>
             <button
               type="button"
-              className="btn-secondary !py-2 text-xs"
+              className="btn-secondary w-full"
               disabled={!Number(form.consumo[0])}
               onClick={() => set("consumo", Array(12).fill(form.consumo[0]))}
               title="Útil quando o cliente só informa a média mensal"
             >
-              Repetir Jan nos 12 meses
+              Repetir janeiro nos 12 meses
             </button>
           </div>
         </div>
@@ -928,6 +937,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
       <TelhadoSimulador
         potenciaPainel={form.potenciaPainel}
         nPaineisNecessarios={form.nPaineis > 0 ? form.nPaineis : Math.max(0, calc?.sizing.nPlacasSugerido ?? 0)}
+        onTextoProposta={setTextoTelhado}
       />
 
       {/* Geração + gráfico */}

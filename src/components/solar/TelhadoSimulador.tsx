@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Kpi, KpiGrid, SectionCard } from "@/components/ui";
-import { dimensaoDoPainel, simularTelhado, type Arranjo, type TelhadoResultado } from "@/services/solar/telhado";
+import { dimensaoDoPainel, simularTelhado, textoParaProposta, type Arranjo, type TelhadoInput, type TelhadoResultado } from "@/services/solar/telhado";
 
 /**
  * Quantos painéis cabem na água do telhado — com desenho em corte superior e
@@ -350,10 +350,12 @@ function desenhar(canvas: HTMLCanvasElement, r: TelhadoResultado, arranjo: Arran
 
 // ------------------------------------------------------------------ tela
 
-export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios }: {
+export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios, onTextoProposta }: {
   potenciaPainel: number;
   /** Quantos o dimensionamento pediu — para confrontar com o que cabe. */
   nPaineisNecessarios: number;
+  /** Parágrafo para a proposta, ou "" quando o usuário não marcou incluir. */
+  onTextoProposta?: (texto: string) => void;
 }) {
   const padrao = dimensaoDoPainel(potenciaPainel);
   const [m, setM] = useState<Medidas>({
@@ -366,6 +368,7 @@ export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios }: {
     recuoMm: "300",
   });
   const [orientacaoManual, setOrientacaoManual] = useState<"auto" | "retrato" | "paisagem">("auto");
+  const [incluirNaProposta, setIncluirNaProposta] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const set = <K extends keyof Medidas>(k: K, v: string) => setM((x) => ({ ...x, [k]: v }));
@@ -382,18 +385,19 @@ export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios }: {
   const larguraM = num(m.larguraM);
   const comprimentoM = num(m.comprimentoM);
 
-  const resultado = useMemo(
-    () =>
-      simularTelhado({
-        larguraM,
-        comprimentoM,
-        painel: { comprimentoMm: num(m.painelCompMm), larguraMm: num(m.painelLargMm) },
-        espacoEntrePaineisMm: num(m.espacoPaineisMm),
-        espacoEntreFileirasMm: num(m.espacoFileirasMm),
-        recuoBordaMm: num(m.recuoMm),
-      }),
+  const entrada = useMemo<TelhadoInput>(
+    () => ({
+      larguraM,
+      comprimentoM,
+      painel: { comprimentoMm: num(m.painelCompMm), larguraMm: num(m.painelLargMm) },
+      espacoEntrePaineisMm: num(m.espacoPaineisMm),
+      espacoEntreFileirasMm: num(m.espacoFileirasMm),
+      recuoBordaMm: num(m.recuoMm),
+    }),
     [larguraM, comprimentoM, m.painelCompMm, m.painelLargMm, m.espacoPaineisMm, m.espacoFileirasMm, m.recuoMm],
   );
+
+  const resultado = useMemo(() => simularTelhado(entrada), [entrada]);
 
   const arranjo =
     orientacaoManual === "auto"
@@ -413,6 +417,15 @@ export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios }: {
       painelLargMm: num(m.painelLargMm),
     });
   }, [resultado, arranjo, potenciaPainel, larguraM, comprimentoM, m.recuoMm, m.espacoPaineisMm, m.espacoFileirasMm, m.painelCompMm, m.painelLargMm]);
+
+  // Reporta o parágrafo ao configurador. String vazia = não entra na proposta,
+  // e é o que também sai quando a simulação deixa de ser válida (medidas
+  // apagadas), para o texto não ficar preso de um estado anterior.
+  useEffect(() => {
+    if (!onTextoProposta) return;
+    const valido = incluirNaProposta && arranjo && arranjo.total > 0 && larguraM > 0 && comprimentoM > 0;
+    onTextoProposta(valido ? textoParaProposta(entrada, resultado, arranjo, potenciaPainel) : "");
+  }, [onTextoProposta, incluirNaProposta, arranjo, entrada, resultado, potenciaPainel, larguraM, comprimentoM]);
 
   function baixarPng() {
     const c = canvasRef.current;
@@ -511,7 +524,7 @@ export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios }: {
             <canvas ref={canvasRef} className="block" />
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-3">
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             <button type="button" className="btn-secondary" onClick={baixarPng} disabled={!temMedidas}>
               Baixar PNG
             </button>
@@ -519,6 +532,32 @@ export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios }: {
               Estimativa geométrica: não considera chaminé, caixa d&apos;água, platibanda nem sombreamento.
             </span>
           </div>
+
+          <label className="toque mt-4 flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-gta-indigo focus:ring-gta-indigo dark:border-slate-600 dark:bg-slate-700"
+              checked={incluirNaProposta}
+              onChange={(e) => setIncluirNaProposta(e.target.checked)}
+              disabled={!arranjo || arranjo.total === 0}
+            />
+            <span>
+              <span className="font-semibold text-gta-navy dark:text-slate-100">Incluir esta simulação na proposta</span>
+              <span className="mt-0.5 block subtitle">
+                Acrescenta um parágrafo com a área útil, a disposição dos módulos e as folgas à observação
+                técnica do .docx. Sem marcar, a simulação fica só aqui.
+              </span>
+            </span>
+          </label>
+
+          {incluirNaProposta && arranjo && arranjo.total > 0 && (
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
+              <p className="hint mb-1.5">Texto que entrará na proposta</p>
+              <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                {textoParaProposta(entrada, resultado, arranjo, potenciaPainel)}
+              </p>
+            </div>
+          )}
         </>
       )}
     </SectionCard>

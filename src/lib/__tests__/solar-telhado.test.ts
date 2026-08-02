@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { simularTelhado, dimensaoDoPainel, type TelhadoInput } from "@/services/solar/telhado";
+import { simularTelhado, dimensaoDoPainel, textoParaProposta, type TelhadoInput } from "@/services/solar/telhado";
 
 /** Módulo de 550 W: 2,279 × 1,134 m. */
 const PAINEL = { comprimentoMm: 2279, larguraMm: 1134 };
@@ -102,5 +102,41 @@ describe("dimensaoDoPainel", () => {
 
   it("potência fora do catálogo cai na mais próxima", () => {
     expect(dimensaoDoPainel(575)).toEqual(dimensaoDoPainel(570));
+  });
+});
+
+describe("textoParaProposta", () => {
+  const r = simularTelhado(base);
+  const texto = textoParaProposta(base, r, r.melhor!, 550);
+
+  it("traz as medidas, a área útil e a disposição", () => {
+    expect(texto).toContain("10,00 m × 8,00 m");
+    expect(texto).toContain("300 mm nas bordas");
+    expect(texto).toContain("69,56 m² de área útil");
+    expect(texto).toContain(`${r.melhor!.total} módulos`);
+    expect(texto).toContain("2279 mm × 1134 mm");
+  });
+
+  it("traz as duas folgas — o que faltava no desenho", () => {
+    expect(texto).toContain("20 mm entre módulos");
+    expect(texto).toContain("20 mm entre fileiras");
+  });
+
+  it("declara a potência do arranjo", () => {
+    // 24 módulos × 550 W = 13,2 kWp
+    expect(texto).toContain("13,20 kWp");
+  });
+
+  it("declara o que o método NÃO cobre — senão vira promessa", () => {
+    expect(texto).toContain("não considera obstruções");
+    expect(texto).toContain("sombreamento");
+    expect(texto).toContain("visita técnica");
+  });
+
+  it("concorda o singular quando há uma só fileira", () => {
+    const rr = simularTelhado({ ...base, comprimentoM: 3 });
+    const t = textoParaProposta({ ...base, comprimentoM: 3 }, rr, rr.melhor!, 550);
+    expect(rr.melhor!.fileiras).toBe(1);
+    expect(t).toContain("× 1 fileira,");
   });
 });
