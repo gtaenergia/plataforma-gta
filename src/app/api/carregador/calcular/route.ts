@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/session";
 import { dimensionarEV, gerarBomEV, precoEV } from "@/services/carregador/engine";
 import { getCarregadorParams } from "@/services/carregador/params";
+import { avaliarEV } from "@/services/carregador/avisos";
 
 export const runtime = "nodejs";
 
@@ -35,5 +36,8 @@ export async function POST(req: Request) {
   const bom = gerarBomEV(sizing, i.distanciaM, i.qtdPontos);
   const preco = precoEV(bom.custoMateriais, i.qtdPontos, params);
 
-  return NextResponse.json({ sizing, bom, preco, params });
+  // Travas técnicas: saturação do catálogo, faixa CA, queda e múltiplos pontos.
+  const avisos = avaliarEV({ potenciaKw: i.potenciaKw, qtdPontos: i.qtdPontos, sizing });
+
+  return NextResponse.json({ sizing, avisos, bom, preco, params });
 }

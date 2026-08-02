@@ -69,7 +69,28 @@ export interface SizingEV {
   nDps: number; // 2 (mono) | 4 (tri)
   eletroduto: string; // ex.: '1.1/4"'
   drTipo: "A" | "B"; // NBR 17019: nunca AC
+  /** Disjuntor ou condutor saturaram no fim do catálogo — a especificação
+   *  resultante fica SUBDIMENSIONADA e não pode ser usada como está. */
+  acimaDoCatalogo: boolean;
+  /** Queda maior que 4% mesmo na maior bitola disponível. */
+  quedaAcimaDoLimite: boolean;
 }
+
+/**
+ * Queda de tensão (fração).
+ *
+ * O fator muda com o sistema: monofásico percorre ida e volta (2·I·L),
+ * trifásico equilibrado usa √3·I·L. Antes o código aplicava 2 nos dois casos,
+ * superestimando a queda trifásica em 15,5% (2/√3) e às vezes puxando uma
+ * bitola acima do necessário.
+ */
+function quedaDeTensao(fase: Fase, corrente: number, comprimentoM: number, secaoMm2: number, tensao: number): number {
+  const fator = fase === "mono" ? 2 : Math.sqrt(3);
+  return (fator * corrente * comprimentoM) / (CONDUTIVIDADE_CU * secaoMm2 * tensao);
+}
+
+/** Teto prático da recarga em corrente alternada (IEC 61851 modo 3: 63 A/fase). */
+export const POTENCIA_MAX_CA_KW = 44;
 
 export function dimensionarEV(i: SizingEVInput): SizingEV {
   const fase = i.fase;
@@ -80,16 +101,29 @@ export function dimensionarEV(i: SizingEVInput): SizingEV {
   const Ib = In * 1.25;
   const L = Math.max(1, i.distanciaM);
 
-  // seção: ampacidade ≥ corrente de projeto E queda ≤ 4% (GTA adota uma bitola
-  // de folga em relação ao mínimo, para margem térmica no eletroduto).
-  let escolha = AMPACIDADE[AMPACIDADE.length - 1];
+  // NBR 5410: Ib ≤ In(dispositivo) ≤ Iz(condutor). O disjuntor era escolhido
+  // sobre In (a corrente da carga), não sobre Ib — então a proposta saía com
+  // "42 A de projeto" protegidos por um disjuntor de 40 A, violando a primeira
+  // condição em todos os casos. Recarga veicular é carga contínua (horas em
+  // corrente plena), que é o motivo de o fator 1,25 existir.
+  const maiorDisjuntor = DISJUNTORES[DISJUNTORES.length - 1];
+  const disjuntorA = menorMaiorIgual(DISJUNTORES, Ib);
+  const acimaDoCatalogoDisjuntor = Ib > maiorDisjuntor;
+
+  // O condutor protege-se pelo DISJUNTOR, não pela corrente de projeto: a
+  // ampacidade tem de suportar o que o dispositivo deixa passar.
+  const maiorAmpacidade = AMPACIDADE[AMPACIDADE.length - 1];
+  let escolha = maiorAmpacidade;
+  let achou = false;
   for (const a of AMPACIDADE) {
-    if (a.i < Ib) continue;
-    const queda = (2 * In * L) / (CONDUTIVIDADE_CU * a.s * tensao);
+    if (a.i < disjuntorA) continue;
     escolha = a;
-    if (queda <= 0.04) break;
+    achou = true;
+    if (quedaDeTensao(fase, In, L, a.s, tensao) <= 0.04) break;
   }
-  const quedaPct = (2 * In * L) / (CONDUTIVIDADE_CU * escolha.s * tensao);
+  const acimaDoCatalogoCabo = !achou;
+
+  const quedaPct = quedaDeTensao(fase, In, L, escolha.s, tensao);
   const nCondutores = fase === "mono" ? 3 : 5;
   const eletroduto = selecionarEletroduto(escolha.s, nCondutores);
 
@@ -97,7 +131,7 @@ export function dimensionarEV(i: SizingEVInput): SizingEV {
     tensao,
     correnteNominal: In,
     correnteProjeto: Ib,
-    disjuntorA: menorMaiorIgual(DISJUNTORES, In),
+    disjuntorA,
     polos: fase === "mono" ? 2 : 4,
     secaoMm2: escolha.s,
     quedaPct,
@@ -105,6 +139,8 @@ export function dimensionarEV(i: SizingEVInput): SizingEV {
     nDps: fase === "mono" ? 2 : 4,
     eletroduto: eletroduto.nome,
     drTipo: i.protecaoCcIntegrada ? "A" : "B",
+    acimaDoCatalogo: acimaDoCatalogoDisjuntor || acimaDoCatalogoCabo,
+    quedaAcimaDoLimite: quedaPct > 0.04,
   };
 }
 
@@ -157,13 +193,17 @@ export function gerarBomEV(s: SizingEV, distanciaM: number, qtd: number): { iten
     ? `Interruptor DR Tipo B ${s.disjuntorA} A / 30 mA (${s.polos}P) — proteção CC (NBR 17019)`
     : `Interruptor DR Tipo A ${s.disjuntorA} A / 30 mA (${s.polos}P) — carregador com RDC-DD 6 mA integrado`;
 
+  // Cada ponto tem circuito exclusivo (NBR 17019), então a infraestrutura
+  // acompanha a quantidade — ela ficava congelada enquanto quadro, disjuntor,
+  // DR e DPS multiplicavam: uma obra de 4 pontos era orçada com o cabo e o
+  // eletroduto de UM, subfaturando a instalação.
   const itens: BomItemEV[] = [
-    item("Infraestrutura", `Eletroduto galvanizado pesado ${eletroduto.nome} (barra 3 m)`, "barra", barras, eletroduto.barra),
-    item("Infraestrutura", `Luva galvanizada ${eletroduto.nome}`, "un", barras, eletroduto.luva),
+    item("Infraestrutura", `Eletroduto galvanizado pesado ${eletroduto.nome} (barra 3 m)`, "barra", barras * n, eletroduto.barra),
+    item("Infraestrutura", `Luva galvanizada ${eletroduto.nome}`, "un", barras * n, eletroduto.luva),
     item("Infraestrutura", `Curva galvanizada ${eletroduto.nome} 90º`, "un", 4 * n, eletroduto.curva),
-    item("Infraestrutura", `Abraçadeira tipo D / Unistrut ${eletroduto.nome}`, "un", Math.ceil(L * 0.75), PRECOS_BASE.abracadeira),
+    item("Infraestrutura", `Abraçadeira tipo D / Unistrut ${eletroduto.nome}`, "un", Math.ceil(L * 0.75) * n, PRECOS_BASE.abracadeira),
     item("Infraestrutura", `Bucha e arruela de alumínio ${eletroduto.nome}`, "par", 4 * n, PRECOS_BASE.buchaArruela),
-    item("Cabeamento", `Cabo flexível HEPR ${secFmt(s.secaoMm2)} mm² (${tri ? "3F+N+T" : "F+N+T"})`, "m", L * s.nCondutores, precoDe(CABO_PRECO, s.secaoMm2)),
+    item("Cabeamento", `Cabo flexível HEPR ${secFmt(s.secaoMm2)} mm² (${tri ? "3F+N+T" : "F+N+T"})`, "m", L * s.nCondutores * n, precoDe(CABO_PRECO, s.secaoMm2)),
     item("Proteção", `Quadro de distribuição IP65 (${tri ? "12 DIN" : "6 a 8 DIN"})`, "un", n, tri ? QUADRO_PRECO.tri : QUADRO_PRECO.mono),
     item("Proteção", `Disjuntor termomagnético ${s.disjuntorA} A curva C (${s.polos}P)`, "un", n, precoDisj),
     item("Proteção", drDescricao, "un", n, precoDr),

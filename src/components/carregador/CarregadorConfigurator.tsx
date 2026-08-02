@@ -66,7 +66,9 @@ const FORM_INICIAL: Form = {
 interface Sizing {
   tensao: number; correnteNominal: number; correnteProjeto: number; disjuntorA: number;
   polos: number; secaoMm2: number; quedaPct: number; nCondutores: number; nDps: number; eletroduto: string; drTipo: "A" | "B";
+  acimaDoCatalogo: boolean; quedaAcimaDoLimite: boolean;
 }
+interface AvisoTec { nivel: "atencao" | "critico"; titulo: string; detalhe: string }
 interface BomItem { categoria: string; descricao: string; unidade: string; qtd: number; precoUnit: number; precoTotal: number }
 interface Bom { itens: BomItem[]; custoMateriais: number }
 /** Linha editável da lista de materiais (qtd/preço como texto p/ edição). */
@@ -88,6 +90,7 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
   const [materiais, setMateriais] = useState<MatRow[]>([]);
   const [params, setParams] = useState<Params | null>(null);
   const [recalcNonce, setRecalcNonce] = useState(0);
+  const [avisos, setAvisos] = useState<AvisoTec[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -140,7 +143,7 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
         });
         if (res.ok) {
           const d = await res.json();
-          setSizing(d.sizing); setBom(d.bom); setParams(d.params);
+          setSizing(d.sizing); setAvisos(d.avisos ?? []); setBom(d.bom); setParams(d.params);
           // Re-semeia a lista SÓ enquanto o usuário não mexeu nela; depois
           // disso sobrescrever apagaria o que ele digitou.
           if (!matTocado.current) setMateriais(d.bom.itens.map(seedRow));
@@ -315,6 +318,17 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
             <Kpi label="Queda de tensão" value={`${nf(sizing.quedaPct * 100, 2)}%`} />
             <Kpi label="DR (NBR 17019)" value={`Tipo ${sizing.drTipo} · ${sizing.disjuntorA} A`} />
             <Kpi label="DPS" value={`${sizing.nDps} × Classe II`} />
+          </div>
+        )}
+
+        {/* Travas técnicas: o que reprovaria na obra ou sairia errado na proposta. */}
+        {avisos.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {avisos.map((a) => (
+              <Alert key={a.titulo} tone={a.nivel === "critico" ? "red" : "amber"} titulo={a.titulo}>
+                {a.detalhe}
+              </Alert>
+            ))}
           </div>
         )}
         {!sizing && (

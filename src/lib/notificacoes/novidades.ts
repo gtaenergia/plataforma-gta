@@ -20,6 +20,12 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "carregador-nbr5410-2026-08",
+    titulo: "Carregador: dimensionamento corrigido pela NBR 5410",
+    mensagem: "O disjuntor passa a cobrir a corrente de projeto (era menor que ela em todos os casos), a queda trifásica usa a fórmula certa, e a lista de materiais escala com o número de pontos. Orçamentos de carregador mudam de valor.",
+    link: "/nova/carregador",
+  },
+  {
     slug: "solar-fio-b-lei-14300-2026-08",
     titulo: "Solar: payback segue a rampa da Lei 14.300",
     mensagem: "O percentual do Fio B agora acompanha o ano-calendário da lei (60% em 2026, 75% em 2027, 90% em 2028) em vez de um valor fixo. Muda o payback de sistemas com muita injeção — monofásicos e superdimensionados.",
