@@ -20,6 +20,12 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "precos-materiais-2026-08",
+    titulo: "Preços de materiais em um lugar só",
+    mensagem: "Novo card em Nova proposta: revise o custo unitário dos materiais à mão ou por planilha (baixa preenchida, você atualiza e importa). A plataforma avisa todo mundo quando a lista fica velha demais.",
+    link: "/precos",
+  },
+  {
     slug: "carregador-nbr5410-2026-08",
     titulo: "Carregador: dimensionamento corrigido pela NBR 5410",
     mensagem: "O disjuntor passa a cobrir a corrente de projeto (era menor que ela em todos os casos), a queda trifásica usa a fórmula certa, e a lista de materiais escala com o número de pontos. Orçamentos de carregador mudam de valor.",

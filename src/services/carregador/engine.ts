@@ -174,21 +174,36 @@ export interface BomItemEV {
   precoTotal: number;
 }
 
-export function gerarBomEV(s: SizingEV, distanciaM: number, qtd: number): { itens: BomItemEV[]; custoMateriais: number } {
+/** Chave do eletroduto no catálogo central (1" -> "1", 1.1/4" -> "1_1_4"). */
+const chaveEletroduto = (nome: string) => nome.replace(/"/g, "").replace(/[./]/g, "_");
+
+export function gerarBomEV(
+  s: SizingEV,
+  distanciaM: number,
+  qtd: number,
+  /** Preços revisados em /nova → Preços de materiais. Ausentes caem no padrão. */
+  precos?: Record<string, number>,
+): { itens: BomItemEV[]; custoMateriais: number } {
   const L = Math.max(1, distanciaM);
   const n = Math.max(1, qtd);
   const tri = s.polos === 4;
   const eletroduto = selecionarEletroduto(s.secaoMm2, s.nCondutores);
   const barras = Math.ceil(L / 3);
+  /** Preço do registro central, com o padrão do motor como reserva. */
+  const P = (id: string, padrao: number) => {
+    const v = precos?.[`carregador.${id}`];
+    return v != null && Number.isFinite(v) && v >= 0 ? v : padrao;
+  };
+  const ed = chaveEletroduto(eletroduto.nome);
 
   const item = (categoria: string, descricao: string, unidade: string, qtdLiquida: number, precoUnit: number): BomItemEV => {
     const q = Math.ceil(qtdLiquida);
     return { categoria, descricao, unidade, qtd: q, precoUnit, precoTotal: q * precoUnit };
   };
 
-  const precoDisj = Math.round(precoDe(DISJ_PRECO, s.disjuntorA) * (tri ? 1.9 : 1));
+  const precoDisj = Math.round(P(`disjuntor.${s.disjuntorA}`, precoDe(DISJ_PRECO, s.disjuntorA)) * (tri ? 1.9 : 1));
   const drTipoB = s.drTipo === "B";
-  const precoDr = Math.round(precoDe(DR_PRECO, s.disjuntorA) * (tri ? 1.8 : 1) * (drTipoB ? 3.5 : 1));
+  const precoDr = Math.round(P(`dr.${s.disjuntorA}`, precoDe(DR_PRECO, s.disjuntorA)) * (tri ? 1.8 : 1) * (drTipoB ? 3.5 : 1));
   const drDescricao = drTipoB
     ? `Interruptor DR Tipo B ${s.disjuntorA} A / 30 mA (${s.polos}P) — proteção CC (NBR 17019)`
     : `Interruptor DR Tipo A ${s.disjuntorA} A / 30 mA (${s.polos}P) — carregador com RDC-DD 6 mA integrado`;
@@ -198,22 +213,22 @@ export function gerarBomEV(s: SizingEV, distanciaM: number, qtd: number): { iten
   // DR e DPS multiplicavam: uma obra de 4 pontos era orçada com o cabo e o
   // eletroduto de UM, subfaturando a instalação.
   const itens: BomItemEV[] = [
-    item("Infraestrutura", `Eletroduto galvanizado pesado ${eletroduto.nome} (barra 3 m)`, "barra", barras * n, eletroduto.barra),
-    item("Infraestrutura", `Luva galvanizada ${eletroduto.nome}`, "un", barras * n, eletroduto.luva),
-    item("Infraestrutura", `Curva galvanizada ${eletroduto.nome} 90º`, "un", 4 * n, eletroduto.curva),
-    item("Infraestrutura", `Abraçadeira tipo D / Unistrut ${eletroduto.nome}`, "un", Math.ceil(L * 0.75) * n, PRECOS_BASE.abracadeira),
-    item("Infraestrutura", `Bucha e arruela de alumínio ${eletroduto.nome}`, "par", 4 * n, PRECOS_BASE.buchaArruela),
-    item("Cabeamento", `Cabo flexível HEPR ${secFmt(s.secaoMm2)} mm² (${tri ? "3F+N+T" : "F+N+T"})`, "m", L * s.nCondutores * n, precoDe(CABO_PRECO, s.secaoMm2)),
-    item("Proteção", `Quadro de distribuição IP65 (${tri ? "12 DIN" : "6 a 8 DIN"})`, "un", n, tri ? QUADRO_PRECO.tri : QUADRO_PRECO.mono),
+    item("Infraestrutura", `Eletroduto galvanizado pesado ${eletroduto.nome} (barra 3 m)`, "barra", barras * n, P(`eletroduto.${ed}.barra`, eletroduto.barra)),
+    item("Infraestrutura", `Luva galvanizada ${eletroduto.nome}`, "un", barras * n, P(`eletroduto.${ed}.luva`, eletroduto.luva)),
+    item("Infraestrutura", `Curva galvanizada ${eletroduto.nome} 90º`, "un", 4 * n, P(`eletroduto.${ed}.curva`, eletroduto.curva)),
+    item("Infraestrutura", `Abraçadeira tipo D / Unistrut ${eletroduto.nome}`, "un", Math.ceil(L * 0.75) * n, P("abracadeira", PRECOS_BASE.abracadeira)),
+    item("Infraestrutura", `Bucha e arruela de alumínio ${eletroduto.nome}`, "par", 4 * n, P("buchaArruela", PRECOS_BASE.buchaArruela)),
+    item("Cabeamento", `Cabo flexível HEPR ${secFmt(s.secaoMm2)} mm² (${tri ? "3F+N+T" : "F+N+T"})`, "m", L * s.nCondutores * n, P(`cabo.${s.secaoMm2}`, precoDe(CABO_PRECO, s.secaoMm2))),
+    item("Proteção", `Quadro de distribuição IP65 (${tri ? "12 DIN" : "6 a 8 DIN"})`, "un", n, tri ? P("quadro.tri", QUADRO_PRECO.tri) : P("quadro.mono", QUADRO_PRECO.mono)),
     item("Proteção", `Disjuntor termomagnético ${s.disjuntorA} A curva C (${s.polos}P)`, "un", n, precoDisj),
     item("Proteção", drDescricao, "un", n, precoDr),
-    item("Proteção", `Protetor de surto (DPS) Classe II 275 V / 40 kA`, "un", s.nDps * n, PRECOS_BASE.dps),
-    item("Aterramento", 'Haste de aterramento cobreada 5/8" x 2,40 m', "un", n, PRECOS_BASE.haste),
-    item("Aterramento", "Caixa de inspeção de solo", "un", n, PRECOS_BASE.caixaInspecao),
-    item("Aterramento", "Conector tipo cunha / grampo", "un", n, PRECOS_BASE.conectorAterr),
-    item("Acessórios", `Terminal tubular (ilhós) ${secFmt(s.secaoMm2)} mm²`, "un", s.nCondutores * 2 * n, PRECOS_BASE.terminal),
-    item("Acessórios", "Fita isolante alta qualidade (rolo 20 m)", "un", n, PRECOS_BASE.fitaIsolante),
-    item("Acessórios", "Fita de autofusão (emendas externas)", "un", n, PRECOS_BASE.fitaAutofusao),
+    item("Proteção", `Protetor de surto (DPS) Classe II 275 V / 40 kA`, "un", s.nDps * n, P("dps", PRECOS_BASE.dps)),
+    item("Aterramento", 'Haste de aterramento cobreada 5/8" x 2,40 m', "un", n, P("haste", PRECOS_BASE.haste)),
+    item("Aterramento", "Caixa de inspeção de solo", "un", n, P("caixaInspecao", PRECOS_BASE.caixaInspecao)),
+    item("Aterramento", "Conector tipo cunha / grampo", "un", n, P("conectorAterr", PRECOS_BASE.conectorAterr)),
+    item("Acessórios", `Terminal tubular (ilhós) ${secFmt(s.secaoMm2)} mm²`, "un", s.nCondutores * 2 * n, P("terminal", PRECOS_BASE.terminal)),
+    item("Acessórios", "Fita isolante alta qualidade (rolo 20 m)", "un", n, P("fitaIsolante", PRECOS_BASE.fitaIsolante)),
+    item("Acessórios", "Fita de autofusão (emendas externas)", "un", n, P("fitaAutofusao", PRECOS_BASE.fitaAutofusao)),
   ];
   const custoMateriais = itens.reduce((sum, it) => sum + it.precoTotal, 0);
   return { itens, custoMateriais };

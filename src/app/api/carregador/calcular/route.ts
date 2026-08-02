@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/session";
 import { dimensionarEV, gerarBomEV, precoEV } from "@/services/carregador/engine";
 import { getCarregadorParams } from "@/services/carregador/params";
 import { avaliarEV } from "@/services/carregador/avisos";
+import { getIndicePrecos } from "@/lib/precos/store";
 
 export const runtime = "nodejs";
 
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
 
   const params = await getCarregadorParams();
   const sizing = dimensionarEV(i);
-  const bom = gerarBomEV(sizing, i.distanciaM, i.qtdPontos);
+  const bom = gerarBomEV(sizing, i.distanciaM, i.qtdPontos, await getIndicePrecos());
   const preco = precoEV(bom.custoMateriais, i.qtdPontos, params);
 
   // Travas técnicas: saturação do catálogo, faixa CA, queda e múltiplos pontos.
