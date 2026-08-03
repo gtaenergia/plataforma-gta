@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Alert } from "@/components/ui";
+import { Campo } from "@/components/Campo";
 /**
  * Formulário de troca de senha.
  * - `requireCurrent`: pede a senha atual (troca voluntária em /conta).
@@ -56,20 +57,16 @@ export function ChangePasswordForm({
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {requireCurrent && (
-        <div>
-          <label className="field-label">Senha atual</label>
+        <Campo label="Senha atual">
           <input type="password" className="field-input" value={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} autoComplete="current-password" required />
-        </div>
+        </Campo>
       )}
-      <div>
-        <label className="field-label">Nova senha</label>
+      <Campo label="Nova senha" hint={<><p className="mt-1 hint">Mínimo de 8 caracteres.</p></>}>
         <input type="password" className="field-input" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} autoComplete="new-password" required />
-        <p className="mt-1 hint">Mínimo de 8 caracteres.</p>
-      </div>
-      <div>
-        <label className="field-label">Confirmar nova senha</label>
+      </Campo>
+      <Campo label="Confirmar nova senha">
         <input type="password" className="field-input" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} autoComplete="new-password" required />
-      </div>
+      </Campo>
       {erro && <Alert tone="red">{erro}</Alert>}
       {ok && !redirectTo && <p className="text-sm font-medium text-green-600 dark:text-green-400">Senha alterada com sucesso.</p>}
       <button type="submit" className="btn-primary" disabled={salvando}>

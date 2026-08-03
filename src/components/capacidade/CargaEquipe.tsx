@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Badge, Loading, SectionCard, Segmented } from "@/components/ui";
+import { Loading, Marca, SectionCard, Segmented } from "@/components/ui";
 import {
   agruparPorResponsavel,
   capacidadeDe,
@@ -122,9 +122,12 @@ export function CargaEquipe({ tarefas }: { tarefas: Task[] }) {
               {/* A lista está ordenada da maior para a menor ocupação, então o
                   recorte mostra justamente quem exige atenção. */}
               {linhas.slice(0, RESUMO_MAX).map((l) => (
-                <Badge key={l.email} tone={tomDaOcupacao(l.folga.ocupacaoPct)}>
-                  {primeiroNome(l.nome)} {l.folga.ocupacaoPct === null ? "—" : `${Math.round(l.folga.ocupacaoPct)}%`}
-                </Badge>
+                <Marca key={l.email} tone={tomDaOcupacao(l.folga.ocupacaoPct)} className="text-sm">
+                  {primeiroNome(l.nome)}{" "}
+                  <span className="tabular-nums">
+                    {l.folga.ocupacaoPct === null ? "—" : `${Math.round(l.folga.ocupacaoPct)}%`}
+                  </span>
+                </Marca>
               ))}
               {linhas.length > RESUMO_MAX && (
                 <button type="button" className="btn-link text-xs" onClick={() => setAberto(true)}>

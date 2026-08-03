@@ -235,30 +235,30 @@ export function TarefaDetalhe({
             {tarefa.descricao || <span className="sem-valor italic">Sem descrição.</span>}
           </p>
           <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-            <Campo rotulo="Status">
+            <Dado rotulo="Status">
               <MarcaStatus valor={tarefa.status} />
-            </Campo>
-            <Campo rotulo="Prioridade">
+            </Dado>
+            <Dado rotulo="Prioridade">
               <MarcaPrioridade valor={tarefa.prioridade} />
-            </Campo>
-            <Campo rotulo="Responsável">{nomeDe(tarefa.responsavel)}</Campo>
-            <Campo rotulo="Cliente">{tarefa.cliente || <span className="sem-valor">—</span>}</Campo>
-            <Campo rotulo="Categoria">{tarefa.categoria || <span className="sem-valor">—</span>}</Campo>
-            <Campo rotulo="Tipo de demanda">{tarefa.tipoDemanda || <span className="sem-valor">—</span>}</Campo>
-            <Campo rotulo="Demandante">
+            </Dado>
+            <Dado rotulo="Responsável">{nomeDe(tarefa.responsavel)}</Dado>
+            <Dado rotulo="Cliente">{tarefa.cliente || <span className="sem-valor">—</span>}</Dado>
+            <Dado rotulo="Categoria">{tarefa.categoria || <span className="sem-valor">—</span>}</Dado>
+            <Dado rotulo="Tipo de demanda">{tarefa.tipoDemanda || <span className="sem-valor">—</span>}</Dado>
+            <Dado rotulo="Demandante">
               {demandanteLabel(tarefa.demandante) || <span className="sem-valor">—</span>}
-            </Campo>
-            <Campo rotulo="Estimativa">
+            </Dado>
+            <Dado rotulo="Estimativa">
               {tarefa.estimativaMin > 0 ? (
                 `${minParaHoras(tarefa.estimativaMin)} h`
               ) : (
                 <span className="sem-valor">não informada</span>
               )}
-            </Campo>
-            <Campo rotulo="Prazo comercial">{formatPrazo(tarefa.prazoComercial, tarefa.horaComercial)}</Campo>
-            <Campo rotulo="Prazo operacional">
+            </Dado>
+            <Dado rotulo="Prazo comercial">{formatPrazo(tarefa.prazoComercial, tarefa.horaComercial)}</Dado>
+            <Dado rotulo="Prazo operacional">
               {formatPrazo(tarefa.prazoOperacional || tarefa.prazo, tarefa.horaOperacional)}
-            </Campo>
+            </Dado>
           </dl>
         </SectionCard>
       ) : (
@@ -446,7 +446,9 @@ export function TarefaDetalhe({
   );
 }
 
-function Campo({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+/** Par rótulo/valor somente leitura do `<dl>`. Não confundir com `<Campo>`, que
+ *  é o par rótulo/controle dos formulários — daí o nome distinto. */
+function Dado({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
   return (
     <div>
       <dt className="hint">{rotulo}</dt>

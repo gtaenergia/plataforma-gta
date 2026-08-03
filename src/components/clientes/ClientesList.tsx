@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Badge, EmptyState, Loading, SectionCard } from "@/components/ui";
 import { usePaginacao, Paginacao } from "@/components/Paginacao";
 import { SEGMENTOS, UFS, cidadeUf, type Cliente } from "@/lib/clientes/types";
+import { Campo } from "@/components/Campo";
 
 type FormState = {
   nome: string;
@@ -132,17 +133,15 @@ export function ClientesList() {
 
       {/* Barra de ações + filtros */}
       <div className="flex flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-end sm:p-4 card">
-        <div className="flex-1 sm:min-w-[220px]">
-          <label className="field-label">Buscar nome / documento / cidade</label>
+        <Campo className="flex-1 sm:min-w-[220px]" label="Buscar nome / documento / cidade">
           <input className="field-input" placeholder="Digite para filtrar…" value={busca} onChange={(e) => setBusca(e.target.value)} />
-        </div>
-        <div className="min-w-[160px]">
-          <label className="field-label">Segmento</label>
+        </Campo>
+        <Campo className="min-w-[160px]" label="Segmento">
           <select className="field-input" value={fSegmento} onChange={(e) => setFSegmento(e.target.value)}>
             <option value="">Todos</option>
             {segmentosComClientes.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-        </div>
+        </Campo>
         {editando === null && (
           <button className="btn-primary whitespace-nowrap" onClick={abrirNovo}>+ Novo cliente</button>
         )}
@@ -159,28 +158,24 @@ export function ClientesList() {
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Identificação</h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
-                <div className="sm:col-span-4">
-                  <label className="field-label">Nome / Razão social *</label>
+                <Campo className="sm:col-span-4" label="Nome / Razão social *">
                   <input className="field-input" value={form.nome} onChange={(e) => set("nome", e.target.value)} required placeholder="Ex.: Fazenda Rio Doce Ltda" />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="field-label">Tipo</label>
+                </Campo>
+                <Campo className="sm:col-span-2" label="Tipo">
                   <select className="field-input" value={form.tipoPessoa} onChange={(e) => set("tipoPessoa", e.target.value as "PF" | "PJ")}>
                     <option value="PJ">Pessoa jurídica</option>
                     <option value="PF">Pessoa física</option>
                   </select>
-                </div>
-                <div className="sm:col-span-3">
-                  <label className="field-label">{form.tipoPessoa === "PF" ? "CPF" : "CNPJ"}</label>
+                </Campo>
+                <Campo className="sm:col-span-3" label={<>{form.tipoPessoa === "PF" ? "CPF" : "CNPJ"}</>}>
                   <input className="field-input" value={form.documento} onChange={(e) => set("documento", e.target.value)} placeholder={form.tipoPessoa === "PF" ? "000.000.000-00" : "00.000.000/0000-00"} />
-                </div>
-                <div className="sm:col-span-3">
-                  <label className="field-label">Segmento</label>
+                </Campo>
+                <Campo className="sm:col-span-3" label="Segmento">
                   <select className="field-input" value={form.segmento} onChange={(e) => set("segmento", e.target.value)}>
                     <option value="">—</option>
                     {SEGMENTOS.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
-                </div>
+                </Campo>
               </div>
             </div>
 
@@ -188,18 +183,15 @@ export function ClientesList() {
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Contato</h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
-                <div className="sm:col-span-2">
-                  <label className="field-label">Nome do contato</label>
+                <Campo className="sm:col-span-2" label="Nome do contato">
                   <input className="field-input" value={form.contatoNome} onChange={(e) => set("contatoNome", e.target.value)} placeholder="Ex.: João (responsável)" />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="field-label">Telefone / WhatsApp</label>
+                </Campo>
+                <Campo className="sm:col-span-2" label="Telefone / WhatsApp">
                   <input className="field-input" value={form.telefone} onChange={(e) => set("telefone", e.target.value)} placeholder="(62) 99999-9999" />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="field-label">E-mail</label>
+                </Campo>
+                <Campo className="sm:col-span-2" label="E-mail">
                   <input type="email" className="field-input" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="cliente@email.com" />
-                </div>
+                </Campo>
               </div>
             </div>
 
@@ -207,41 +199,34 @@ export function ClientesList() {
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Endereço</h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
-                <div className="sm:col-span-2">
-                  <label className="field-label">CEP</label>
+                <Campo className="sm:col-span-2" label="CEP">
                   <input className="field-input" value={form.cep} onChange={(e) => set("cep", e.target.value)} placeholder="00000-000" />
-                </div>
-                <div className="sm:col-span-3">
-                  <label className="field-label">Logradouro</label>
+                </Campo>
+                <Campo className="sm:col-span-3" label="Logradouro">
                   <input className="field-input" value={form.logradouro} onChange={(e) => set("logradouro", e.target.value)} placeholder="Rua / Av." />
-                </div>
-                <div className="sm:col-span-1">
-                  <label className="field-label">Número</label>
+                </Campo>
+                <Campo className="sm:col-span-1" label="Número">
                   <input className="field-input" value={form.numero} onChange={(e) => set("numero", e.target.value)} />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="field-label">Bairro</label>
+                </Campo>
+                <Campo className="sm:col-span-2" label="Bairro">
                   <input className="field-input" value={form.bairro} onChange={(e) => set("bairro", e.target.value)} />
-                </div>
-                <div className="sm:col-span-3">
-                  <label className="field-label">Cidade</label>
+                </Campo>
+                <Campo className="sm:col-span-3" label="Cidade">
                   <input className="field-input" value={form.cidade} onChange={(e) => set("cidade", e.target.value)} placeholder="Ex.: Anápolis" />
-                </div>
-                <div className="sm:col-span-1">
-                  <label className="field-label">UF</label>
+                </Campo>
+                <Campo className="sm:col-span-1" label="UF">
                   <select className="field-input" value={form.uf} onChange={(e) => set("uf", e.target.value)}>
                     <option value="">—</option>
                     {UFS.map((u) => <option key={u} value={u}>{u}</option>)}
                   </select>
-                </div>
+                </Campo>
               </div>
             </div>
 
             {/* Observações */}
-            <div>
-              <label className="field-label">Observações</label>
+            <Campo label="Observações">
               <textarea className="field-input min-h-[70px]" value={form.observacoes} onChange={(e) => set("observacoes", e.target.value)} placeholder="Notas internas sobre o cliente…" />
-            </div>
+            </Campo>
 
             <div className="flex justify-end gap-2">
               <button type="button" className="btn-secondary" onClick={fecharForm}>Cancelar</button>

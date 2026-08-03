@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { PERMISSOES, PERMISSOES_POR_MODULO, type PermissaoKey } from "@/lib/rbac/permissoes";
 import type { Cargo } from "@/lib/cargos/types";
 import { Alert, EmptyState, Loading } from "@/components/ui";
+import { Campo } from "@/components/Campo";
 
 /** Checkboxes de permissão agrupadas por módulo. */
 function PermissoesEditor({
@@ -211,8 +212,7 @@ export function CargosAdmin() {
       {novoAberto && (
         <form onSubmit={criar} className="section-card-destaque">
           <h2 className="section-title mb-4">Novo cargo</h2>
-          <div className="mb-4">
-            <label className="field-label">Nome do cargo *</label>
+          <Campo className="mb-4" label="Nome do cargo *">
             <input
               className="field-input max-w-xs"
               value={novoNome}
@@ -220,7 +220,7 @@ export function CargosAdmin() {
               placeholder="Ex.: Operacional, Comercial"
               required
             />
-          </div>
+          </Campo>
           <PermissoesEditor selecionadas={novoSel} onToggle={toggleNovo} idPrefix="novo" />
           <div className="mt-4">
             <button type="submit" className="btn-primary" disabled={criando || !novoNome.trim()}>

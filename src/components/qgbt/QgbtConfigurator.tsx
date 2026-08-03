@@ -7,6 +7,7 @@ import { QgbtParamsForm } from "./QgbtParamsForm";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
+import { Campo } from "@/components/Campo";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -180,11 +181,11 @@ export function QgbtConfigurator({ propostaId }: { propostaId?: string }) {
       <section className="section-card">
         <h2 className="section-title">Cliente e local</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3"><label className="field-label">Nome do cliente *</label><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></div>
-          <div className="sm:col-span-3"><label className="field-label">Cidade/UF *</label><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></div>
-          <div className="sm:col-span-3"><label className="field-label">Local / obra</label><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} /></div>
-          <div className="sm:col-span-1"><label className="field-label">Validade (dias)</label><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} /></div>
-          <div className="sm:col-span-2"><label className="field-label">Emissão</label><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></div>
+          <Campo className="sm:col-span-3" label="Nome do cliente *"><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></Campo>
+          <Campo className="sm:col-span-3" label="Cidade/UF *"><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></Campo>
+          <Campo className="sm:col-span-3" label="Local / obra"><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} /></Campo>
+          <Campo className="sm:col-span-1" label="Validade (dias)"><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} /></Campo>
+          <Campo className="sm:col-span-2" label="Emissão"><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></Campo>
         </div>
         <p className="mt-2 hint">A referência é gerada automaticamente ao salvar.</p>
       </section>
@@ -194,9 +195,9 @@ export function QgbtConfigurator({ propostaId }: { propostaId?: string }) {
         <h2 className="section-title">Quadro e custo</h2>
         <p className="mt-1 subtitle">Informe o custo dos componentes + montagem por quadro. Preço = <strong>custo × Fator K</strong>.</p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3"><label className="field-label">Especificação (A / V)</label><input className="field-input" value={form.especificacao} onChange={(e) => set("especificacao", e.target.value)} placeholder="Ex.: 350 A / 380 V IP55" /></div>
-          <div className="sm:col-span-1"><label className="field-label">Nº de quadros</label><input type="number" min={1} className="field-input" value={form.qtdQuadros} onChange={(e) => set("qtdQuadros", Math.max(1, Number(e.target.value)))} /></div>
-          <div className="sm:col-span-2"><label className="field-label">Custo por quadro (R$)</label><input className="field-input" inputMode="decimal" value={form.custoUnitario} onChange={(e) => set("custoUnitario", e.target.value)} placeholder="Ex.: 21.058" /></div>
+          <Campo className="sm:col-span-3" label="Especificação (A / V)"><input className="field-input" value={form.especificacao} onChange={(e) => set("especificacao", e.target.value)} placeholder="Ex.: 350 A / 380 V IP55" /></Campo>
+          <Campo className="sm:col-span-1" label="Nº de quadros"><input type="number" min={1} className="field-input" value={form.qtdQuadros} onChange={(e) => set("qtdQuadros", Math.max(1, Number(e.target.value)))} /></Campo>
+          <Campo className="sm:col-span-2" label="Custo por quadro (R$)"><input className="field-input" inputMode="decimal" value={form.custoUnitario} onChange={(e) => set("custoUnitario", e.target.value)} placeholder="Ex.: 21.058" /></Campo>
         </div>
 
         {preco && preco.custo > 0 && (
@@ -218,11 +219,9 @@ export function QgbtConfigurator({ propostaId }: { propostaId?: string }) {
           )}
         </div>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3">
-            <label className="field-label">Valor total (R$) *</label>
+          <Campo className="sm:col-span-3" label="Valor total (R$) *" hint={preco && preco.custo > 0 ? <p className="mt-1 hint">custo {brl(preco.custo)} × Fator K {nf(preco.fatorK, 2)} → sugerido {brl(preco.faturamento)}</p> : null}>
             <input className="field-input" value={form.valorServico} onChange={(e) => { precoTocado.current = true; set("valorServico", e.target.value); }} placeholder="Ex.: 32.700,00" />
-            {preco && preco.custo > 0 ? <p className="mt-1 hint">custo {brl(preco.custo)} × Fator K {nf(preco.fatorK, 2)} → sugerido {brl(preco.faturamento)}</p> : null}
-          </div>
+          </Campo>
           <div className="sm:col-span-3 flex items-end">
             <div className="w-full rounded-md bg-gta-navy p-2 text-white shadow-sm">
               <div className="text-xs text-slate-300">Total ao cliente</div>
@@ -253,9 +252,9 @@ export function QgbtConfigurator({ propostaId }: { propostaId?: string }) {
       <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Textos da proposta (opcional)</summary>
         <div className="mt-4 space-y-3">
-          <div><label className="field-label">Objeto</label><textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
-          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className="field-input min-h-[90px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
-          <div><label className="field-label">Prazo de execução</label><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
+          <Campo label="Objeto"><textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></Campo>
+          <Campo label="Condições gerais (uma por linha)"><textarea className="field-input min-h-[90px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></Campo>
+          <Campo label="Prazo de execução"><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></Campo>
           <p className="hint">A forma de pagamento é montada na seção “Condições de pagamento” acima.</p>
         </div>
       </details>

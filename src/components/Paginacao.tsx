@@ -43,10 +43,10 @@ export function usePaginacao<T>(itens: T[], porPaginaInicial = 20): { paginados:
   };
 }
 
-/* 36px é o padrão de ação-ícone da plataforma (`.icon-btn`); aqui a borda é
-   necessária porque o botão fica solto no rodapé, sem cartão em volta. */
+/* `.icon-btn` traz os 36px do padrão da plataforma e os 44px no toque; a borda
+   é somada aqui porque o botão fica solto no rodapé, sem cartão em volta. */
 const btnCls =
-  "inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700";
+  "icon-btn rounded-md border border-slate-300 !text-slate-600 hover:!bg-slate-100 hover:!text-slate-900 disabled:opacity-40 dark:border-slate-600 dark:!text-slate-300 dark:hover:!bg-slate-700 dark:hover:!text-white";
 
 export function Paginacao({ total, inicio, fim, pagina, totalPaginas, porPagina, setPagina, setPorPagina }: PaginacaoControles) {
   if (total === 0) return null;

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ROLE_LABEL, type PublicUser, type Role } from "@/lib/users/types";
 import type { Cargo } from "@/lib/cargos/types";
 import { Alert, Badge, Loading, type Tone } from "@/components/ui";
+import { Campo } from "@/components/Campo";
 
 const ROLE_TONE: Record<Role, Tone> = { admin: "indigo", member: "slate" };
 
@@ -134,23 +135,19 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
         <form onSubmit={criar} className="section-card-destaque">
           <h2 className="section-title mb-3">Novo usuário</h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
-            <div className="sm:col-span-3">
-              <label className="field-label">Nome *</label>
+            <Campo className="sm:col-span-3" label="Nome *">
               <input className="field-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-            </div>
-            <div className="sm:col-span-3">
-              <label className="field-label">E-mail *</label>
+            </Campo>
+            <Campo className="sm:col-span-3" label="E-mail *">
               <input type="email" className="field-input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="field-label">Perfil</label>
+            </Campo>
+            <Campo className="sm:col-span-2" label="Perfil">
               <select className="field-input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
                 <option value="member">Membro</option>
                 <option value="admin">Administrador</option>
               </select>
-            </div>
-            <div className="sm:col-span-2">
-              <label className="field-label">Cargo</label>
+            </Campo>
+            <Campo className="sm:col-span-2" label="Cargo">
               <select
                 className="field-input"
                 value={form.cargoId}
@@ -163,11 +160,10 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
                   <option key={c.id} value={c.id}>{c.nome}</option>
                 ))}
               </select>
-            </div>
-            <div className="sm:col-span-2">
-              <label className="field-label">Senha provisória (opcional)</label>
+            </Campo>
+            <Campo className="sm:col-span-2" label="Senha provisória (opcional)">
               <input className="field-input" value={form.senhaProvisoria} onChange={(e) => setForm({ ...form, senhaProvisoria: e.target.value })} placeholder="Gerada automaticamente se vazio" />
-            </div>
+            </Campo>
           </div>
           <div className="mt-3">
             <button type="submit" className="btn-primary" disabled={salvando}>
@@ -302,7 +298,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
                         {u.active ? "Desativar" : "Ativar"}
                       </button>
                       <button
-                        className="text-red-500 hover:underline disabled:opacity-40"
+                        className="btn-link text-xs !text-red-600 dark:!text-red-400 disabled:opacity-40"
                         disabled={eu}
                         onClick={() => excluir(u)}
                       >

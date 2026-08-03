@@ -7,6 +7,7 @@ import { SubestacaoParamsForm } from "./SubestacaoParamsForm";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
+import { Campo } from "@/components/Campo";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -324,26 +325,21 @@ export function SubestacaoConfigurator({ propostaId }: { propostaId?: string }) 
       <section className="section-card">
         <h2 className="section-title">Cliente e local</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3">
-            <label className="field-label">Nome do cliente *</label>
+          <Campo className="sm:col-span-3" label="Nome do cliente *">
             <ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} />
-          </div>
-          <div className="sm:col-span-3">
-            <label className="field-label">Cidade/UF *</label>
+          </Campo>
+          <Campo className="sm:col-span-3" label="Cidade/UF *">
             <input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goianápolis/GO" />
-          </div>
-          <div className="sm:col-span-3">
-            <label className="field-label">Local da obra</label>
+          </Campo>
+          <Campo className="sm:col-span-3" label="Local da obra">
             <input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Edifício Residencial — Centro" />
-          </div>
-          <div className="sm:col-span-1">
-            <label className="field-label">Validade (dias)</label>
+          </Campo>
+          <Campo className="sm:col-span-1" label="Validade (dias)">
             <input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="field-label">Emissão</label>
+          </Campo>
+          <Campo className="sm:col-span-2" label="Emissão">
             <input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} />
-          </div>
+          </Campo>
         </div>
         <p className="mt-2 hint">A referência (nº da proposta) é gerada automaticamente ao salvar.</p>
       </section>
@@ -355,59 +351,50 @@ export function SubestacaoConfigurator({ propostaId }: { propostaId?: string }) 
           Informe a carga (ou a demanda) — o sistema dimensiona o transformador e a proteção.
         </p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-2">
-            <label className="field-label">Tipo de subestação</label>
+          <Campo className="sm:col-span-2" label="Tipo de subestação">
             <select className="field-input" value={form.tipoSE} onChange={(e) => set("tipoSE", e.target.value as Form["tipoSE"])}>
               {["Aérea", "Abrigada", "Pedestal"].map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
-          </div>
-          <div className="sm:col-span-2">
-            <label className="field-label">Tensão primária (MT)</label>
+          </Campo>
+          <Campo className="sm:col-span-2" label="Tensão primária (MT)">
             <select className="field-input" value={form.tensaoMt} onChange={(e) => set("tensaoMt", Number(e.target.value))}>
               <option value={13.8}>13,8 kV</option>
               <option value={34.5}>34,5 kV</option>
             </select>
-          </div>
-          <div className="sm:col-span-2">
-            <label className="field-label">Tensão secundária (BT)</label>
+          </Campo>
+          <Campo className="sm:col-span-2" label="Tensão secundária (BT)">
             <select className="field-input" value={form.tensaoBt} onChange={(e) => set("tensaoBt", Number(e.target.value))}>
               <option value={380}>380/220 V</option>
               <option value={220}>220/127 V</option>
               <option value={440}>440/254 V</option>
             </select>
-          </div>
-          <div className="sm:col-span-2">
-            <label className="field-label">Entrada por</label>
+          </Campo>
+          <Campo className="sm:col-span-2" label="Entrada por">
             <select className="field-input" value={form.modo} onChange={(e) => set("modo", e.target.value as Form["modo"])}>
               <option value="carga">Carga instalada (kW)</option>
               <option value="demanda">Demanda (kVA)</option>
             </select>
-          </div>
+          </Campo>
           {form.modo === "carga" ? (
             <>
-              <div className="sm:col-span-2">
-                <label className="field-label">Carga instalada (kW) *</label>
+              <Campo className="sm:col-span-2" label="Carga instalada (kW) *">
                 <input className="field-input" inputMode="decimal" value={form.cargaKw} onChange={(e) => set("cargaKw", e.target.value)} placeholder="Ex.: 250" />
-              </div>
-              <div className="sm:col-span-1">
-                <label className="field-label">Fator de demanda</label>
+              </Campo>
+              <Campo className="sm:col-span-1" label="Fator de demanda">
                 <input className="field-input" inputMode="decimal" value={form.fatorDemanda} onChange={(e) => set("fatorDemanda", e.target.value)} />
-              </div>
-              <div className="sm:col-span-1">
-                <label className="field-label">Fator de potência</label>
+              </Campo>
+              <Campo className="sm:col-span-1" label="Fator de potência">
                 <input className="field-input" inputMode="decimal" value={form.fatorPotencia} onChange={(e) => set("fatorPotencia", e.target.value)} />
-              </div>
+              </Campo>
             </>
           ) : (
-            <div className="sm:col-span-2">
-              <label className="field-label">Demanda (kVA) *</label>
+            <Campo className="sm:col-span-2" label="Demanda (kVA) *">
               <input className="field-input" inputMode="decimal" value={form.demandaKva} onChange={(e) => set("demandaKva", e.target.value)} placeholder="Ex.: 225" />
-            </div>
+            </Campo>
           )}
-          <div className="sm:col-span-2">
-            <label className="field-label">Nº de subestações</label>
+          <Campo className="sm:col-span-2" label="Nº de subestações">
             <input type="number" className="field-input" value={form.qtdSubestacoes} onChange={(e) => set("qtdSubestacoes", Number(e.target.value))} />
-          </div>
+          </Campo>
         </div>
 
         {sizing?.aviso && <Alert tone="amber" className="mt-4">{sizing.aviso}</Alert>}
@@ -449,19 +436,17 @@ export function SubestacaoConfigurator({ propostaId }: { propostaId?: string }) 
           )}
         </div>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-2">
-            <label className="field-label">Valor do projeto (R$) *</label>
-            <input className="field-input" value={form.valorProjeto} onChange={(e) => { precoTocado.current = true; set("valorProjeto", e.target.value); }} placeholder="Ex.: 8.000,00" />
-            {preco ? (
+          <Campo className="sm:col-span-2" label="Valor do projeto (R$) *" hint={preco ? (
               <p className="mt-1 hint">
                 {nf(preco.horas, 1)} h × valor/hora + ART = custo {brl(preco.custo)} · margem {nf(preco.margem * 100, 0)}% → sugerido {brl(preco.precoTotal)}
               </p>
-            ) : null}
-          </div>
-          <div className="sm:col-span-2">
-            <label className="field-label">Impostos / NF (R$)</label>
+            ) : null}>
+
+            <input className="field-input" value={form.valorProjeto} onChange={(e) => { precoTocado.current = true; set("valorProjeto", e.target.value); }} placeholder="Ex.: 8.000,00" />
+          </Campo>
+          <Campo className="sm:col-span-2" label="Impostos / NF (R$)">
             <input className="field-input" value={form.impostos} onChange={(e) => set("impostos", e.target.value)} />
-          </div>
+          </Campo>
           <div className="sm:col-span-2 flex items-end">
             <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
               <input type="checkbox" className="h-4 w-4" checked={form.incluirConexao} onChange={(e) => set("incluirConexao", e.target.checked)} />
@@ -484,9 +469,9 @@ export function SubestacaoConfigurator({ propostaId }: { propostaId?: string }) 
       <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Textos da proposta (opcional)</summary>
         <div className="mt-4 space-y-3">
-          <div><label className="field-label">Objeto</label><textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
-          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className="field-input min-h-[70px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
-          <div><label className="field-label">Prazo de execução</label><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
+          <Campo label="Objeto"><textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></Campo>
+          <Campo label="Condições gerais (uma por linha)"><textarea className="field-input min-h-[70px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></Campo>
+          <Campo label="Prazo de execução"><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></Campo>
         </div>
       </details>
 

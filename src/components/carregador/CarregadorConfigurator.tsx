@@ -10,6 +10,7 @@ import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } f
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
 import { POTENCIAS_CA, acharPotencia } from "@/services/carregador/potencias";
+import { Campo } from "@/components/Campo";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -267,11 +268,11 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
       <section className="section-card">
         <h2 className="section-title">Cliente e local</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3"><label className="field-label">Nome do cliente *</label><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></div>
-          <div className="sm:col-span-3"><label className="field-label">Cidade/UF *</label><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></div>
-          <div className="sm:col-span-3"><label className="field-label">Local da instalação</label><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Garagem — vaga 12" /></div>
-          <div className="sm:col-span-1"><label className="field-label">Validade (dias)</label><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} /></div>
-          <div className="sm:col-span-2"><label className="field-label">Emissão</label><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></div>
+          <Campo className="sm:col-span-3" label="Nome do cliente *"><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></Campo>
+          <Campo className="sm:col-span-3" label="Cidade/UF *"><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></Campo>
+          <Campo className="sm:col-span-3" label="Local da instalação"><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Garagem — vaga 12" /></Campo>
+          <Campo className="sm:col-span-1" label="Validade (dias)"><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} /></Campo>
+          <Campo className="sm:col-span-2" label="Emissão"><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></Campo>
         </div>
         <p className="mt-2 hint">A referência é gerada automaticamente ao salvar.</p>
       </section>
@@ -306,15 +307,14 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
               <input id="ev-potencia-livre" className="field-input" inputMode="decimal" value={form.potenciaKw} onChange={(e) => set("potenciaKw", e.target.value)} placeholder="Ex.: 9,6" />
             </div>
           )}
-          <div className="sm:col-span-2">
-            <label className="field-label">Alimentação</label>
+          <Campo className="sm:col-span-2" label="Alimentação">
             <select className="field-input" value={form.fase} onChange={(e) => set("fase", e.target.value as Form["fase"])}>
               <option value="mono">Monofásico (220 V)</option>
               <option value="tri">Trifásico (380 V)</option>
             </select>
-          </div>
-          <div className="sm:col-span-1"><label className="field-label">Distância (m)</label><input className="field-input" inputMode="decimal" value={form.distanciaM} onChange={(e) => set("distanciaM", e.target.value)} /></div>
-          <div className="sm:col-span-1"><label className="field-label">Nº de pontos</label><input type="number" className="field-input" value={form.qtdPontos} onChange={(e) => set("qtdPontos", Number(e.target.value))} /></div>
+          </Campo>
+          <Campo className="sm:col-span-1" label="Distância (m)"><input className="field-input" inputMode="decimal" value={form.distanciaM} onChange={(e) => set("distanciaM", e.target.value)} /></Campo>
+          <Campo className="sm:col-span-1" label="Nº de pontos"><input type="number" className="field-input" value={form.qtdPontos} onChange={(e) => set("qtdPontos", Number(e.target.value))} /></Campo>
         </div>
 
         {/* A quem a potência escolhida serve. Em CA quem limita é o carregador
@@ -334,14 +334,12 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
         )}
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-6">
-            <label className="field-label">Proteção diferencial (NBR 17019)</label>
+          <Campo className="sm:col-span-6" label="Proteção diferencial (NBR 17019)" hint={<><p className="mt-1 hint">A NBR 17019 proíbe DR Tipo AC. A maioria dos WallBox (WEG, Intelbras, Wallbox) tem detecção de 6 mA CC integrada.</p></>}>
             <select className="field-input" value={form.protecaoCcIntegrada ? "sim" : "nao"} onChange={(e) => set("protecaoCcIntegrada", e.target.value === "sim")}>
               <option value="sim">Carregador com detecção de 6 mA CC integrada → DR Tipo A</option>
               <option value="nao">Sem detecção integrada → DR Tipo B (obrigatório)</option>
             </select>
-            <p className="mt-1 hint">A NBR 17019 proíbe DR Tipo AC. A maioria dos WallBox (WEG, Intelbras, Wallbox) tem detecção de 6 mA CC integrada.</p>
-          </div>
+          </Campo>
         </div>
 
         {sizing && (
@@ -412,13 +410,17 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
               <tbody>
                 {materiais.map((m, i) => (
                   <tr key={i}>
-                    <td className="py-1 pr-2"><input className="field-input !px-2 !py-1 text-sm" value={m.descricao} onChange={(e) => setMat(i, "descricao", e.target.value)} placeholder="Descrição" /></td>
-                    <td className="px-1"><input className="field-input !px-2 !py-1 text-sm" inputMode="decimal" value={m.qtd} onChange={(e) => setMat(i, "qtd", e.target.value)} /></td>
-                    <td className="px-1"><input className="field-input !px-1.5 !py-1 text-sm" value={m.unidade} onChange={(e) => setMat(i, "unidade", e.target.value)} /></td>
-                    <td className="px-1"><input className="field-input !px-2 !py-1 text-right text-sm" inputMode="decimal" value={m.precoUnit} onChange={(e) => setMat(i, "precoUnit", e.target.value)} /></td>
+                    {/* O cabeçalho da coluna não nomeia o campo para um leitor de
+                        tela; sem `aria-label` a lista vira dezenas de caixas
+                        anônimas. O nome do material entra no rótulo para
+                        distinguir a linha. */}
+                    <td className="py-1 pr-2"><input className="field-input !px-2 !py-1 text-sm" value={m.descricao} onChange={(e) => setMat(i, "descricao", e.target.value)} placeholder="Descrição" aria-label={`Material da linha ${i + 1}`} /></td>
+                    <td className="px-1"><input className="field-input !px-2 !py-1 text-sm" inputMode="decimal" value={m.qtd} onChange={(e) => setMat(i, "qtd", e.target.value)} aria-label={`Quantidade de ${m.descricao || `material da linha ${i + 1}`}`} /></td>
+                    <td className="px-1"><input className="field-input !px-1.5 !py-1 text-sm" value={m.unidade} onChange={(e) => setMat(i, "unidade", e.target.value)} aria-label={`Unidade de ${m.descricao || `material da linha ${i + 1}`}`} /></td>
+                    <td className="px-1"><input className="field-input !px-2 !py-1 text-right text-sm" inputMode="decimal" value={m.precoUnit} onChange={(e) => setMat(i, "precoUnit", e.target.value)} aria-label={`Preço unitário de ${m.descricao || `material da linha ${i + 1}`}`} /></td>
                     <td className="whitespace-nowrap px-1 text-right text-slate-600 dark:text-slate-300">{brl(rowTotal(m))}</td>
                     <td className="px-0 text-center">
-                      <button type="button" onClick={() => removeMat(i)} className="inline-flex h-8 w-8 items-center justify-center rounded text-slate-300 hover:bg-red-50 hover:text-red-600 dark:text-slate-600 dark:hover:bg-red-900/20 dark:hover:text-red-400" aria-label="Remover material">
+                      <button type="button" onClick={() => removeMat(i)} className="icon-btn" aria-label={`Remover ${m.descricao || `material da linha ${i + 1}`}`}>
                         <X className="h-4 w-4" aria-hidden />
                       </button>
                     </td>
@@ -440,16 +442,12 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
           )}
         </div>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-2">
-            <label className="field-label">Valor do serviço (R$) *</label>
+          <Campo className="sm:col-span-2" label="Valor do serviço (R$) *" hint={preco ? <p className="mt-1 hint">custo {brl(preco.custoGeral)} × Fator K {nf(preco.fatorK, 2)} → sugerido {brl(preco.preco)} · margem líq. {nf(preco.margem * 100, 0)}%</p> : null}>
             <input className="field-input" value={form.valorServico} onChange={(e) => { precoTocado.current = true; set("valorServico", e.target.value); }} placeholder="Ex.: 5.000,00" />
-            {preco ? <p className="mt-1 hint">custo {brl(preco.custoGeral)} × Fator K {nf(preco.fatorK, 2)} → sugerido {brl(preco.preco)} · margem líq. {nf(preco.margem * 100, 0)}%</p> : null}
-          </div>
-          <div className="sm:col-span-2">
-            <label className="field-label">Equipamento / carregador (R$)</label>
+          </Campo>
+          <Campo className="sm:col-span-2" label="Equipamento / carregador (R$)" hint={<><p className="mt-1 hint">0 = fornecido pelo cliente.</p></>}>
             <input className="field-input" value={form.valorEquipamento} onChange={(e) => set("valorEquipamento", e.target.value)} />
-            <p className="mt-1 hint">0 = fornecido pelo cliente.</p>
-          </div>
+          </Campo>
           <div className="sm:col-span-2 flex items-end">
             <div className="w-full rounded-md bg-gta-navy p-2 text-white shadow-sm">
               <div className="text-xs text-slate-300">Total ao cliente</div>
@@ -484,10 +482,10 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
       <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Textos da proposta (opcional)</summary>
         <div className="mt-4 space-y-3">
-          <div><label className="field-label">Subtítulo do cabeçalho</label><input className="field-input" value={form.subtitulo} onChange={(e) => set("subtitulo", e.target.value)} /></div>
-          <div><label className="field-label">Objeto</label><textarea className="field-input min-h-[60px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
-          <div><label className="field-label">Texto do objetivo</label><textarea className="field-input min-h-[90px]" value={form.textoObjetivo} onChange={(e) => set("textoObjetivo", e.target.value)} /></div>
-          <div><label className="field-label">Prazo de execução</label><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
+          <Campo label="Subtítulo do cabeçalho"><input className="field-input" value={form.subtitulo} onChange={(e) => set("subtitulo", e.target.value)} /></Campo>
+          <Campo label="Objeto"><textarea className="field-input min-h-[60px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></Campo>
+          <Campo label="Texto do objetivo"><textarea className="field-input min-h-[90px]" value={form.textoObjetivo} onChange={(e) => set("textoObjetivo", e.target.value)} /></Campo>
+          <Campo label="Prazo de execução"><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></Campo>
           <p className="hint">A forma de pagamento é montada na seção “Condições de pagamento” acima.</p>
         </div>
       </details>

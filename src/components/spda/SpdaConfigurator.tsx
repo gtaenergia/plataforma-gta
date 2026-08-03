@@ -8,6 +8,7 @@ import { SpdaParamsForm } from "./SpdaParamsForm";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
+import { Campo } from "@/components/Campo";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -210,11 +211,11 @@ export function SpdaConfigurator({ propostaId }: { propostaId?: string }) {
       <section className="section-card">
         <h2 className="section-title">Cliente e local</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3"><label className="field-label">Nome do cliente *</label><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></div>
-          <div className="sm:col-span-3"><label className="field-label">Cidade/UF *</label><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></div>
-          <div className="sm:col-span-3"><label className="field-label">Local / obra</label><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Campus — Quirinópolis/GO" /></div>
-          <div className="sm:col-span-1"><label className="field-label">Validade (dias)</label><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} /></div>
-          <div className="sm:col-span-2"><label className="field-label">Emissão</label><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></div>
+          <Campo className="sm:col-span-3" label="Nome do cliente *"><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></Campo>
+          <Campo className="sm:col-span-3" label="Cidade/UF *"><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></Campo>
+          <Campo className="sm:col-span-3" label="Local / obra"><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Campus — Quirinópolis/GO" /></Campo>
+          <Campo className="sm:col-span-1" label="Validade (dias)"><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} /></Campo>
+          <Campo className="sm:col-span-2" label="Emissão"><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></Campo>
         </div>
         <p className="mt-2 hint">A referência é gerada automaticamente ao salvar.</p>
       </section>
@@ -224,9 +225,9 @@ export function SpdaConfigurator({ propostaId }: { propostaId?: string }) {
         <h2 className="section-title">Estrutura e área</h2>
         <p className="mt-1 subtitle">O preço vem das métricas reais: <strong>risco por bloco</strong> + <strong>projeto por m²</strong>.</p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-2"><label className="field-label">Nº de blocos / estruturas *</label><input type="number" min={1} className="field-input" value={form.nBlocos} onChange={(e) => set("nBlocos", Math.max(1, Number(e.target.value)))} /></div>
-          <div className="sm:col-span-2"><label className="field-label">Área total de cobertura (m²) *</label><input className="field-input" inputMode="decimal" value={form.areaM2} onChange={(e) => set("areaM2", e.target.value)} placeholder="Ex.: 3.790" /></div>
-          <div className="sm:col-span-2"><label className="field-label">Custo logístico estimado (R$)</label><input className="field-input" inputMode="decimal" value={form.custoLogistico} onChange={(e) => set("custoLogistico", e.target.value)} placeholder="0" /><p className="mt-1 hint">Deslocamento, hospedagem, diárias, terrômetro, estagiário — só para conferir a margem.</p></div>
+          <Campo className="sm:col-span-2" label="Nº de blocos / estruturas *"><input type="number" min={1} className="field-input" value={form.nBlocos} onChange={(e) => set("nBlocos", Math.max(1, Number(e.target.value)))} /></Campo>
+          <Campo className="sm:col-span-2" label="Área total de cobertura (m²) *"><input className="field-input" inputMode="decimal" value={form.areaM2} onChange={(e) => set("areaM2", e.target.value)} placeholder="Ex.: 3.790" /></Campo>
+          <Campo className="sm:col-span-2" label="Custo logístico estimado (R$)" hint={<><p className="mt-1 hint">Deslocamento, hospedagem, diárias, terrômetro, estagiário — só para conferir a margem.</p></>}><input className="field-input" inputMode="decimal" value={form.custoLogistico} onChange={(e) => set("custoLogistico", e.target.value)} placeholder="0" /></Campo>
         </div>
 
         {preco && (
@@ -251,16 +252,12 @@ export function SpdaConfigurator({ propostaId }: { propostaId?: string }) {
           )}
         </div>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-2">
-            <label className="field-label">Valor do projeto (R$) *</label>
+          <Campo className="sm:col-span-2" label="Valor do projeto (R$) *" hint={preco ? <p className="mt-1 hint">risco {brl(riscoItem)} + projeto {brl(projetoItem)} = {brl(valorTotalProjeto)} · margem {nf(margemVal * 100, 0)}%</p> : null}>
             <input className="field-input" value={form.valorProjeto} onChange={(e) => { precoTocado.current = true; set("valorProjeto", e.target.value); }} placeholder="Ex.: 21.870,00" />
-            {preco ? <p className="mt-1 hint">risco {brl(riscoItem)} + projeto {brl(projetoItem)} = {brl(valorTotalProjeto)} · margem {nf(margemVal * 100, 0)}%</p> : null}
-          </div>
-          <div className="sm:col-span-2">
-            <label className="field-label">Execução (R$, 0 = só projeto)</label>
+          </Campo>
+          <Campo className="sm:col-span-2" label="Execução (R$, 0 = só projeto)" hint={<><p className="mt-1 hint">Mão de obra; materiais faturados à parte.</p></>}>
             <input className="field-input" value={form.valorExecucao} onChange={(e) => set("valorExecucao", e.target.value)} />
-            <p className="mt-1 hint">Mão de obra; materiais faturados à parte.</p>
-          </div>
+          </Campo>
           <div className="sm:col-span-2 flex items-end">
             <div className="w-full rounded-md bg-gta-navy p-2 text-white shadow-sm">
               <div className="text-xs text-slate-300">Total ao cliente</div>
@@ -295,9 +292,9 @@ export function SpdaConfigurator({ propostaId }: { propostaId?: string }) {
       <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Textos da proposta (opcional)</summary>
         <div className="mt-4 space-y-3">
-          <div><label className="field-label">Objeto</label><textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
-          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className="field-input min-h-[90px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
-          <div><label className="field-label">Prazo de execução</label><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
+          <Campo label="Objeto"><textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></Campo>
+          <Campo label="Condições gerais (uma por linha)"><textarea className="field-input min-h-[90px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></Campo>
+          <Campo label="Prazo de execução"><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></Campo>
         </div>
       </details>
 

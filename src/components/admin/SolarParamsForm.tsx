@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Alert, Loading } from "@/components/ui";
+import { Campo } from "@/components/Campo";
 /**
  * Formulário dos parâmetros do Solar (custos/imposto/comissão/eficiência).
  * Valores em % são exibidos como porcentagem (7,01) e salvos como fração (0,0701).
@@ -153,16 +154,14 @@ export function SolarParamsForm({ onSaved }: { onSaved?: (p: Params) => void }) 
           <h3 className="text-sm font-semibold text-gta-navy dark:text-slate-200">{grupo.titulo}</h3>
           <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-3">
             {grupo.campos.map((c) => (
-              <div key={c.key}>
-                <label className="field-label">{c.label}</label>
+              <Campo key={c.key} label={<>{c.label}</>} hint={<><p className="mt-1 hint">{c.help}</p></>}>
                 <input
                   className="field-input"
                   inputMode="decimal"
                   value={texto[c.key]}
                   onChange={(e) => setTexto({ ...texto, [c.key]: e.target.value })}
                 />
-                <p className="mt-1 hint">{c.help}</p>
-              </div>
+              </Campo>
             ))}
           </div>
         </div>

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, MessageSquare, X } from "lucide-react";
+import { MessageSquare, X } from "lucide-react";
 import {
   PRIORIDADES,
   STATUS_TAREFA,
@@ -16,6 +16,7 @@ import {
   type Task,
 } from "@/lib/tasks/types";
 import { Alert, Loading } from "@/components/ui";
+import { Paginacao, usePaginacao } from "@/components/Paginacao";
 import { MarcaPrioridade, PontoStatus } from "./marcadores";
 
 interface Usuario {
@@ -87,9 +88,6 @@ export function TaskList() {
   const [fDemandante, setFDemandante] = useState<string>("todos");
   const [busca, setBusca] = useState("");
 
-  // paginação
-  const [pagina, setPagina] = useState(1);
-  const [porPagina, setPorPagina] = useState(20);
 
   useEffect(() => {
     (async () => {
@@ -168,16 +166,8 @@ export function TaskList() {
   }, [tasks, fStatus, fResp, fCliente, fCategoria, fDemandante, busca]);
 
   // volta para a 1ª página quando os filtros/busca mudam
-  useEffect(() => {
-    setPagina(1);
-  }, [fStatus, fResp, fCliente, fCategoria, fDemandante, busca, porPagina]);
-
-  // fatia a página atual (paginação no cliente sobre a lista já filtrada)
-  const totalPaginas = Math.max(1, Math.ceil(visiveis.length / porPagina));
-  const paginaAtual = Math.min(pagina, totalPaginas);
-  const paginadas = visiveis.slice((paginaAtual - 1) * porPagina, paginaAtual * porPagina);
-  const inicio = visiveis.length === 0 ? 0 : (paginaAtual - 1) * porPagina + 1;
-  const fim = Math.min(paginaAtual * porPagina, visiveis.length);
+  // O hook compartilhado já volta para a 1ª página quando o total muda.
+  const { paginados, controles } = usePaginacao(visiveis);
 
   function aplicar(task: Task) {
     setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
@@ -320,7 +310,7 @@ export function TaskList() {
                 </td>
               </tr>
             )}
-            {paginadas.map((t) => (
+            {paginados.map((t) => (
               <TaskRow
                 key={t.id}
                 task={t}
@@ -333,49 +323,10 @@ export function TaskList() {
         </table>
       </div>
 
-      {/* paginação */}
-      {visiveis.length > 0 && (
-        <div className="flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:gap-3 dark:text-slate-300">
-          <div className="flex items-center gap-2">
-            <span className="text-slate-600 dark:text-slate-400">
-              {inicio}–{fim} de {visiveis.length}
-            </span>
-            <select
-              aria-label="Tarefas por página"
-              className="field-input !w-auto !py-1 text-xs"
-              value={porPagina}
-              onChange={(e) => setPorPagina(Number(e.target.value))}
-            >
-              {[10, 20, 50, 100].map((n) => (
-                <option key={n} value={n}>
-                  {n} por página
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-              disabled={paginaAtual <= 1}
-              onClick={() => setPagina(paginaAtual - 1)}
-              aria-label="Anterior"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="px-1 text-slate-600 dark:text-slate-400">
-              Página {paginaAtual} de {totalPaginas}
-            </span>
-            <button
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-              disabled={paginaAtual >= totalPaginas}
-              onClick={() => setPagina(paginaAtual + 1)}
-              aria-label="Próxima"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Componente compartilhado, o mesmo de Propostas, Clientes e Aprovações.
+          A cópia que existia aqui já tinha divergido: botões de 32px contra os
+          36px do padrão — e, no celular, abaixo do alvo de toque. */}
+      <Paginacao {...controles} />
     </div>
   );
 }

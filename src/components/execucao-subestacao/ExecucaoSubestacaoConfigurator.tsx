@@ -7,6 +7,7 @@ import { ExecSeParamsForm } from "./ExecSeParamsForm";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
+import { Campo } from "@/components/Campo";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -192,11 +193,11 @@ export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: st
       <section className="section-card">
         <h2 className="section-title">Cliente e local</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3"><label className="field-label">Nome do cliente *</label><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></div>
-          <div className="sm:col-span-3"><label className="field-label">Cidade/UF *</label><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></div>
-          <div className="sm:col-span-3"><label className="field-label">Local / obra</label><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Zona rural — GO" /></div>
-          <div className="sm:col-span-1"><label className="field-label">Validade (dias)</label><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} /></div>
-          <div className="sm:col-span-2"><label className="field-label">Emissão</label><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></div>
+          <Campo className="sm:col-span-3" label="Nome do cliente *"><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></Campo>
+          <Campo className="sm:col-span-3" label="Cidade/UF *"><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></Campo>
+          <Campo className="sm:col-span-3" label="Local / obra"><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Zona rural — GO" /></Campo>
+          <Campo className="sm:col-span-1" label="Validade (dias)"><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} /></Campo>
+          <Campo className="sm:col-span-2" label="Emissão"><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></Campo>
         </div>
         <p className="mt-2 hint">A referência é gerada automaticamente ao salvar.</p>
       </section>
@@ -206,18 +207,17 @@ export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: st
         <h2 className="section-title">Custo da execução</h2>
         <p className="mt-1 subtitle">Informe o custo do levantamento (BOM). O preço é <strong>custo × Fator K</strong>; o equipamento principal é faturado à parte.</p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-2"><label className="field-label">Potência (kVA)</label><input className="field-input" inputMode="decimal" value={form.potenciaKva} onChange={(e) => set("potenciaKva", e.target.value)} placeholder="Ex.: 750" /></div>
-          <div className="sm:col-span-2">
-            <label className="field-label">Tipo</label>
+          <Campo className="sm:col-span-2" label="Potência (kVA)"><input className="field-input" inputMode="decimal" value={form.potenciaKva} onChange={(e) => set("potenciaKva", e.target.value)} placeholder="Ex.: 750" /></Campo>
+          <Campo className="sm:col-span-2" label="Tipo">
             <select className="field-input" value={form.tipo} onChange={(e) => set("tipo", e.target.value as Form["tipo"])}>
               <option value="Aérea">Aérea</option>
               <option value="Abrigada">Abrigada</option>
               <option value="Pedestal">Pedestal</option>
             </select>
-          </div>
-          <div className="sm:col-span-2"><label className="field-label">Materiais (R$)</label><input className="field-input" inputMode="decimal" value={form.custoMateriais} onChange={(e) => set("custoMateriais", e.target.value)} placeholder="Ex.: 55.000" /></div>
-          <div className="sm:col-span-2"><label className="field-label">Mão de obra (R$)</label><input className="field-input" inputMode="decimal" value={form.custoMaoObra} onChange={(e) => set("custoMaoObra", e.target.value)} placeholder="Ex.: 6.000" /></div>
-          <div className="sm:col-span-2"><label className="field-label">Projeto/ART/outros (R$)</label><input className="field-input" inputMode="decimal" value={form.custoProjetoOutros} onChange={(e) => set("custoProjetoOutros", e.target.value)} placeholder="Ex.: 12.000" /></div>
+          </Campo>
+          <Campo className="sm:col-span-2" label="Materiais (R$)"><input className="field-input" inputMode="decimal" value={form.custoMateriais} onChange={(e) => set("custoMateriais", e.target.value)} placeholder="Ex.: 55.000" /></Campo>
+          <Campo className="sm:col-span-2" label="Mão de obra (R$)"><input className="field-input" inputMode="decimal" value={form.custoMaoObra} onChange={(e) => set("custoMaoObra", e.target.value)} placeholder="Ex.: 6.000" /></Campo>
+          <Campo className="sm:col-span-2" label="Projeto/ART/outros (R$)"><input className="field-input" inputMode="decimal" value={form.custoProjetoOutros} onChange={(e) => set("custoProjetoOutros", e.target.value)} placeholder="Ex.: 12.000" /></Campo>
         </div>
 
         {preco && (
@@ -239,16 +239,12 @@ export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: st
           )}
         </div>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-2">
-            <label className="field-label">Valor do serviço (R$) *</label>
+          <Campo className="sm:col-span-2" label="Valor do serviço (R$) *" hint={preco ? <p className="mt-1 hint">custo {brl(preco.custo)} × Fator K {nf(preco.fatorK, 2)} → sugerido {brl(preco.faturamento)}</p> : null}>
             <input className="field-input" value={form.valorServico} onChange={(e) => { precoTocado.current = true; set("valorServico", e.target.value); }} placeholder="Ex.: 128.790,00" />
-            {preco ? <p className="mt-1 hint">custo {brl(preco.custo)} × Fator K {nf(preco.fatorK, 2)} → sugerido {brl(preco.faturamento)}</p> : null}
-          </div>
-          <div className="sm:col-span-2">
-            <label className="field-label">Equipamento (R$, à parte)</label>
+          </Campo>
+          <Campo className="sm:col-span-2" label="Equipamento (R$, à parte)" hint={<><p className="mt-1 hint">Transformador/cubículo; 0 = por conta do cliente.</p></>}>
             <input className="field-input" value={form.valorEquipamento} onChange={(e) => set("valorEquipamento", e.target.value)} />
-            <p className="mt-1 hint">Transformador/cubículo; 0 = por conta do cliente.</p>
-          </div>
+          </Campo>
           <div className="sm:col-span-2 flex items-end">
             <div className="w-full rounded-md bg-gta-navy p-2 text-white shadow-sm">
               <div className="text-xs text-slate-300">Total ao cliente</div>
@@ -279,9 +275,9 @@ export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: st
       <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Textos da proposta (opcional)</summary>
         <div className="mt-4 space-y-3">
-          <div><label className="field-label">Objeto</label><textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
-          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className="field-input min-h-[90px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
-          <div><label className="field-label">Prazo de execução</label><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
+          <Campo label="Objeto"><textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></Campo>
+          <Campo label="Condições gerais (uma por linha)"><textarea className="field-input min-h-[90px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></Campo>
+          <Campo label="Prazo de execução"><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></Campo>
         </div>
       </details>
 

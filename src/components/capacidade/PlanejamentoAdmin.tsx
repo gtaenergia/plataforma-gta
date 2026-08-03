@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { ChevronRight, Plus, Trash2, X } from "lucide-react";
 import { Alert, Badge, EmptyState, Loading, SectionCard } from "@/components/ui";
 import { CATEGORIAS_PADRAO_TAREFA } from "@/lib/tasks/types";
 import { CONFIG_CAPACIDADE_PADRAO, type ConfigCapacidade, type TipoDemanda } from "@/lib/capacidade/types";
@@ -345,22 +345,30 @@ export function PlanejamentoAdmin() {
           </Alert>
         )}
 
-        <div className="space-y-6">
+        {/* Categorias recolhidas: expandidas, as três tabelas somavam 1.813px —
+            mais da metade da página. Quem edita mexe numa categoria por vez, e
+            o resumo no cabeçalho já diz onde falta duração. `<details>` dá o
+            comportamento e o acesso por teclado sem estado próprio. */}
+        <div className="space-y-2">
           {categorias.map((categoria) => {
             const daCategoria = config.tipos.filter(
               (t) => chaveCategoria(t.categoria) === chaveCategoria(categoria),
             );
+            const pendentes = daCategoria.filter((t) => !(t.minutos > 0)).length;
             return (
-              <div key={categoria}>
-                <div className="mb-2 flex items-baseline justify-between gap-2">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gta-navy dark:text-slate-100">
-                    {categoria}
-                  </h3>
+              <details key={categoria} className="group rounded-lg border border-slate-200 dark:border-slate-700">
+                <summary className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2.5 transition hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                  <span className="flex items-center gap-2">
+                    <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition group-open:rotate-90" aria-hidden />
+                    <span className="font-medium text-gta-navy dark:text-slate-100">{categoria}</span>
+                  </span>
                   <span className="hint">
                     {daCategoria.length} tipo{daCategoria.length === 1 ? "" : "s"}
+                    {pendentes > 0 && ` · ${pendentes} sem duração`}
                   </span>
-                </div>
+                </summary>
 
+                <div className="border-t border-slate-200 p-3 dark:border-slate-700">
                 {daCategoria.length === 0 ? (
                   <p className="hint mb-2">Nenhum tipo cadastrado nesta categoria.</p>
                 ) : (
@@ -374,7 +382,6 @@ export function PlanejamentoAdmin() {
                         <tr>
                           <th>Tipo de demanda</th>
                           <th className="w-36">Duração (h)</th>
-                          <th className="w-28" />
                           <th className="w-12" />
                         </tr>
                       </thead>
@@ -402,13 +409,17 @@ export function PlanejamentoAdmin() {
                                 onChange={(e) => alterarTipo(t.id, { minutos: paraMinutos(e.target.value) ?? 0 })}
                               />
                             </td>
-                            <td>{!(t.minutos > 0) && <Badge tone="amber">Sem duração</Badge>}</td>
+                            {/* Sem pílula "Sem duração": o campo vazio mostrando
+                                o valor padrão como sugestão já diz isso, e no
+                                catálogo recém-criado seriam vinte pílulas âmbar
+                                de uma vez. A contagem fica no cabeçalho da
+                                categoria e no aviso da seção. */}
                             <td>
                               <button
                                 type="button"
                                 onClick={() => removerTipo(t.id)}
                                 aria-label={`Remover ${t.nome || "tipo sem nome"}`}
-                                className="rounded p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                                className="icon-btn"
                               >
                                 <Trash2 className="h-4 w-4" aria-hidden />
                               </button>
@@ -422,9 +433,10 @@ export function PlanejamentoAdmin() {
 
                 <button type="button" className="btn-ghost mt-1" onClick={() => adicionarTipo(categoria)}>
                   <Plus className="h-4 w-4" aria-hidden />
-                  Adicionar tipo em {categoria}
+                  Adicionar tipo
                 </button>
-              </div>
+                </div>
+              </details>
             );
           })}
         </div>
@@ -500,17 +512,23 @@ export function PlanejamentoAdmin() {
         {config.feriados.length === 0 ? (
           <p className="hint mt-4">Nenhum feriado cadastrado.</p>
         ) : (
+          /* Ficha removível, não `badge`: pílula de status é rótulo que se lê,
+             esta aqui é um controle que se clica — e o "✕" como texto não
+             acompanhava o tamanho do ícone usado no resto da plataforma. */
           <ul className="mt-4 flex flex-wrap gap-2">
             {config.feriados.map((f) => (
               <li key={f}>
-                <button
-                  type="button"
-                  onClick={() => alterar({ feriados: config.feriados.filter((x) => x !== f) })}
-                  className="badge badge-slate hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300"
-                  aria-label={`Remover feriado ${f}`}
-                >
-                  {f.split("-").reverse().join("/")} ✕
-                </button>
+                <span className="inline-flex items-center gap-1 rounded-md border border-slate-300 py-1 pl-2.5 pr-1 text-sm text-slate-700 dark:border-slate-600 dark:text-slate-300">
+                  <span className="tabular-nums">{f.split("-").reverse().join("/")}</span>
+                  <button
+                    type="button"
+                    onClick={() => alterar({ feriados: config.feriados.filter((x) => x !== f) })}
+                    className="remover-ficha"
+                    aria-label={`Remover o feriado ${f.split("-").reverse().join("/")}`}
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </span>
               </li>
             ))}
           </ul>

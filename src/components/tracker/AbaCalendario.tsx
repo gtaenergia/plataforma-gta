@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Alert, EmptyState, Loading } from "@/components/ui";
 import { duracaoMin, formatarDuracao, type TimeEntry } from "@/lib/tracker/types";
+
 import { addDias, DIA_SEMANA_CURTO, fmtCurta, segundaDaSemana, useEntradas } from "./comum";
 
 /** Altura de uma hora na grade, em px. */
@@ -44,22 +45,71 @@ export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
     [horaIni, horaFim],
   );
 
-  /** Lançamentos de um dia, com posição/altura já calculadas. */
+  /**
+   * Lançamentos de um dia, com posição, altura E largura já calculadas.
+   *
+   * Lançamentos SOBREPOSTOS dividem a largura da coluna, como num calendário de
+   * agenda. Antes todos ocupavam a faixa inteira e se cobriam: três lançamentos
+   * simultâneos deixavam só o último visível, e o registro anterior
+   * simplesmente sumia da tela.
+   *
+   * O algoritmo é o clássico de agenda: agrupa os que se encadeiam por
+   * sobreposição e, dentro do grupo, coloca cada um na primeira faixa livre.
+   */
   function blocosDoDia(dia: Date) {
-    return entradas
+    const doDia = entradas
       .filter((e) => new Date(e.inicio).toDateString() === dia.toDateString())
       .map((e) => {
         const ini = new Date(e.inicio);
         const fim = e.fim ? new Date(e.fim) : agora;
+        return { entrada: e, iniMs: ini.getTime(), fimMs: Math.max(fim.getTime(), ini.getTime() + 60000) };
+      })
+      .sort((a, b) => a.iniMs - b.iniMs || b.fimMs - a.fimMs);
+
+    const posicionados: { entrada: TimeEntry; top: number; altura: number; faixa: number; faixas: number }[] = [];
+    let grupo: typeof doDia = [];
+    let fimDoGrupo = -Infinity;
+
+    /** Distribui um grupo já fechado nas faixas e empurra para a saída. */
+    const fecharGrupo = () => {
+      if (grupo.length === 0) return;
+      // `colunas[i]` guarda o fim do último lançamento daquela faixa.
+      const colunas: number[] = [];
+      const faixaDe = new Map<string, number>();
+      for (const b of grupo) {
+        let f = colunas.findIndex((fimAnterior) => b.iniMs >= fimAnterior);
+        if (f === -1) {
+          f = colunas.length;
+          colunas.push(0);
+        }
+        colunas[f] = b.fimMs;
+        faixaDe.set(b.entrada.id, f);
+      }
+      for (const b of grupo) {
+        const ini = new Date(b.iniMs);
         const inicioMin = ini.getHours() * 60 + ini.getMinutes() - horaIni * 60;
-        const durMin = Math.max(1, (fim.getTime() - ini.getTime()) / 60000);
-        return {
-          entrada: e,
+        const durMin = Math.max(1, (b.fimMs - b.iniMs) / 60000);
+        posicionados.push({
+          entrada: b.entrada,
           top: (inicioMin / 60) * PX_POR_HORA,
           // piso de 18px para um lançamento curto continuar clicável/legível
           altura: Math.max(18, (durMin / 60) * PX_POR_HORA),
-        };
-      });
+          faixa: faixaDe.get(b.entrada.id) ?? 0,
+          faixas: colunas.length,
+        });
+      }
+      grupo = [];
+      fimDoGrupo = -Infinity;
+    };
+
+    for (const b of doDia) {
+      // Começou depois do fim de TODOS os anteriores: o grupo se encerrou.
+      if (b.iniMs >= fimDoGrupo) fecharGrupo();
+      grupo.push(b);
+      fimDoGrupo = Math.max(fimDoGrupo, b.fimMs);
+    }
+    fecharGrupo();
+    return posicionados;
   }
 
   const totalSemana = entradas.reduce((s, e) => s + duracaoMin(e, agora), 0);
@@ -123,11 +173,18 @@ export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
                       {horas.map((h) => (
                         <div key={h} className="border-t border-slate-100 dark:border-slate-800" style={{ height: PX_POR_HORA }} />
                       ))}
-                      {blocosDoDia(dia).map(({ entrada, top, altura }) => (
+                      {blocosDoDia(dia).map(({ entrada, top, altura, faixa, faixas }) => (
                         <div
                           key={entrada.id}
-                          className={`absolute inset-x-0.5 overflow-hidden rounded px-1 py-0.5 text-[10px] leading-tight text-white bg-gta-indigo ${!entrada.fim ? "animate-pulse" : ""}`}
-                          style={{ top, height: altura }}
+                          className={`absolute overflow-hidden rounded border border-white/25 px-1 py-0.5 text-[10px] leading-tight text-white bg-gta-indigo ${!entrada.fim ? "animate-pulse" : ""}`}
+                          style={{
+                            top,
+                            height: altura,
+                            // Cada faixa ocupa sua fatia da coluna; a borda clara
+                            // separa blocos vizinhos que encostam.
+                            left: `calc(${(faixa / faixas) * 100}% + 2px)`,
+                            width: `calc(${100 / faixas}% - 4px)`,
+                          }}
                           title={`${entrada.descricao || "(sem descrição)"}${mostrarUsuario ? ` — ${nomeDe(entrada.usuarioEmail)}` : ""}\n${formatarDuracao(duracaoMin(entrada, agora))}${entrada.cliente ? `\n${entrada.cliente}` : ""}`}
                         >
                           <div className="truncate font-medium">{entrada.descricao || "(sem descrição)"}</div>

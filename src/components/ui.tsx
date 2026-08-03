@@ -136,10 +136,16 @@ export function SectionCard({ title, subtitle, actions, children, className = ""
   );
 }
 
-/** Estado vazio padronizado (listas/tabelas sem resultado). */
+/**
+ * Estado vazio padronizado (listas/tabelas sem resultado).
+ *
+ * `slate-600` e não `slate-500`: sobre o fundo claro da página o tom anterior
+ * dava 4,4:1, logo abaixo do mínimo de 4,5 da WCAG AA — e este texto costuma
+ * ser a única coisa na tela.
+ */
 export function EmptyState({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400 ${className}`}>
+    <div className={`rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-600 dark:border-slate-700 dark:text-slate-400 ${className}`}>
       {children}
     </div>
   );

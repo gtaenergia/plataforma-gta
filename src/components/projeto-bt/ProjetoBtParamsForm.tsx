@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Alert, Loading } from "@/components/ui";
+import { Campo } from "@/components/Campo";
 type ParamKey =
   | "taxaForca" | "pisoForca"
   | "taxaIluminacao" | "pisoIluminacao"
@@ -83,20 +84,17 @@ export function ProjetoBtParamsForm({ onSaved }: { onSaved?: (p: Params) => void
             <p className="text-xs font-semibold text-gta-navy dark:text-slate-200">{g.titulo}</p>
             <div className="mt-2 grid grid-cols-2 gap-3">
               {g.campos.map((c) => (
-                <div key={c.key}>
-                  <label className="field-label">{c.label}</label>
+                <Campo key={c.key} label={<>{c.label}</>}>
                   <input className="field-input" inputMode="decimal" value={texto[c.key]} onChange={(e) => setTexto({ ...texto, [c.key]: e.target.value })} />
-                </div>
+                </Campo>
               ))}
             </div>
           </div>
         ))}
       </div>
-      <div className="sm:w-1/2">
-        <label className="field-label">{CAMPO_MULT.label}</label>
+      <Campo className="sm:w-1/2" label={<>{CAMPO_MULT.label}</>} hint={<><p className="mt-1 hint">{CAMPO_MULT.help}</p></>}>
         <input className="field-input" inputMode="decimal" value={texto.multIndustrial} onChange={(e) => setTexto({ ...texto, multIndustrial: e.target.value })} />
-        <p className="mt-1 hint">{CAMPO_MULT.help}</p>
-      </div>
+      </Campo>
       {erro && <Alert tone="red">{erro}</Alert>}
       <div className="flex flex-wrap items-center gap-3">
         <button className="btn-primary" onClick={salvar} disabled={salvando}>{salvando ? "Salvando…" : "Salvar parâmetros"}</button>

@@ -7,6 +7,7 @@ import { ServiceIcon } from "@/components/ServiceIcon";
 import { Alert, EmptyState, Loading, Marca, type Tone } from "@/components/ui";
 import { usePaginacao, Paginacao } from "@/components/Paginacao";
 import { statusPropostaLabel, STATUS_PROPOSTA, type Proposta } from "@/lib/propostas/types";
+import { Campo } from "@/components/Campo";
 
 const STATUS_TONE: Record<string, Tone> = {
   rascunho: "slate",
@@ -142,40 +143,36 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
 
       {/* Filtros */}
       <div className="flex flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-end sm:p-4 card">
-        <div className="flex-1 sm:min-w-[200px]">
-          <label className="field-label">Buscar cliente / referência</label>
+        <Campo className="flex-1 sm:min-w-[200px]" label="Buscar cliente / referência">
           <input
             className="field-input"
             placeholder="Digite para filtrar…"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
-        </div>
-        <div className="min-w-[170px]">
-          <label className="field-label">Serviço</label>
+        </Campo>
+        <Campo className="min-w-[170px]" label="Serviço">
           <select className="field-input" value={fServico} onChange={(e) => setFServico(e.target.value)}>
             <option value="">Todos</option>
             {servicosComPropostas.map((s) => (
               <option key={s.key} value={s.key}>{s.label}</option>
             ))}
           </select>
-        </div>
-        <div className="min-w-[150px]">
-          <label className="field-label">Criador</label>
+        </Campo>
+        <Campo className="min-w-[150px]" label="Criador">
           <select className="field-input" value={fCriador} onChange={(e) => setFCriador(e.target.value)}>
             <option value="">Todos</option>
             {criadores.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
-        </div>
-        <div className="min-w-[140px]">
-          <label className="field-label">Status</label>
+        </Campo>
+        <Campo className="min-w-[140px]" label="Status">
           <select className="field-input" value={fStatus} onChange={(e) => setFStatus(e.target.value)}>
             <option value="">Todos</option>
             {STATUS_PROPOSTA.map((s) => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>
-        </div>
+        </Campo>
         {temFiltro && (
           <button className="btn-secondary !py-2 text-sm" onClick={limparFiltros}>Limpar</button>
         )}

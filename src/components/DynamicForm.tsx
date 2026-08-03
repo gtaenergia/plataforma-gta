@@ -10,6 +10,7 @@ import {
 } from "react-hook-form";
 import { X } from "lucide-react";
 import type { FieldDef, FormSchema } from "@/services/types";
+import { Campo } from "@/components/Campo";
 
 const widthClass: Record<string, string> = {
   full: "col-span-1 sm:col-span-6",
@@ -133,11 +134,17 @@ function ScalarField({
   const cls = widthClass[field.width ?? "full"] ?? widthClass.full;
 
   return (
-    <div className={cls}>
-      <label className="field-label">
+    <Campo
+      className={cls}
+      label={<>
         {field.label}
-        {field.required && <span className="text-red-500"> *</span>}
-      </label>
+        {field.required && <span className="text-red-600 dark:text-red-400"> *</span>}
+      </>}
+      hint={<>
+        {field.help && <p className="mt-1 hint">{field.help}</p>}
+        {err && <p className="field-error">{String(err.message ?? "Campo inválido")}</p>}
+      </>}
+    >
       {field.type === "textarea" ? (
         <textarea className="field-input min-h-[90px]" {...register(field.name)} placeholder={field.placeholder} />
       ) : field.type === "select" ? (
@@ -157,9 +164,7 @@ function ScalarField({
           placeholder={field.placeholder}
         />
       )}
-      {field.help && <p className="mt-1 hint">{field.help}</p>}
-      {err && <p className="field-error">{String(err.message ?? "Campo inválido")}</p>}
-    </div>
+    </Campo>
   );
 }
 
@@ -170,10 +175,13 @@ function ArrayFieldEditor({ field }: { field: FieldDef }) {
   const cols = field.itemFields ?? [];
 
   return (
+    /* Aqui o texto encabeça uma TABELA, não um controle: não é rótulo de campo
+       (um <label> só pode apontar para um elemento de formulário). Fica como
+       texto, e o nome do grupo vai no aria-label da tabela. */
     <div>
-      <label className="field-label">{field.label}</label>
+      <span className="field-label">{field.label}</span>
       <div className="overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
-        <table className="table-compacta">
+        <table className="table-compacta" aria-label={field.label}>
           <thead>
             <tr>
               {cols.map((c) => (
@@ -189,8 +197,11 @@ function ArrayFieldEditor({ field }: { field: FieldDef }) {
               <tr key={row.id}>
                 {cols.map((c) => (
                   <td key={c.name} className="px-2 py-1">
+                    {/* Célula de tabela não tem rótulo próprio: o nome vem do
+                        cabeçalho da coluna + o número da linha. */}
                     <input
                       className="field-input"
+                      aria-label={`${c.label} — linha ${i + 1}`}
                       {...register(`${field.name}.${i}.${c.name}` as const)}
                       placeholder={c.label}
                     />
@@ -201,7 +212,7 @@ function ArrayFieldEditor({ field }: { field: FieldDef }) {
                     <button
                       type="button"
                       onClick={() => remove(i)}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded text-red-500 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20"
+                      className="icon-btn text-red-600 dark:text-red-400"
                       title="Remover"
                       aria-label="Remover linha"
                     >

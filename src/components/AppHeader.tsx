@@ -84,7 +84,7 @@ export function AppHeader({ userName, isAdmin }: { userName?: string; isAdmin?: 
             <button
               type="button"
               onClick={() => setNavAberto((v) => !v)}
-              className="-ml-1 flex h-10 w-10 items-center justify-center rounded hover:bg-white/10 md:hidden"
+              className="acao-cabecalho acao-cabecalho-icone -ml-1 md:hidden"
               aria-label="Menu"
               aria-expanded={navAberto}
               aria-controls="mobile-nav"
@@ -98,7 +98,9 @@ export function AppHeader({ userName, isAdmin }: { userName?: string; isAdmin?: 
               </svg>
             </button>
           )}
-          <Link href="/" className="flex items-center gap-2.5">
+          {/* `toque` só existe dentro da media query de dedo: no celular o link
+              da marca tinha 32px de altura, abaixo do alvo mínimo. */}
+          <Link href="/" className="toque flex items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/gta-icon.png" alt="GTA" className="h-8 w-8" />
             <span className="text-base font-bold tracking-tight sm:text-lg">GTA Energia</span>
@@ -126,7 +128,7 @@ export function AppHeader({ userName, isAdmin }: { userName?: string; isAdmin?: 
             <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuAberto((v) => !v)}
-              className="flex items-center gap-2 rounded border border-white/25 px-2.5 py-2 text-sm hover:bg-white/10 sm:px-3 sm:py-1.5"
+              className="acao-cabecalho gap-2 border border-white/25 px-2.5 text-sm sm:px-3"
               aria-haspopup="menu"
               aria-expanded={menuAberto}
             >
@@ -175,7 +177,7 @@ export function AppHeader({ userName, isAdmin }: { userName?: string; isAdmin?: 
                 <button
                   onClick={alternarTema}
                   role="menuitem"
-                  className="flex w-full items-center justify-between border-t border-slate-100 px-4 py-2.5 text-left text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-700"
+                  className="toque flex w-full items-center justify-between border-t border-slate-100 px-4 py-2.5 text-left text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-700"
                 >
                   <span>Tema {dark ? "escuro" : "claro"}</span>
                   {dark ? <Moon className="h-4 w-4" aria-hidden /> : <Sun className="h-4 w-4" aria-hidden />}
@@ -183,7 +185,7 @@ export function AppHeader({ userName, isAdmin }: { userName?: string; isAdmin?: 
                 <button
                   onClick={logout}
                   role="menuitem"
-                  className="block w-full border-t border-slate-100 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-slate-50 dark:border-slate-700 dark:text-red-400 dark:hover:bg-slate-700"
+                  className="toque block w-full border-t border-slate-100 px-4 py-2.5 text-left text-sm text-red-600 hover:bg-slate-50 dark:border-slate-700 dark:text-red-400 dark:hover:bg-slate-700"
                 >
                   Sair
                 </button>
@@ -224,7 +226,8 @@ function MenuLink({ href, onNavigate, children }: { href: string; onNavigate: ()
       href={href}
       role="menuitem"
       onClick={onNavigate}
-      className="block px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
+      /* `toque` só age no celular: os itens tinham 40px, abaixo do alvo. */
+      className="toque block w-full px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
     >
       {children}
     </Link>

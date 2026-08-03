@@ -183,6 +183,27 @@ input[list].field-input {
          hover:underline focus-visible:outline-none focus-visible:underline
          disabled:cursor-not-allowed disabled:opacity-60 dark:text-indigo-300;
 }
+/* ---- Ações do cabeçalho ---------------------------------------------------
+   Menu, sino e perfil ficam lado a lado e tinham TRÊS alturas diferentes —
+   40px, 36px e 42px —, o que fazia o sino parecer menor que os vizinhos. Aqui
+   a altura é uma só; a largura varia porque o perfil carrega texto. */
+.acao-cabecalho {
+  @apply inline-flex h-9 shrink-0 items-center justify-center rounded transition
+         hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50;
+}
+/* Variante só-ícone: quadrada. */
+.acao-cabecalho-icone {
+  @apply w-9;
+}
+
+/* Remover embutido numa ficha: menor que `.icon-btn` porque divide espaço com
+   o rótulo, mas ainda com alvo de toque cheio no celular (ver media query). */
+.remover-ficha {
+  @apply inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-slate-400 transition
+         hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2
+         focus-visible:ring-red-400/40 dark:hover:bg-red-900/30 dark:hover:text-red-400;
+}
+
 /* Botão só-ícone (remover linha, fechar…). 36px é o padrão de ação-ícone da
    plataforma (mesmo do sino e do excluir das Tarefas); 44px no toque. */
 .icon-btn {
@@ -229,6 +250,12 @@ input[list].field-input {
   .btn-secondary,
   .btn-danger,
   .segmented-item { @apply min-h-[44px]; }
+  /* Ação de remover embutida numa ficha (feriado, filtro aplicado): no desktop
+     ela é pequena de propósito, para não competir com o rótulo ao lado; no
+     dedo precisa do alvo cheio. */
+  .remover-ficha { @apply h-11 w-11; }
+  .acao-cabecalho { @apply h-11; }
+  .acao-cabecalho-icone { @apply w-11; }
   /* Sete quadrados de 44px mais os espaços somam 332px — cabem nos 343px úteis
      de uma tela de 375px. Quadrado fixo, e não `flex-1`, para não variar de
      largura entre a jornada da equipe e a tabela por profissional. */
@@ -253,9 +280,11 @@ input[list].field-input {
 .segmented {
   @apply inline-flex rounded-lg border border-slate-200 p-0.5 text-xs dark:border-slate-700;
 }
+/* `slate-600` na opção inativa: em `slate-500` dava 4,4:1 sobre o fundo claro,
+   logo abaixo do mínimo — e o alternador é controle, não texto de apoio. */
 .segmented-item {
   @apply inline-flex items-center justify-center rounded-md px-3 py-1 font-medium transition
-         text-slate-500 hover:text-gta-indigo
+         text-slate-600 hover:text-gta-indigo
          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gta-indigo/40
          dark:text-slate-400 dark:hover:text-indigo-300;
 }

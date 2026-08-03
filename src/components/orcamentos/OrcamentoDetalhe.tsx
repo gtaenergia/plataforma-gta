@@ -11,6 +11,7 @@ import {
 } from "@/lib/orcamentos/types";
 import type { PermissaoKey } from "@/lib/rbac/permissoes";
 import { Alert, BackLink, Badge, Marca, type Tone } from "@/components/ui";
+import { Campo } from "@/components/Campo";
 
 const ESTACAO_TONE: Record<string, Tone> = {
   rascunho: "slate",
@@ -411,26 +412,21 @@ export function OrcamentoDetalhe({
         <form onSubmit={salvarAjustes} className="section-card">
           <h2 className="section-title mb-4">Ajustes</h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
-            <div className="sm:col-span-3">
-              <label className="field-label">Cliente *</label>
+            <Campo className="sm:col-span-3" label="Cliente *">
               <input className="field-input" value={ajuste.cliente} onChange={(e) => setAjuste({ ...ajuste, cliente: e.target.value })} required />
-            </div>
-            <div className="sm:col-span-3">
-              <label className="field-label">Forma de pagamento</label>
+            </Campo>
+            <Campo className="sm:col-span-3" label="Forma de pagamento">
               <input className="field-input" value={ajuste.formaPagamento} onChange={(e) => setAjuste({ ...ajuste, formaPagamento: e.target.value })} />
-            </div>
-            <div className="sm:col-span-3">
-              <label className="field-label">Data de emissão</label>
+            </Campo>
+            <Campo className="sm:col-span-3" label="Data de emissão">
               <input type="date" className="field-input" value={ajuste.dataEmissao} onChange={(e) => setAjuste({ ...ajuste, dataEmissao: e.target.value })} />
-            </div>
-            <div className="sm:col-span-3">
-              <label className="field-label">Prazo/validade (dias)</label>
+            </Campo>
+            <Campo className="sm:col-span-3" label="Prazo/validade (dias)">
               <input type="number" min={0} className="field-input" value={ajuste.validadeDias} onChange={(e) => setAjuste({ ...ajuste, validadeDias: e.target.value })} />
-            </div>
-            <div className="sm:col-span-6">
-              <label className="field-label">Descrição</label>
+            </Campo>
+            <Campo className="sm:col-span-6" label="Descrição">
               <input className="field-input" value={ajuste.descricao} onChange={(e) => setAjuste({ ...ajuste, descricao: e.target.value })} />
-            </div>
+            </Campo>
           </div>
           <div className="mt-3">
             <button type="submit" className="btn-primary" disabled={salvandoAjuste || !ajuste.cliente.trim()}>
@@ -507,8 +503,19 @@ export function OrcamentoDetalhe({
         <div className="section-card">
           <h2 className="section-title mb-4">Ações</h2>
           {acaoAberta ? (
-            <div className="space-y-2">
-              <label className="field-label">Parecer {acaoAberta === "cancelar" ? "(opcional)" : "*"}</label>
+            <Campo className="space-y-2" label={<>Parecer {acaoAberta === "cancelar" ? "(opcional)" : "*"}</>} hint={<><div className="flex gap-2">
+                <button
+                  className="btn-primary"
+                  disabled={processando || (acaoAberta !== "cancelar" && !parecer.trim())}
+                  onClick={() => transicionar(acaoAberta, parecer.trim() || undefined)}
+                >
+                  {processando ? "Processando…" : CONFIRMAR[acaoAberta]}
+                </button>
+                <button className="btn-secondary" onClick={() => setAcaoAberta(null)} disabled={processando}>
+                  Voltar
+                </button>
+              </div></>}>
+
               <textarea
                 className="field-input min-h-20"
                 value={parecer}
@@ -521,19 +528,7 @@ export function OrcamentoDetalhe({
                       : "Registre o parecer da revisão"
                 }
               />
-              <div className="flex gap-2">
-                <button
-                  className="btn-primary"
-                  disabled={processando || (acaoAberta !== "cancelar" && !parecer.trim())}
-                  onClick={() => transicionar(acaoAberta, parecer.trim() || undefined)}
-                >
-                  {processando ? "Processando…" : CONFIRMAR[acaoAberta]}
-                </button>
-                <button className="btn-secondary" onClick={() => setAcaoAberta(null)} disabled={processando}>
-                  Voltar
-                </button>
-              </div>
-            </div>
+            </Campo>
           ) : (
             <div className="flex flex-wrap gap-2">
               {podeEnviar && (

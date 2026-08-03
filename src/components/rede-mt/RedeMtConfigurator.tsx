@@ -8,6 +8,7 @@ import { RedeMtParamsForm } from "./RedeMtParamsForm";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
+import { Campo } from "@/components/Campo";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -212,11 +213,11 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
       <section className="section-card">
         <h2 className="section-title">Cliente e local</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3"><label className="field-label">Nome do cliente *</label><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></div>
-          <div className="sm:col-span-3"><label className="field-label">Cidade/UF *</label><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></div>
-          <div className="sm:col-span-3"><label className="field-label">Local / obra</label><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Fazenda — zona rural/GO" /></div>
-          <div className="sm:col-span-1"><label className="field-label">Validade (dias)</label><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} /></div>
-          <div className="sm:col-span-2"><label className="field-label">Emissão</label><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></div>
+          <Campo className="sm:col-span-3" label="Nome do cliente *"><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></Campo>
+          <Campo className="sm:col-span-3" label="Cidade/UF *"><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></Campo>
+          <Campo className="sm:col-span-3" label="Local / obra"><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} placeholder="Ex.: Fazenda — zona rural/GO" /></Campo>
+          <Campo className="sm:col-span-1" label="Validade (dias)"><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", Number(e.target.value))} /></Campo>
+          <Campo className="sm:col-span-2" label="Emissão"><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></Campo>
         </div>
         <p className="mt-2 hint">A referência é gerada automaticamente ao salvar.</p>
       </section>
@@ -226,26 +227,29 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
         <h2 className="section-title">Escopo e custo</h2>
         <p className="mt-1 subtitle">Monte a composição do custo por linha (etapa projeto ou execução). O app soma cada etapa e aplica o <strong>Fator K</strong> para sugerir o preço.</p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3"><label className="field-label">Extensão / porte</label><input className="field-input" value={form.extensao} onChange={(e) => set("extensao", e.target.value)} placeholder="Ex.: 1 km / loteamento 80 lotes" /></div>
-          <div className="sm:col-span-3"><label className="field-label">Tensão</label><input className="field-input" value={form.tensao} onChange={(e) => set("tensao", e.target.value)} placeholder="Ex.: 13,8 kV" /></div>
+          <Campo className="sm:col-span-3" label="Extensão / porte"><input className="field-input" value={form.extensao} onChange={(e) => set("extensao", e.target.value)} placeholder="Ex.: 1 km / loteamento 80 lotes" /></Campo>
+          <Campo className="sm:col-span-3" label="Tensão"><input className="field-input" value={form.tensao} onChange={(e) => set("tensao", e.target.value)} placeholder="Ex.: 13,8 kV" /></Campo>
         </div>
 
         {/* Composição de custo editável */}
         <div className="mt-4 space-y-2">
-          <div className="hidden gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 sm:flex dark:text-slate-500">
+          <div className="hidden gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-600 sm:flex dark:text-slate-400">
             <span className="w-28">Etapa</span><span className="flex-1">Descrição do custo</span><span className="w-14 text-right">Qtd</span><span className="w-28 text-right">Valor un.</span><span className="w-28 text-right">Total</span><span className="w-6" />
           </div>
           {custoRows.map((r, i) => (
             <div key={i} className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <select className="field-input sm:w-28" value={r.etapa} onChange={(e) => setRow(i, { etapa: e.target.value as CustoRow["etapa"] })}>
+              {/* O cabeçalho da grade some abaixo de `sm` e nunca nomeou os
+                  campos para leitor de tela: o nome vem por `aria-label`,
+                  numerado para distinguir uma linha da outra. */}
+              <select className="field-input sm:w-28" aria-label={`Etapa do ${i + 1}º item de custo`} value={r.etapa} onChange={(e) => setRow(i, { etapa: e.target.value as CustoRow["etapa"] })}>
                 <option value="projeto">Projeto</option>
                 <option value="execucao">Execução</option>
               </select>
-              <input className="field-input flex-1" value={r.descricao} onChange={(e) => setRow(i, { descricao: e.target.value })} placeholder="Descrição do item de custo" />
-              <input className="field-input text-right sm:w-14" inputMode="decimal" value={r.qtd} onChange={(e) => setRow(i, { qtd: e.target.value })} placeholder="1" />
-              <input className="field-input text-right sm:w-28" inputMode="decimal" value={r.valorUnit} onChange={(e) => setRow(i, { valorUnit: e.target.value })} placeholder="0,00" />
+              <input className="field-input flex-1" aria-label={`Descrição do ${i + 1}º item de custo`} value={r.descricao} onChange={(e) => setRow(i, { descricao: e.target.value })} placeholder="Descrição do item de custo" />
+              <input className="field-input text-right sm:w-14" inputMode="decimal" aria-label={`Quantidade de ${r.descricao || `${i + 1}º item de custo`}`} value={r.qtd} onChange={(e) => setRow(i, { qtd: e.target.value })} placeholder="1" />
+              <input className="field-input text-right sm:w-28" inputMode="decimal" aria-label={`Valor unitário de ${r.descricao || `${i + 1}º item de custo`}`} value={r.valorUnit} onChange={(e) => setRow(i, { valorUnit: e.target.value })} placeholder="0,00" />
               <div className="text-right text-sm font-medium text-slate-600 sm:w-28 dark:text-slate-300">{brl(rowTotal(r))}</div>
-              <button type="button" className="icon-btn" onClick={() => removeRow(i)} aria-label="Remover"><X className="h-4 w-4" /></button>
+              <button type="button" className="icon-btn" onClick={() => removeRow(i)} aria-label={`Remover ${r.descricao || `${i + 1}º item de custo`}`}><X className="h-4 w-4" /></button>
             </div>
           ))}
         </div>
@@ -273,16 +277,12 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
           )}
         </div>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-2">
-            <label className="field-label">Valor do projeto (R$)</label>
+          <Campo className="sm:col-span-2" label="Valor do projeto (R$)" hint={preco && preco.custoProjeto > 0 ? <p className="mt-1 hint">custo {brl(preco.custoProjeto)} × {nf(preco.fatorKProjeto, 3)} / (1−NF) → {brl(preco.faturamentoProjeto)}</p> : null}>
             <input className="field-input" value={form.valorProjeto} onChange={(e) => { precoTocado.current = true; set("valorProjeto", e.target.value); }} />
-            {preco && preco.custoProjeto > 0 ? <p className="mt-1 hint">custo {brl(preco.custoProjeto)} × {nf(preco.fatorKProjeto, 3)} / (1−NF) → {brl(preco.faturamentoProjeto)}</p> : null}
-          </div>
-          <div className="sm:col-span-2">
-            <label className="field-label">Valor da execução (R$)</label>
+          </Campo>
+          <Campo className="sm:col-span-2" label="Valor da execução (R$)" hint={preco && preco.custoExecucao > 0 ? <p className="mt-1 hint">custo {brl(preco.custoExecucao)} × Fator K {nf(preco.fatorKExecucao, 2)} → {brl(preco.faturamentoExecucao)}</p> : null}>
             <input className="field-input" value={form.valorExecucao} onChange={(e) => { precoTocado.current = true; set("valorExecucao", e.target.value); }} />
-            {preco && preco.custoExecucao > 0 ? <p className="mt-1 hint">custo {brl(preco.custoExecucao)} × Fator K {nf(preco.fatorKExecucao, 2)} → {brl(preco.faturamentoExecucao)}</p> : null}
-          </div>
+          </Campo>
           <div className="sm:col-span-2 flex items-end">
             <div className="w-full rounded-md bg-gta-navy p-2 text-white shadow-sm">
               <div className="text-xs text-slate-300">Total ao cliente</div>
@@ -315,9 +315,9 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
       <details className="section-card">
         <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">Textos da proposta (opcional)</summary>
         <div className="mt-4 space-y-3">
-          <div><label className="field-label">Objeto</label><textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></div>
-          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className="field-input min-h-[90px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
-          <div><label className="field-label">Prazo de execução</label><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
+          <Campo label="Objeto"><textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => set("objeto", e.target.value)} /></Campo>
+          <Campo label="Condições gerais (uma por linha)"><textarea className="field-input min-h-[90px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></Campo>
+          <Campo label="Prazo de execução"><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></Campo>
         </div>
       </details>
 

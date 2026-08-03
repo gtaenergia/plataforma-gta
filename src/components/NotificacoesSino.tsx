@@ -88,7 +88,7 @@ export function NotificacoesSino() {
     <div className="relative" ref={ref}>
       <button
         onClick={abrir}
-        className="relative flex h-9 w-9 items-center justify-center rounded border border-white/25 hover:bg-white/10"
+        className="acao-cabecalho acao-cabecalho-icone relative border border-white/25"
         aria-label="Notificações"
         aria-haspopup="menu"
         aria-expanded={aberto}

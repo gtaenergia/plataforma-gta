@@ -59,7 +59,10 @@ export function TrackerBoard({ meEmail, podeVerEquipe }: { meEmail: string; pode
               className={`toque -mb-px shrink-0 gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition ${
                 aba === id
                   ? "border-gta-indigo text-gta-indigo dark:border-indigo-400 dark:text-indigo-300"
-                  : "border-transparent text-slate-500 hover:border-slate-300 hover:text-gta-navy dark:text-slate-400 dark:hover:text-slate-200"
+                  /* `slate-600`: em `slate-500` a aba inativa ficava em 4,4:1
+                     sobre o fundo claro, logo abaixo do mínimo — e aba é
+                     navegação, não texto secundário. */
+                  : "border-transparent text-slate-600 hover:border-slate-300 hover:text-gta-navy dark:text-slate-400 dark:hover:text-slate-200"
               }`}
             >
               <Icone className="h-4 w-4" aria-hidden />

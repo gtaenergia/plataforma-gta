@@ -8,6 +8,7 @@ import { CondicoesPagamento, montarFormaPagamento, type CondPag } from "@/compon
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 
 import { Alert } from "@/components/ui";
+import { Campo } from "@/components/Campo";
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
 const brl = (v: number) => "R$ " + nf(v, 2);
@@ -261,12 +262,12 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
       <section className="section-card">
         <h2 className="section-title">Cliente e local</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3"><label className="field-label">Nome do cliente *</label><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></div>
-          <div className="sm:col-span-3"><label className="field-label">Cidade/UF *</label><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></div>
-          <div className="sm:col-span-3"><label className="field-label">Local / obra</label><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} /></div>
-          <div className="sm:col-span-3"><label className="field-label">Porte / referência</label><input className="field-input" value={form.porte} onChange={(e) => set("porte", e.target.value)} placeholder="Ex.: edifício 21 pav. / 800 m² / galpão industrial" /></div>
-          <div className="sm:col-span-1"><label className="field-label">Validade (dias)</label><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", e.target.value)} /></div>
-          <div className="sm:col-span-2"><label className="field-label">Emissão</label><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></div>
+          <Campo className="sm:col-span-3" label="Nome do cliente *"><ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} /></Campo>
+          <Campo className="sm:col-span-3" label="Cidade/UF *"><input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goiânia/GO" /></Campo>
+          <Campo className="sm:col-span-3" label="Local / obra"><input className="field-input" value={form.localAtividade} onChange={(e) => set("localAtividade", e.target.value)} /></Campo>
+          <Campo className="sm:col-span-3" label="Porte / referência"><input className="field-input" value={form.porte} onChange={(e) => set("porte", e.target.value)} placeholder="Ex.: edifício 21 pav. / 800 m² / galpão industrial" /></Campo>
+          <Campo className="sm:col-span-1" label="Validade (dias)"><input type="number" className="field-input" value={form.validadeDias} onChange={(e) => set("validadeDias", e.target.value)} /></Campo>
+          <Campo className="sm:col-span-2" label="Emissão"><input type="date" className="field-input" value={form.dataEmissao} onChange={(e) => set("dataEmissao", e.target.value)} /></Campo>
         </div>
         <p className="mt-2 hint">A referência é gerada automaticamente ao salvar. O porte entra na descrição de cada disciplina.</p>
       </section>
@@ -277,20 +278,17 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
         <h2 className="section-title">Porte do projeto</h2>
         <p className="mt-1 subtitle">A <strong>área construída</strong> dirige a sugestão de preço de cada disciplina (R$/m²). Em branco, cada disciplina parte do piso e você ajusta à mão.</p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-2">
-            <label className="field-label">Área construída (m²)</label>
+          <Campo className="sm:col-span-2" label="Área construída (m²)">
             <input className="field-input" inputMode="decimal" value={form.areaM2} onChange={(e) => set("areaM2", e.target.value)} placeholder="Ex.: 800" />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="field-label">Tipo de edificação</label>
+          </Campo>
+          <Campo className="sm:col-span-2" label="Tipo de edificação">
             <select className="field-input" value={form.tipo} onChange={(e) => set("tipo", e.target.value)}>
               {TIPOS.map((t) => <option key={t.id} value={t.id}>{t.nome}{t.id === "industrial" ? ` (×${nf(params.multIndustrial ?? 1.4, 1)})` : ""}</option>)}
             </select>
-          </div>
-          <div className="sm:col-span-2">
-            <label className="field-label">Custo de execução (R$) <span className="font-normal text-slate-500 dark:text-slate-400">— opcional</span></label>
+          </Campo>
+          <Campo className="sm:col-span-2" label={<>Custo de execução (R$) <span className="font-normal text-slate-500 dark:text-slate-400">— opcional</span></>}>
             <input className="field-input" inputMode="decimal" value={form.custoExecucao} onChange={(e) => set("custoExecucao", e.target.value)} placeholder="p/ conferir o % (honorário/obra)" />
-          </div>
+          </Campo>
         </div>
       </section>
 
@@ -318,7 +316,10 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
                   <div className="w-full sm:w-48">
                     <div className="relative">
                       <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-500 dark:text-slate-400">R$</span>
-                      <input className="field-input pl-8 text-right" inputMode="decimal" value={form[`v_${d.id}`] ?? ""} disabled={!on} onChange={(e) => setValorDisc(d.id, e.target.value)} />
+                      {/* O rótulo visível é a caixa de seleção da disciplina, à
+                          esquerda; sem `aria-label` o campo de valor é anunciado
+                          sem dizer a qual disciplina pertence. */}
+                      <input className="field-input pl-8 text-right" inputMode="decimal" aria-label={`Valor de ${d.nome}`} value={form[`v_${d.id}`] ?? ""} disabled={!on} onChange={(e) => setValorDisc(d.id, e.target.value)} />
                     </div>
                     {on && (
                       <p className="mt-1 flex items-center justify-end gap-1.5 text-right text-[11px] text-slate-500 dark:text-slate-400">
@@ -354,15 +355,17 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
         <div className="mt-4 space-y-3">
           <div>
             <div className="flex items-center justify-between">
-              <label className="field-label">Objeto <span className="font-normal text-slate-500 dark:text-slate-400">(gerado a partir das disciplinas)</span></label>
+              {/* fora do <Campo> porque o rótulo divide a linha com o botão
+                  "Recompor automático"; a associação vai no id explícito. */}
+              <label htmlFor="projeto-bt-objeto" className="field-label">Objeto <span className="font-normal text-slate-500 dark:text-slate-400">(gerado a partir das disciplinas)</span></label>
               {objetoTocado.current && (
                 <button type="button" className="toque text-xs text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => { objetoTocado.current = false; setForm((f) => ({ ...f, objeto: montarObjeto(idsSelecionados ? idsSelecionados.split(",") : []) })); }}>Recompor automático</button>
               )}
             </div>
-            <textarea className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => { objetoTocado.current = true; set("objeto", e.target.value); }} />
+            <textarea id="projeto-bt-objeto" className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => { objetoTocado.current = true; set("objeto", e.target.value); }} />
           </div>
-          <div><label className="field-label">Condições gerais (uma por linha)</label><textarea className="field-input min-h-[110px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></div>
-          <div><label className="field-label">Prazo de entrega</label><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></div>
+          <Campo label="Condições gerais (uma por linha)"><textarea className="field-input min-h-[110px]" value={form.observacoesExtra} onChange={(e) => set("observacoesExtra", e.target.value)} /></Campo>
+          <Campo label="Prazo de entrega"><input className="field-input" value={form.prazoExecucao} onChange={(e) => set("prazoExecucao", e.target.value)} /></Campo>
           <p className="hint">A forma de pagamento é montada na seção “Condições de pagamento” acima.</p>
         </div>
       </details>

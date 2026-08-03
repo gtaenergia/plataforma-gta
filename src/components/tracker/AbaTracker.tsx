@@ -494,7 +494,7 @@ function LinhaLancamento({
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <span className="hidden text-xs tabular-nums text-slate-400 sm:inline dark:text-slate-500">
+        <span className="hidden text-xs tabular-nums text-slate-600 sm:inline dark:text-slate-400">
           {hora(entrada.inicio)}{entrada.fim ? `–${hora(entrada.fim)}` : ""}
         </span>
         <span className="text-sm font-medium tabular-nums text-slate-600 dark:text-slate-300">{formatarDuracao(min)}</span>

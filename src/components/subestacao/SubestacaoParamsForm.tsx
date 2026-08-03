@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Alert, Loading } from "@/components/ui";
+import { Campo } from "@/components/Campo";
 /**
  * Parâmetros de preço do Projeto de Subestação (modelo por custo).
  * A margem é exibida em % (50) e salva como fração (0,5). Disponível a todos.
@@ -88,11 +89,9 @@ export function SubestacaoParamsForm({ onSaved }: { onSaved?: (p: Params) => voi
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {CAMPOS.map((c) => (
-          <div key={c.key}>
-            <label className="field-label">{c.label}</label>
+          <Campo key={c.key} label={<>{c.label}</>} hint={<><p className="mt-1 hint">{c.help}</p></>}>
             <input className="field-input" inputMode="decimal" value={texto[c.key]} onChange={(e) => setTexto({ ...texto, [c.key]: e.target.value })} />
-            <p className="mt-1 hint">{c.help}</p>
-          </div>
+          </Campo>
         ))}
       </div>
       {erro && <Alert tone="red">{erro}</Alert>}
