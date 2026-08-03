@@ -7,7 +7,7 @@ import { CATEGORIAS_PADRAO_TAREFA } from "@/lib/tasks/types";
 import { CONFIG_CAPACIDADE_PADRAO, type ConfigCapacidade, type TipoDemanda } from "@/lib/capacidade/types";
 import { chaveCategoria } from "@/lib/capacidade/motor";
 import { CargaEquipe } from "./CargaEquipe";
-import { DIA_NOME, SeletorDias } from "./SeletorDias";
+import { SeletorDias } from "./SeletorDias";
 
 /**
  * Parâmetros de planejamento: jornada da equipe, catálogo de tipos de demanda
@@ -46,6 +46,31 @@ function paraMinutos(txt: string): number | undefined {
   return Math.round(n * 60);
 }
 
+/**
+ * Escreve a jornada de cada pessoa explicitamente, a partir do que hoje ela
+ * herda do padrão da equipe.
+ *
+ * A tela deixou de ter "jornada padrão" — a jornada é de cada um. Sem isto o
+ * padrão continuaria decidindo prazo por trás, invisível, para quem nunca foi
+ * ajustado; e o campo ficaria impossível de editar, porque apagar para
+ * redigitar faria o valor herdado reaparecer no lugar.
+ *
+ * Só mexe no que está na tela: `config.padrao` continua no modelo como a
+ * jornada de quem entrar na equipe depois e ainda não foi cadastrado.
+ */
+function materializarJornadas(config: ConfigCapacidade, usuarios: Usuario[]): ConfigCapacidade {
+  const pessoas = { ...config.pessoas };
+  for (const u of usuarios) {
+    const atual = pessoas[u.email] ?? {};
+    pessoas[u.email] = {
+      minutosPorDia: atual.minutosPorDia ?? config.padrao.minutosPorDia,
+      atrasoInicioMin: atual.atrasoInicioMin ?? config.padrao.atrasoInicioMin,
+      diasUteis: atual.diasUteis ?? config.padrao.diasUteis,
+    };
+  }
+  return { ...config, pessoas };
+}
+
 export function PlanejamentoAdmin() {
   const [config, setConfig] = useState<ConfigCapacidade | null>(null);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -67,8 +92,9 @@ export function PlanejamentoAdmin() {
         ]);
         const [dc, du, dt] = await Promise.all([rc.json(), ru.json(), rt.json()]);
         if (!rc.ok) throw new Error(dc.error ?? "Falha ao carregar a configuração.");
-        setConfig(dc.config);
-        setUsuarios(du.usuarios ?? []);
+        const usuariosAtivos: Usuario[] = du.usuarios ?? [];
+        setConfig(materializarJornadas(dc.config, usuariosAtivos));
+        setUsuarios(usuariosAtivos);
         setTarefas(dt.tasks ?? []);
       } catch (e) {
         setErro(e instanceof Error ? e.message : "Erro ao carregar.");
@@ -101,16 +127,11 @@ export function PlanejamentoAdmin() {
 
   function alterarPessoa(email: string, campo: "minutosPorDia" | "atrasoInicioMin", valor: string) {
     if (!config) return;
-    const min = paraMinutos(valor);
-    const atual = { ...(config.pessoas[email] ?? {}) };
-    if (min === undefined) delete atual[campo];
-    else atual[campo] = min;
-
-    const pessoas = { ...config.pessoas };
-    // Sem campo nenhum, a entrada some — assim o mapa não acumula objetos
-    // vazios que confundem quem for ler o JSON depois.
-    if (Object.keys(atual).length === 0) delete pessoas[email];
-    else pessoas[email] = atual;
+    // Campo vazio vira 0, e não "apaga o ajuste": sem jornada padrão na tela,
+    // apagar não teria de onde herdar — e zero horas já é o jeito de dizer que
+    // a pessoa não executa tarefas.
+    const min = paraMinutos(valor) ?? 0;
+    const pessoas = { ...config.pessoas, [email]: { ...(config.pessoas[email] ?? {}), [campo]: min } };
     alterar({ pessoas });
   }
 
@@ -119,15 +140,9 @@ export function PlanejamentoAdmin() {
     const atual = { ...(config.pessoas[email] ?? {}) };
     const base = atual.diasUteis ?? config.padrao.diasUteis;
     const novos = base.includes(dia) ? base.filter((d) => d !== dia) : [...base, dia].sort();
-    // Igual ao padrão volta a ser herança, não um ajuste travado que deixaria
-    // de acompanhar uma mudança futura no padrão da equipe.
-    const igualAoPadrao = novos.join() === config.padrao.diasUteis.join();
-    if (igualAoPadrao) delete atual.diasUteis;
-    else atual.diasUteis = novos;
-
-    const pessoas = { ...config.pessoas };
-    if (Object.keys(atual).length === 0) delete pessoas[email];
-    else pessoas[email] = atual;
+    // Sempre explícito: os dias são de cada pessoa, não uma herança que pode
+    // mudar sozinha quando outra coisa mudar.
+    const pessoas = { ...config.pessoas, [email]: { ...atual, diasUteis: novos } };
     alterar({ pessoas });
   }
 
@@ -189,11 +204,6 @@ export function PlanejamentoAdmin() {
   if (carregando) return <Loading />;
   if (!config) return <Alert tone="red">{erro ?? "Não foi possível carregar."}</Alert>;
 
-  const padraoDias = config.padrao.diasUteis
-    .map((d) => DIA_NOME[d])
-    .join(", ")
-    .replace(/, ([^,]*)$/, " e $1");
-
   return (
     <div className="space-y-6">
       {erro && <Alert tone="red">{erro}</Alert>}
@@ -204,66 +214,8 @@ export function PlanejamentoAdmin() {
       )}
 
       <SectionCard
-        title="Jornada padrão da equipe"
-        subtitle="Aplicada a todos os profissionais que não tiverem parâmetros individuais."
-      >
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <label className="field-label" htmlFor="cap-horas">Horas por dia</label>
-            <input
-              id="cap-horas"
-              type="number"
-              min={0}
-              max={24}
-              step={0.5}
-              className="field-input"
-              value={paraHoras(config.padrao.minutosPorDia)}
-              onChange={(e) =>
-                alterar({ padrao: { ...config.padrao, minutosPorDia: paraMinutos(e.target.value) ?? 0 } })
-              }
-            />
-          </div>
-          <div>
-            <label className="field-label" htmlFor="cap-atraso">Tempo médio de resposta (h)</label>
-            <input
-              id="cap-atraso"
-              type="number"
-              min={0}
-              step={0.5}
-              className="field-input"
-              value={paraHoras(config.padrao.atrasoInicioMin)}
-              onChange={(e) =>
-                alterar({ padrao: { ...config.padrao, atrasoInicioMin: paraMinutos(e.target.value) ?? 0 } })
-              }
-            />
-            <p className="hint mt-1">
-              Intervalo médio entre a abertura da tarefa e o início do atendimento. Considerado no cálculo do prazo.
-            </p>
-          </div>
-          <div>
-            <span className="field-label">Dias de trabalho</span>
-            <SeletorDias
-              valor={config.padrao.diasUteis}
-              onAlternar={(dia) => {
-                const atuais = config.padrao.diasUteis;
-                const novos = atuais.includes(dia)
-                  ? atuais.filter((x) => x !== dia)
-                  : [...atuais, dia].sort();
-                alterar({ padrao: { ...config.padrao, diasUteis: novos } });
-              }}
-            />
-          </div>
-        </div>
-        {config.padrao.diasUteis.length === 0 && (
-          <Alert tone="amber" className="mt-4">
-            Nenhum dia de trabalho selecionado. Sem essa informação a plataforma não calcula prazos.
-          </Alert>
-        )}
-      </SectionCard>
-
-      <SectionCard
-        title="Parâmetros individuais"
-        subtitle="Campos em branco herdam a jornada padrão. Jornada igual a zero identifica profissionais que não executam tarefas — eles deixam de ser indicados."
+        title="Jornada da equipe"
+        subtitle="A jornada de cada profissional. Zero horas identifica quem não executa tarefas — essa pessoa deixa de ser indicada."
       >
         {usuarios.length === 0 ? (
           <EmptyState>Nenhum usuário ativo.</EmptyState>
@@ -273,9 +225,9 @@ export function PlanejamentoAdmin() {
               <thead>
                 <tr>
                   <th>Profissional</th>
-                  <th className="w-32">Horas/dia</th>
-                  <th className="w-32">Resposta (h)</th>
-                  <th>Dias</th>
+                  <th className="w-36">Horas por dia</th>
+                  <th className="w-36">Horas até iniciar</th>
+                  <th>Dias de trabalho</th>
                 </tr>
               </thead>
               <tbody>
@@ -295,9 +247,8 @@ export function PlanejamentoAdmin() {
                           max={24}
                           step={0.5}
                           className="field-input !py-1.5"
-                          placeholder={paraHoras(config.padrao.minutosPorDia)}
                           aria-label={`Horas por dia de ${u.name || u.email}`}
-                          value={paraHoras(p?.minutosPorDia)}
+                          value={paraHoras(p?.minutosPorDia ?? config.padrao.minutosPorDia)}
                           onChange={(e) => alterarPessoa(u.email, "minutosPorDia", e.target.value)}
                         />
                       </td>
@@ -307,9 +258,8 @@ export function PlanejamentoAdmin() {
                           min={0}
                           step={0.5}
                           className="field-input !py-1.5"
-                          placeholder={paraHoras(config.padrao.atrasoInicioMin)}
-                          aria-label={`Atraso até olhar a plataforma de ${u.name || u.email}`}
-                          value={paraHoras(p?.atrasoInicioMin)}
+                          aria-label={`Horas até iniciar de ${u.name || u.email}`}
+                          value={paraHoras(p?.atrasoInicioMin ?? config.padrao.atrasoInicioMin)}
                           onChange={(e) => alterarPessoa(u.email, "atrasoInicioMin", e.target.value)}
                         />
                       </td>
@@ -381,7 +331,7 @@ export function PlanejamentoAdmin() {
                       <thead>
                         <tr>
                           <th>Tipo de demanda</th>
-                          <th className="w-36">Duração (h)</th>
+                          <th className="w-36">Duração em horas</th>
                           <th className="w-12" />
                         </tr>
                       </thead>
@@ -469,7 +419,7 @@ export function PlanejamentoAdmin() {
         </div>
 
         <div className="mt-4 max-w-xs">
-          <label className="field-label" htmlFor="cap-padrao">Duração padrão (tipos sem cadastro)</label>
+          <label className="field-label" htmlFor="cap-padrao">Duração em horas, para o tipo ainda sem cadastro</label>
           <input
             id="cap-padrao"
             type="number"
@@ -544,7 +494,6 @@ export function PlanejamentoAdmin() {
         <button type="button" className="btn-primary" onClick={salvar} disabled={salvando}>
           {salvando ? "Salvando…" : "Salvar parâmetros"}
         </button>
-        <span className="hint">Jornada padrão: {paraHoras(config.padrao.minutosPorDia)} h/dia, {padraoDias || "nenhum dia selecionado"}.</span>
       </div>
     </div>
   );
