@@ -1,14 +1,14 @@
 import { AppHeader } from "@/components/AppHeader";
-import { PropostaManualForm } from "@/components/propostas/PropostaManualForm";
+import { RegistrarPropostaForm } from "@/components/propostas/RegistrarPropostaForm";
 import { BackLink, PageHeader } from "@/components/ui";
 import { requirePageUser } from "@/lib/session";
 
 /**
- * Cadastro de proposta feita fora da plataforma. Página própria, e não um
+ * Registro de proposta feita fora da plataforma. Página própria, e não um
  * cartão dentro da lista: o formulário tem sete campos mais o anexo, e o mesmo
  * desenho de /tarefas/nova já resolveu esse caso.
  */
-export default async function PropostaManualPage() {
+export default async function RegistrarPropostaPage() {
   const user = await requirePageUser();
 
   return (
@@ -19,12 +19,12 @@ export default async function PropostaManualPage() {
           <BackLink href="/propostas">Voltar para Propostas</BackLink>
           <div className="mt-2">
             <PageHeader
-              title="Cadastrar proposta manual"
-              subtitle="Para a proposta que foi montada fora da plataforma. Ela entra no mesmo histórico e na mesma esteira de aprovação das geradas."
+              title="Registrar proposta pronta"
+              subtitle="Para a proposta que já foi montada fora da plataforma. Ela entra no mesmo histórico e na mesma esteira de aprovação das que a plataforma gera."
             />
           </div>
         </div>
-        <PropostaManualForm />
+        <RegistrarPropostaForm />
       </main>
     </div>
   );

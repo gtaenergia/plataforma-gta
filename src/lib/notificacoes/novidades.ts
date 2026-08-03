@@ -20,11 +20,11 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
-    slug: "proposta-manual-2026-08",
-    titulo: "Novidade: cadastrar proposta feita fora da plataforma",
+    slug: "proposta-registrada-2026-08",
+    titulo: "Novidade: registrar proposta feita fora da plataforma",
     mensagem:
-      "A proposta específica demais para caber num configurador agora entra no histórico: classifique o serviço, informe cliente e valor e, se quiser, anexe o PDF para mandar à aprovação. Em Propostas, no botão “Cadastrar manual”.",
-    link: "/propostas/manual",
+      "A proposta específica demais para caber num configurador agora entra no histórico: escolha o serviço, informe cliente e valor e, se quiser, anexe o PDF para mandar à aprovação. Em Propostas, no botão “Registrar proposta pronta”.",
+    link: "/propostas/registrar",
   },
   {
     slug: "calendario-tarefas-2026-08",

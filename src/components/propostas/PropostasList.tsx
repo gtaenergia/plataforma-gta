@@ -128,6 +128,17 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
     }
   }
 
+  /**
+   * "Gerada" descreve o que a PLATAFORMA fez, e ela não fez nada numa proposta
+   * trazida de fora — a linha dizia "Fora da plataforma" e "Gerada" ao mesmo
+   * tempo. Só o rótulo muda; o status gravado continua sendo o mesmo, porque é
+   * ele que libera o envio para a aprovação.
+   */
+  function rotuloStatus(p: Proposta) {
+    if (p.manual && p.status === "gerada") return "Registrada";
+    return statusPropostaLabel(p.status);
+  }
+
   function rotuloServico(key: string) {
     if (key === SERVICO_OUTRO) return SERVICO_OUTRO_LABEL;
     return serviceMap.get(key)?.label ?? key;
@@ -200,10 +211,10 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
                   <div className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
                     <ServiceIcon serviceKey={p.serviceKey} className="h-4 w-4 shrink-0 text-gta-indigo dark:text-indigo-300" />
                     <span className="truncate">{rotuloServico(p.serviceKey)}</span>
-                    {p.manual && <Badge tone="slate" className="shrink-0">Manual</Badge>}
+                    {p.manual && <Badge tone="slate" className="shrink-0">Fora da plataforma</Badge>}
                   </div>
                 </div>
-                <Marca tone={STATUS_TONE[p.status] ?? "slate"} className="shrink-0">{statusPropostaLabel(p.status)}</Marca>
+                <Marca tone={STATUS_TONE[p.status] ?? "slate"} className="shrink-0">{rotuloStatus(p)}</Marca>
               </div>
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
                 {p.referencia && <span className="font-mono">{p.referencia}</span>}
@@ -273,13 +284,13 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
                     <span className="inline-flex items-center gap-1.5">
                       <ServiceIcon serviceKey={p.serviceKey} className="h-4 w-4 text-gta-indigo dark:text-indigo-300" />
                       {rotuloServico(p.serviceKey)}
-                      {p.manual && <Badge tone="slate">Manual</Badge>}
+                      {p.manual && <Badge tone="slate">Fora da plataforma</Badge>}
                     </span>
                   </td>
                   <td className="px-4 py-2 font-mono text-xs text-slate-600 dark:text-slate-400">{p.referencia || "—"}</td>
                   <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{nomeCriador(p)}</td>
                   <td className="px-4 py-2">
-                    <Marca tone={STATUS_TONE[p.status] ?? "slate"}>{statusPropostaLabel(p.status)}</Marca>
+                    <Marca tone={STATUS_TONE[p.status] ?? "slate"}>{rotuloStatus(p)}</Marca>
                   </td>
                   <td className="px-4 py-2 text-slate-600 dark:text-slate-400">{fmtData(p.atualizadoEm)}</td>
                   <td className="px-4 py-2">

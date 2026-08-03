@@ -9,14 +9,14 @@ import { SERVICO_OUTRO, SERVICO_OUTRO_LABEL } from "@/lib/propostas/types";
 import { ANEXO_MAX_BYTES } from "@/lib/orcamentos/types";
 
 /**
- * Cadastro de uma proposta feita FORA da plataforma.
+ * Registro de uma proposta feita FORA da plataforma.
  *
  * A GTA tem propostas específicas demais para caber num configurador, e hoje
  * elas só existem no computador de quem fez. Aqui elas viram registro: entram
  * na mesma lista, no mesmo filtro por serviço e na mesma esteira de aprovação
  * das geradas.
  *
- * O PDF é opcional no cadastro porque o registro do histórico vale por si — e
+ * O PDF é opcional porque o registro do histórico vale por si — e
  * porque nem sempre o arquivo está pronto na hora em que a proposta é lançada.
  */
 
@@ -27,13 +27,12 @@ interface ServiceMeta {
 
 const MB = 1024 * 1024;
 
-export function PropostaManualForm() {
+export function RegistrarPropostaForm() {
   const router = useRouter();
   const [servicos, setServicos] = useState<ServiceMeta[]>([]);
   const [serviceKey, setServiceKey] = useState(SERVICO_OUTRO);
   const [cliente, setCliente] = useState("");
   const [cidadeUf, setCidadeUf] = useState("");
-  const [referencia, setReferencia] = useState("");
   const [valor, setValor] = useState("");
   const [dataEmissao, setDataEmissao] = useState(() => new Date().toISOString().slice(0, 10));
   const [observacoes, setObservacoes] = useState("");
@@ -77,10 +76,14 @@ export function PropostaManualForm() {
         body: JSON.stringify({
           serviceKey,
           cliente: cliente.trim(),
-          referencia: referencia.trim(),
+          // Em branco de propósito: o store gera a referência no mesmo
+          // formato e na mesma sequência por serviço das propostas geradas.
+          referencia: "",
           // "gerada" porque a proposta EXISTE — foi feita à mão, mas está pronta.
           // É também o status que libera o envio para a esteira de aprovação.
           status: "gerada",
+          // `manual` é o nome do campo no modelo (cadastrada à mão); na
+          // interface o conceito se chama REGISTRAR, para contrastar com gerar.
           manual: true,
           dados: {
             cidadeUf: cidadeUf.trim() || undefined,
@@ -91,7 +94,7 @@ export function PropostaManualForm() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Falha ao cadastrar a proposta.");
+      if (!res.ok) throw new Error(data.error ?? "Falha ao registrar a proposta.");
 
       // Sem PDF: o registro já cumpriu o papel de histórico.
       if (!arquivo) {
@@ -109,7 +112,7 @@ export function PropostaManualForm() {
         body: JSON.stringify({ propostaId: data.proposta.id }),
       });
       const orc = await ro.json();
-      if (!ro.ok) throw new Error(orc.error ?? "Proposta cadastrada, mas falhou ao abrir a aprovação.");
+      if (!ro.ok) throw new Error(orc.error ?? "Proposta registrada, mas falhou ao abrir a aprovação.");
 
       const form = new FormData();
       form.append("file", arquivo);
@@ -120,7 +123,7 @@ export function PropostaManualForm() {
       router.refresh();
       router.push(`/aprovacoes/${orc.orcamento.id}`);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro ao cadastrar.");
+      setErro(e instanceof Error ? e.message : "Erro ao registrar.");
       setSalvando(false);
     }
   }
@@ -142,23 +145,18 @@ export function PropostaManualForm() {
           <Campo className="sm:col-span-3" label="Cliente *">
             <ClienteInput
               className="field-input"
-              listId="manual-clientes"
+              listId="registrar-clientes"
               value={cliente}
               onNome={setCliente}
               onCidadeUf={setCidadeUf}
             />
           </Campo>
-          <Campo
-            className="sm:col-span-3"
-            label="Referência"
-            hint={<p className="mt-1 hint">Em branco, a plataforma gera a referência como nas propostas geradas.</p>}
-          >
-            <input className="field-input" value={referencia} onChange={(e) => setReferencia(e.target.value)} placeholder="Ex.: GTA-SE-2026-014" />
-          </Campo>
-          <Campo className="sm:col-span-2" label="Valor (R$)">
+          <Campo className="sm:col-span-3" label="Valor (R$)">
             <input className="field-input" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="Ex.: 32.700,00" />
           </Campo>
-          <Campo className="sm:col-span-1" label="Emissão">
+          {/* `col-span-3`: em `1` o campo ficava com 102px e o seletor de data
+                nativo pede 147 — a data aparecia cortada. */}
+          <Campo className="sm:col-span-3" label="Emissão">
             <input type="date" className="field-input" value={dataEmissao} onChange={(e) => setDataEmissao(e.target.value)} />
           </Campo>
           <Campo className="sm:col-span-6" label="Observações">
@@ -174,7 +172,7 @@ export function PropostaManualForm() {
 
       <SectionCard
         title="Documento"
-        subtitle="O PDF da proposta, para anexar à aprovação. Opcional — sem ele o cadastro fica só como registro."
+        subtitle="O PDF da proposta, para anexar à aprovação. Opcional — sem ele a proposta fica só no histórico."
       >
         <div className="flex flex-wrap items-center gap-3">
           <input
@@ -216,7 +214,7 @@ export function PropostaManualForm() {
 
       <div className="flex flex-wrap gap-3">
         <button type="button" className="btn-primary" disabled={salvando} onClick={salvar}>
-          {salvando ? "Salvando…" : arquivo ? "Cadastrar e abrir a aprovação" : "Cadastrar proposta"}
+          {salvando ? "Salvando…" : arquivo ? "Registrar e abrir a aprovação" : "Registrar proposta"}
         </button>
         <button type="button" className="btn-ghost" disabled={salvando} onClick={() => router.push("/propostas")}>
           Cancelar

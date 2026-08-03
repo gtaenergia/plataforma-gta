@@ -24,11 +24,12 @@ export default async function PropostasPage() {
             subtitle="Todas as propostas geradas na plataforma. Filtre por cliente, serviço, criador ou status, e reabra uma proposta para continuar de onde parou."
             actions={
               <>
-                {/* Secundário porque é o caminho de exceção: o normal é gerar
-                    pela plataforma, e o cadastro manual existe para a proposta
-                    específica demais para caber num configurador. */}
-                <Link href="/propostas/manual" className="btn-secondary whitespace-nowrap">
-                  Cadastrar manual
+                {/* "Registrar" e não "Cadastrar manual": o par que a pessoa lê é
+                    GERAR (a plataforma monta) x REGISTRAR (já está pronta,
+                    só entra no histórico). "Externa" estava fora de questão —
+                    no sistema já significa orçamento de terceiro. */}
+                <Link href="/propostas/registrar" className="btn-secondary whitespace-nowrap" title="Guardar no histórico uma proposta que já foi feita fora da plataforma">
+                  Registrar proposta pronta
                 </Link>
                 <Link href="/" className="btn-primary whitespace-nowrap">
                   + Nova proposta
