@@ -98,6 +98,14 @@ function cota(
   ctx.restore();
 }
 
+/** Dimensões lógicas do desenho (o canvas é escalado pelo devicePixelRatio). */
+const W = 1100;
+const H = 830;
+/** Respiro mínimo entre o rótulo de uma chamada e a borda da imagem. */
+const MARGEM_ROTULO = 8;
+/** Distância entre o fim da linha de indicação e o começo do texto. */
+const FOLGA_ROTULO = 5;
+
 /**
  * Linha de indicação para cota pequena demais para caber no desenho.
  *
@@ -113,7 +121,27 @@ function chamada(
   alinhamento: CanvasTextAlign = "left",
 ) {
   const inicio = caminho[0];
-  const fim = caminho[caminho.length - 1];
+  ctx.font = "600 12px system-ui, sans-serif";
+
+  /*
+   * O fim do caminho é onde o RÓTULO começa, e ele era posicionado a partir da
+   * borda do telhado. Num telhado largo isso jogava o texto para fora da
+   * imagem: com 20 m de água o "folga entre módulos 20 mm" era cortado no meio.
+   * Aqui o ponto final recua o quanto for preciso para o texto caber — quem
+   * manda é a largura medida do texto, não uma distância fixa que só funciona
+   * em alguns telhados.
+   */
+  const larguraTexto = ctx.measureText(texto).width;
+  const alvo = caminho[caminho.length - 1];
+  const fim = {
+    ...alvo,
+    x:
+      alinhamento === "right"
+        ? Math.max(alvo.x, MARGEM_ROTULO + larguraTexto + FOLGA_ROTULO)
+        : Math.min(alvo.x, W - MARGEM_ROTULO - larguraTexto - FOLGA_ROTULO),
+  };
+  caminho = [...caminho.slice(0, -1), fim];
+
   ctx.strokeStyle = COR.cota;
   ctx.fillStyle = COR.cota;
   ctx.lineWidth = 1;
@@ -126,10 +154,9 @@ function chamada(
   ctx.beginPath();
   ctx.arc(inicio.x, inicio.y, 1.4, 0, Math.PI * 2);
   ctx.fill();
-  ctx.font = "600 12px system-ui, sans-serif";
   ctx.textAlign = alinhamento;
   ctx.textBaseline = "middle";
-  ctx.fillText(texto, fim.x + (alinhamento === "right" ? -5 : 5), fim.y);
+  ctx.fillText(texto, fim.x + (alinhamento === "right" ? -FOLGA_ROTULO : FOLGA_ROTULO), fim.y);
 }
 
 /** Quadro técnico: as cotas que não cabem no desenho ficam tabeladas aqui. */
@@ -184,8 +211,6 @@ interface DesenhoInput {
 
 function desenhar(canvas: HTMLCanvasElement, r: TelhadoResultado, arranjo: Arranjo | null, i: DesenhoInput) {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const W = 1100;
-  const H = 830;
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   canvas.style.width = "100%";
