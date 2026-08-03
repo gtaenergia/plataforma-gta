@@ -302,11 +302,16 @@ export function ClientesList() {
                     {!c.telefone && !c.email && "—"}
                   </div>
                 </td>
-                <td className="px-4 py-2">{c.segmento ? <Badge tone="indigo">{c.segmento}</Badge> : <span className="sem-valor">—</span>}</td>
+                {/* Texto, não <Badge>: são 7 segmentos e a pílula saía índigo em
+                    TODOS, então a cor não distinguia Rural de Industrial — só
+                    pintava a coluna inteira. O cabeçalho já diz o que é o valor,
+                    como em Cidade/UF ao lado. No cartão do celular a pílula fica,
+                    porque lá ela aparece uma vez por cartão, não em coluna. */}
+                <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{c.segmento || <span className="sem-valor">—</span>}</td>
                 <td className="px-4 py-2">
-                  <div className="flex items-center justify-end gap-3 whitespace-nowrap text-xs">
-                    <button onClick={() => abrirEdicao(c)} className="text-gta-indigo dark:text-indigo-300 hover:underline">Editar</button>
-                    <button onClick={() => excluir(c)} className="text-red-500 hover:underline dark:text-red-400">Excluir</button>
+                  <div className="flex items-center justify-end gap-3 whitespace-nowrap">
+                    <button onClick={() => abrirEdicao(c)} className="btn-link text-xs">Editar</button>
+                    <button onClick={() => excluir(c)} className="btn-link-danger text-xs">Excluir</button>
                   </div>
                 </td>
               </tr>

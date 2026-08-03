@@ -220,7 +220,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
                 <button className={`text-slate-600 dark:text-slate-300 ${acaoCls}`} disabled={eu} onClick={() => patch(u.id, { active: !u.active })}>
                   {u.active ? "Desativar" : "Ativar"}
                 </button>
-                <button className={`text-red-500 dark:text-red-400 ${acaoCls}`} disabled={eu} onClick={() => excluir(u)}>Excluir</button>
+                <button className={`text-red-600 dark:text-red-400 ${acaoCls}`} disabled={eu} onClick={() => excluir(u)}>Excluir</button>
               </div>
             </div>
           );

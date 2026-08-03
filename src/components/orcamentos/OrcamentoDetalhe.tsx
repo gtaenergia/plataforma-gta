@@ -462,7 +462,7 @@ export function OrcamentoDetalhe({
                   </div>
                 </div>
                 {podeAnexar && (
-                  <button onClick={() => removerRevisao(a.id)} className="shrink-0 text-xs text-red-500 hover:underline dark:text-red-400">
+                  <button onClick={() => removerRevisao(a.id)} className="btn-link-danger shrink-0 text-xs">
                     Remover
                   </button>
                 )}
@@ -628,7 +628,7 @@ export function OrcamentoDetalhe({
           <button
             onClick={excluirOrcamento}
             disabled={excluindo}
-            className="text-xs text-red-500 hover:underline disabled:opacity-50 dark:text-red-400"
+            className="btn-link-danger text-xs"
           >
             {excluindo ? "Excluindo…" : "Excluir orçamento"}
           </button>

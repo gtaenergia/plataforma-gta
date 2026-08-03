@@ -177,11 +177,22 @@ input[list].field-input {
          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gta-indigo/40
          dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-indigo-300;
 }
-/* Ação textual (links de "Abrir", "Ver mais"…). */
+/* Ação textual (links de "Abrir", "Ver mais"…).
+   `min-h-[24px]`: sem isso o link tem a altura da própria linha de texto — 16px
+   com `text-xs` —, abaixo do alvo mínimo de 24px da WCAG 2.2 até com mouse. No
+   dedo a media query lá embaixo leva para 44. */
 .btn-link {
-  @apply inline-flex items-center gap-1 text-sm font-medium text-gta-indigo transition
+  @apply inline-flex min-h-[24px] items-center gap-1 text-sm font-medium text-gta-indigo transition
          hover:underline focus-visible:outline-none focus-visible:underline
          disabled:cursor-not-allowed disabled:opacity-60 dark:text-indigo-300;
+}
+/* Mesma ação textual, versão destrutiva ("Excluir", "Remover").
+   `red-600` e não `red-500`: sobre o fundo claro o tom anterior media 3,76:1,
+   abaixo do mínimo de 4,5 da WCAG AA. */
+.btn-link-danger {
+  @apply inline-flex min-h-[24px] items-center gap-1 text-sm font-medium text-red-600 transition
+         hover:underline focus-visible:outline-none focus-visible:underline
+         disabled:cursor-not-allowed disabled:opacity-60 dark:text-red-400;
 }
 /* ---- Ações do cabeçalho ---------------------------------------------------
    Menu, sino e perfil ficam lado a lado e tinham TRÊS alturas diferentes —
@@ -245,6 +256,7 @@ input[list].field-input {
   .icon-btn { @apply h-11 w-11; }
   /* Links de ação e botões compactos ganham altura mínima sem mudar a fonte. */
   .btn-link,
+  .btn-link-danger,
   .btn-ghost,
   .btn-primary,
   .btn-secondary,
