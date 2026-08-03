@@ -56,7 +56,12 @@ export function TrackerBoard({ meEmail, podeVerEquipe }: { meEmail: string; pode
               type="button"
               onClick={() => setAba(id)}
               aria-current={aba === id ? "page" : undefined}
-              className={`toque -mb-px shrink-0 gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition ${
+              /* `inline-flex` explícito: o `gap-1.5` dependia do `.toque`, que
+                 só existe dentro da media query de dedo. No desktop a aba
+                 ficava `display:block` — e o preflight do Tailwind torna todo
+                 <svg> um bloco, então o ícone caía numa linha própria, colado
+                 no rótulo, em vez de ficar ao lado dele. */
+              className={`toque -mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition ${
                 aba === id
                   ? "border-gta-indigo text-gta-indigo dark:border-indigo-400 dark:text-indigo-300"
                   /* `slate-600`: em `slate-500` a aba inativa ficava em 4,4:1
