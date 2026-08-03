@@ -52,7 +52,7 @@ export default async function ContaPage() {
             <dt className="mt-2 text-slate-600 sm:mt-0 dark:text-slate-400">Carga horária</dt>
             <dd className="text-slate-700 sm:col-span-2 dark:text-slate-300">
               {descreverJornada(minha)}
-              {minha.origem === "padrao" && <span className="hint"> (padrão da equipe)</span>}
+              {minha.origem === "padrao" && <span className="hint"> — ainda não cadastrada</span>}
             </dd>
           </dl>
           <p className="hint mt-3">

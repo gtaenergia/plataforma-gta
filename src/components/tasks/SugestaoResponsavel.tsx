@@ -162,7 +162,10 @@ function LinhaCandidato({
     >
       <span className="font-medium text-gta-navy dark:text-slate-100">{c.nome}</span>
       {principal && <Badge tone="indigo">Indicado</Badge>}
-      {c.capacidade.origem === "padrao" && <span className="hint">Jornada padrão</span>}
+      {/* Não existe mais "jornada padrão" para o administrador ver ou editar —
+          a jornada é de cada um. Quando a pessoa ainda não foi cadastrada em
+          Planejamento, o que serve é dizer isso, não citar um padrão invisível. */}
+      {c.capacidade.origem === "padrao" && <span className="hint">Jornada não cadastrada</span>}
 
       <span className="text-slate-700 dark:text-slate-300">
         Entrega em <strong>{fmtData(c.prazo.data as string)}</strong>
