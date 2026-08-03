@@ -206,10 +206,12 @@ select.field-input::-ms-expand,
          disabled:cursor-not-allowed disabled:opacity-60 dark:text-indigo-300;
 }
 /* Mesma ação textual, versão destrutiva ("Excluir", "Remover").
-   `red-600` e não `red-500`: sobre o fundo claro o tom anterior media 3,76:1,
-   abaixo do mínimo de 4,5 da WCAG AA. */
+   `red-700` e não `red-500`/`red-600`: o 500 media 3,76:1 e o 600 chegava a
+   4,47:1 quando o botão cai sobre o fundo CINZA da página (#f5f6f8) em vez do
+   branco do cartão — os dois abaixo do mínimo de 4,5 da WCAG AA. O 700 passa
+   nos dois fundos. */
 .btn-link-danger {
-  @apply inline-flex min-h-[24px] items-center gap-1 text-sm font-medium text-red-600 transition
+  @apply inline-flex min-h-[24px] items-center gap-1 text-sm font-medium text-red-700 transition
          hover:underline focus-visible:outline-none focus-visible:underline
          disabled:cursor-not-allowed disabled:opacity-60 dark:text-red-400;
 }

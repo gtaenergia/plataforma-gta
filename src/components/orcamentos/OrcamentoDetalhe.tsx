@@ -126,7 +126,51 @@ export function OrcamentoDetalhe({
   // Desfazer uma decisão já tomada (aprovou por engano, cancelou errado):
   // volta para em_revisao, de onde as decisões normais valem de novo.
   const podeReabrir = !naoFinalizado && pode("orcamentos.aprovar");
-  const semAcoes = !podeEnviar && !podeDecidir && !podeCancelar && !podeReabrir;
+  // `podeReabrir` fica de fora: reabrir mora no cartão de Revisão, junto do
+  // parecer que justifica a decisão. Num orçamento finalizado ele era a ÚNICA
+  // ação, e o cartão "Ações" existia só para segurar um botão.
+  const semAcoes = !podeEnviar && !podeDecidir && !podeCancelar;
+
+  /**
+   * Formulário do parecer. Função, e não bloco fixo: a mesma caixa aparece no
+   * cartão de Ações (enviar/aprovar/rejeitar/cancelar) e no de Revisão
+   * (reabrir), sempre embaixo do botão que a pessoa acabou de apertar.
+   */
+  function painelParecer(acao: AcaoTransicao) {
+    return (
+      <Campo
+        className="space-y-2"
+        label={<>Parecer {acao === "cancelar" ? "(opcional)" : "*"}</>}
+        hint={
+          <div className="mt-2 flex gap-2">
+            <button
+              className="btn-primary"
+              disabled={processando || (acao !== "cancelar" && !parecer.trim())}
+              onClick={() => transicionar(acao, parecer.trim() || undefined)}
+            >
+              {processando ? "Processando…" : CONFIRMAR[acao]}
+            </button>
+            <button className="btn-secondary" onClick={() => setAcaoAberta(null)} disabled={processando}>
+              Voltar
+            </button>
+          </div>
+        }
+      >
+        <textarea
+          className="field-input min-h-20"
+          value={parecer}
+          onChange={(e) => setParecer(e.target.value)}
+          placeholder={
+            acao === "rejeitar"
+              ? "O que precisa ser ajustado?"
+              : acao === "reabrir"
+                ? "Por que a decisão está sendo desfeita?"
+                : "Registre o parecer da revisão"
+          }
+        />
+      </Campo>
+    );
+  }
 
   const revisoes = [...orc.anexos].sort((a, b) => a.revisao - b.revisao);
   const temRev0 = orc.anexos.some((a) => a.revisao === 0);
@@ -502,33 +546,8 @@ export function OrcamentoDetalhe({
       {!semAcoes && (
         <div className="section-card">
           <h2 className="section-title mb-4">Ações</h2>
-          {acaoAberta ? (
-            <Campo className="space-y-2" label={<>Parecer {acaoAberta === "cancelar" ? "(opcional)" : "*"}</>} hint={<><div className="flex gap-2">
-                <button
-                  className="btn-primary"
-                  disabled={processando || (acaoAberta !== "cancelar" && !parecer.trim())}
-                  onClick={() => transicionar(acaoAberta, parecer.trim() || undefined)}
-                >
-                  {processando ? "Processando…" : CONFIRMAR[acaoAberta]}
-                </button>
-                <button className="btn-secondary" onClick={() => setAcaoAberta(null)} disabled={processando}>
-                  Voltar
-                </button>
-              </div></>}>
-
-              <textarea
-                className="field-input min-h-20"
-                value={parecer}
-                onChange={(e) => setParecer(e.target.value)}
-                placeholder={
-                  acaoAberta === "rejeitar"
-                    ? "O que precisa ser ajustado?"
-                    : acaoAberta === "reabrir"
-                      ? "Por que a decisão está sendo desfeita?"
-                      : "Registre o parecer da revisão"
-                }
-              />
-            </Campo>
+          {acaoAberta && acaoAberta !== "reabrir" ? (
+            painelParecer(acaoAberta)
           ) : (
             <div className="flex flex-wrap gap-2">
               {podeEnviar && (
@@ -551,17 +570,6 @@ export function OrcamentoDetalhe({
                   Cancelar orçamento
                 </button>
               )}
-              {podeReabrir && (
-                <div className="w-full">
-                  <button className="btn-secondary" onClick={() => acionar("reabrir")} disabled={processando}>
-                    Reabrir para revisão
-                  </button>
-                  <p className="mt-2 hint">
-                    Desfaz a decisão e devolve o orçamento para revisão — use se
-                    {orc.estacao === "aprovado" ? " aprovou" : " cancelou"} por engano. Fica registrado no histórico.
-                  </p>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -570,6 +578,28 @@ export function OrcamentoDetalhe({
       {/* Revisão / comentários */}
       <div className="section-card">
         <h2 className="section-title mb-4">Revisão</h2>
+
+        {/* Reabrir mora aqui, e não num cartão "Ações": desfazer uma decisão é
+            um ato de revisão, e o parecer que a justifica fica ao lado dos
+            comentários que contam a mesma história. */}
+        {podeReabrir && (
+          <div className="mb-4 border-b border-slate-200 pb-4 dark:border-slate-700">
+            {acaoAberta === "reabrir" ? (
+              painelParecer("reabrir")
+            ) : (
+              <>
+                <button className="btn-secondary" onClick={() => acionar("reabrir")} disabled={processando}>
+                  Reabrir para revisão
+                </button>
+                <p className="mt-2 hint">
+                  Desfaz a decisão e devolve o orçamento para revisão — use se
+                  {orc.estacao === "aprovado" ? " aprovou" : " cancelou"} por engano. Fica registrado no histórico.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
         {orc.comentarios.length === 0 ? (
           <p className="text-sm text-slate-500 dark:text-slate-400">Nenhum comentário ainda.</p>
         ) : (
@@ -589,6 +619,8 @@ export function OrcamentoDetalhe({
           <form onSubmit={comentar} className="mt-3 flex gap-2">
             <input
               className="field-input"
+              /* Só o placeholder nomeava o campo, e placeholder some ao digitar. */
+              aria-label="Comentário de revisão"
               value={comentario}
               onChange={(e) => setComentario(e.target.value)}
               placeholder="Escreva um comentário de revisão…"
