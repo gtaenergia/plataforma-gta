@@ -23,9 +23,17 @@ export default async function PropostasPage() {
                não podiam ser retomadas. */
             subtitle="Todas as propostas geradas na plataforma. Filtre por cliente, serviço, criador ou status, e reabra uma proposta para continuar de onde parou."
             actions={
-              <Link href="/" className="btn-primary whitespace-nowrap">
-                + Nova proposta
-              </Link>
+              <>
+                {/* Secundário porque é o caminho de exceção: o normal é gerar
+                    pela plataforma, e o cadastro manual existe para a proposta
+                    específica demais para caber num configurador. */}
+                <Link href="/propostas/manual" className="btn-secondary whitespace-nowrap">
+                  Cadastrar manual
+                </Link>
+                <Link href="/" className="btn-primary whitespace-nowrap">
+                  + Nova proposta
+                </Link>
+              </>
             }
           />
         </div>

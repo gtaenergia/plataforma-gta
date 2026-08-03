@@ -20,6 +20,13 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "proposta-manual-2026-08",
+    titulo: "Novidade: cadastrar proposta feita fora da plataforma",
+    mensagem:
+      "A proposta específica demais para caber num configurador agora entra no histórico: classifique o serviço, informe cliente e valor e, se quiser, anexe o PDF para mandar à aprovação. Em Propostas, no botão “Cadastrar manual”.",
+    link: "/propostas/manual",
+  },
+  {
     slug: "calendario-tarefas-2026-08",
     titulo: "Novidade: calendário de prazos",
     mensagem: "Veja os prazos das suas tarefas distribuídos no mês, com prioridade e situação, e alterne para a visão da equipe. Fica em Calendário, no menu do perfil.",

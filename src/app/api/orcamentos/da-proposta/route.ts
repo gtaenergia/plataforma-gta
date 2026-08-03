@@ -3,6 +3,7 @@ import { requirePermissaoApi } from "@/lib/rbac/guards";
 import { getOrcamentoStore, redigirOrcamento } from "@/lib/orcamentos/store";
 import { criarDaPropostaSchema, type OrcamentoMeta } from "@/lib/orcamentos/types";
 import { getPropostaStore } from "@/lib/propostas/store";
+import { SERVICO_OUTRO, SERVICO_OUTRO_LABEL } from "@/lib/propostas/types";
 import { getService } from "@/services/registry";
 import { parseNumber } from "@/lib/format";
 
@@ -58,13 +59,22 @@ export async function POST(req: Request) {
     regeneravel = false;
   }
 
+  // Proposta manual não tem mapper para extrair o preço: o valor foi digitado
+  // no cadastro e mora em `dados`. Sem isto o orçamento chegaria à aprovação
+  // sem preço nenhum — justamente o número que decide a aprovação.
+  if (valor === undefined && proposta.manual && typeof src.valor === "number" && src.valor > 0) {
+    valor = src.valor;
+  }
+
   const meta: OrcamentoMeta = {
     dataEmissao: typeof src.dataEmissao === "string" ? src.dataEmissao : undefined,
     validadeDias: typeof src.validadeDias === "number" ? src.validadeDias : undefined,
     formaPagamento,
     regeneravel,
   };
-  const rotulo = service?.label ?? proposta.serviceKey;
+  // `SERVICO_OUTRO` não está no registro de serviços, então o fallback pela
+  // chave crua escreveria "outro" em minúscula na descrição.
+  const rotulo = service?.label ?? (proposta.serviceKey === SERVICO_OUTRO ? SERVICO_OUTRO_LABEL : proposta.serviceKey);
   const descricao = proposta.referencia ? `${rotulo} — ${proposta.referencia}` : rotulo;
 
   const me = guard.me;

@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ServiceIcon } from "@/components/ServiceIcon";
-import { Alert, EmptyState, Loading, Marca, type Tone } from "@/components/ui";
+import { Alert, Badge, EmptyState, Loading, Marca, type Tone } from "@/components/ui";
 import { usePaginacao, Paginacao } from "@/components/Paginacao";
-import { statusPropostaLabel, STATUS_PROPOSTA, type Proposta } from "@/lib/propostas/types";
+import { SERVICO_OUTRO, SERVICO_OUTRO_LABEL, statusPropostaLabel, STATUS_PROPOSTA, type Proposta } from "@/lib/propostas/types";
 import { Campo } from "@/components/Campo";
 
 const STATUS_TONE: Record<string, Tone> = {
@@ -129,6 +129,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
   }
 
   function rotuloServico(key: string) {
+    if (key === SERVICO_OUTRO) return SERVICO_OUTRO_LABEL;
     return serviceMap.get(key)?.label ?? key;
   }
 
@@ -188,7 +189,9 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
           <EmptyState>{propostas.length === 0 ? "Nenhuma proposta gerada ainda." : "Nenhuma proposta corresponde aos filtros."}</EmptyState>
         )}
         {paginados.map((p) => {
-          const podeReabrir = serviceMap.get(p.serviceKey)?.usesConfigurator;
+          // `!p.manual`: a manual pode estar classificada como Solar, e sem isso
+          // o botão Abrir cairia no configurador com o formulário vazio.
+          const podeReabrir = !p.manual && serviceMap.get(p.serviceKey)?.usesConfigurator;
           return (
             <div key={p.id} className="p-3 card">
               <div className="flex items-start justify-between gap-2">
@@ -197,6 +200,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
                   <div className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
                     <ServiceIcon serviceKey={p.serviceKey} className="h-4 w-4 shrink-0 text-gta-indigo dark:text-indigo-300" />
                     <span className="truncate">{rotuloServico(p.serviceKey)}</span>
+                    {p.manual && <Badge tone="slate" className="shrink-0">Manual</Badge>}
                   </div>
                 </div>
                 <Marca tone={STATUS_TONE[p.status] ?? "slate"} className="shrink-0">{statusPropostaLabel(p.status)}</Marca>
@@ -261,7 +265,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
             )}
             {paginados.map((p) => {
               const meta = serviceMap.get(p.serviceKey);
-              const podeReabrir = meta?.usesConfigurator;
+              const podeReabrir = !p.manual && meta?.usesConfigurator;
               return (
                 <tr key={p.id}>
                   <td className="px-4 py-2 font-medium text-gta-navy dark:text-slate-100">{p.cliente}</td>
@@ -269,6 +273,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
                     <span className="inline-flex items-center gap-1.5">
                       <ServiceIcon serviceKey={p.serviceKey} className="h-4 w-4 text-gta-indigo dark:text-indigo-300" />
                       {rotuloServico(p.serviceKey)}
+                      {p.manual && <Badge tone="slate">Manual</Badge>}
                     </span>
                   </td>
                   <td className="px-4 py-2 font-mono text-xs text-slate-600 dark:text-slate-400">{p.referencia || "—"}</td>

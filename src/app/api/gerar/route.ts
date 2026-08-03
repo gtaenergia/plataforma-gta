@@ -69,6 +69,7 @@ export async function POST(req: Request) {
           cliente,
           referencia: ref ?? "",
           status: "gerada",
+          manual: false, // veio de um configurador
           dados: parsed.data as Record<string, unknown>,
           formGerado,
           criadoPor: user.email,

@@ -130,6 +130,7 @@ interface Row {
   status: string;
   dados: Record<string, unknown>;
   form_gerado: Record<string, unknown> | null;
+  manual: boolean | null;
   criado_por: string;
   criado_em: string;
   atualizado_em: string;
@@ -142,6 +143,8 @@ const rowToProposta = (r: Row): Proposta => ({
   status: r.status as Proposta["status"],
   dados: r.dados ?? {},
   formGerado: r.form_gerado ?? undefined,
+  // `?? false`: as linhas gravadas antes da coluna existir voltam null.
+  manual: r.manual ?? false,
   criadoPor: r.criado_por,
   criadoEm: new Date(r.criado_em).toISOString(),
   atualizadoEm: new Date(r.atualizado_em).toISOString(),
@@ -170,6 +173,7 @@ class PostgresPropostaStore implements PropostaStore {
         )
       `
         .then(() => this.pool.sql`ALTER TABLE propostas ADD COLUMN IF NOT EXISTS form_gerado jsonb`)
+        .then(() => this.pool.sql`ALTER TABLE propostas ADD COLUMN IF NOT EXISTS manual boolean NOT NULL DEFAULT false`)
         .then(() => undefined);
     }
     return this.ready;
@@ -192,10 +196,10 @@ class PostgresPropostaStore implements PropostaStore {
       ? data.referencia
       : referenciaAuto(data.serviceKey, data.cliente, data.dados, await this.nextSeq(data.serviceKey));
     await this.pool.sql`
-      INSERT INTO propostas (id, service_key, cliente, referencia, status, dados, form_gerado, criado_por, criado_em, atualizado_em)
+      INSERT INTO propostas (id, service_key, cliente, referencia, status, dados, form_gerado, manual, criado_por, criado_em, atualizado_em)
       VALUES (${id}, ${data.serviceKey}, ${data.cliente}, ${referencia}, ${data.status},
               ${JSON.stringify(data.dados)}::jsonb, ${data.formGerado ? JSON.stringify(data.formGerado) : null}::jsonb,
-              ${data.criadoPor}, ${now}, ${now})
+              ${data.manual}, ${data.criadoPor}, ${now}, ${now})
     `;
     return { ...data, referencia, id, criadoEm: now, atualizadoEm: now };
   }
@@ -227,6 +231,7 @@ class PostgresPropostaStore implements PropostaStore {
         status = COALESCE(${patch.status ?? null}::text, status),
         dados = COALESCE(${dadosJson}::jsonb, dados),
         form_gerado = COALESCE(${formGeradoJson}::jsonb, form_gerado),
+        manual = COALESCE(${patch.manual ?? null}::boolean, manual),
         atualizado_em = ${atualizadoEm}
       WHERE id = ${id}
       RETURNING *

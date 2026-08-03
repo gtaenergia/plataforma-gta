@@ -32,6 +32,7 @@ export async function POST(_req: Request, ctx: Ctx) {
     cliente: original.cliente,
     referencia: "", // o store gera a referência nova a partir de dados.referenciaSeq
     status: "rascunho",
+    manual: original.manual,
     dados,
     criadoPor: user.email,
   });
