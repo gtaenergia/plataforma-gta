@@ -139,9 +139,14 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
     return statusPropostaLabel(p.status);
   }
 
-  function rotuloServico(key: string) {
-    if (key === SERVICO_OUTRO) return SERVICO_OUTRO_LABEL;
-    return serviceMap.get(key)?.label ?? key;
+  function rotuloServico(p: Proposta) {
+    if (p.serviceKey === SERVICO_OUTRO) {
+      // O nome que a pessoa digitou diz mais que "Outro" — e é o que está na
+      // referência, então a coluna e o código passam a contar a mesma coisa.
+      const nome = p.dados?.servicoOutro;
+      return typeof nome === "string" && nome.trim() ? nome.trim() : SERVICO_OUTRO_LABEL;
+    }
+    return serviceMap.get(p.serviceKey)?.label ?? p.serviceKey;
   }
 
   const limparFiltros = () => { setBusca(""); setFServico(""); setFStatus(""); setFCriador(""); };
@@ -210,7 +215,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
                   <div className="truncate font-medium text-gta-navy dark:text-slate-100">{p.cliente}</div>
                   <div className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
                     <ServiceIcon serviceKey={p.serviceKey} className="h-4 w-4 shrink-0 text-gta-indigo dark:text-indigo-300" />
-                    <span className="truncate">{rotuloServico(p.serviceKey)}</span>
+                    <span className="truncate">{rotuloServico(p)}</span>
                     {p.manual && <Badge tone="slate" className="shrink-0">Fora da plataforma</Badge>}
                   </div>
                 </div>
@@ -283,7 +288,7 @@ export function PropostasList({ podeEnviar }: { podeEnviar: boolean }) {
                   <td className="px-4 py-2 text-slate-600 dark:text-slate-300">
                     <span className="inline-flex items-center gap-1.5">
                       <ServiceIcon serviceKey={p.serviceKey} className="h-4 w-4 text-gta-indigo dark:text-indigo-300" />
-                      {rotuloServico(p.serviceKey)}
+                      {rotuloServico(p)}
                       {p.manual && <Badge tone="slate">Fora da plataforma</Badge>}
                     </span>
                   </td>

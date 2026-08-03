@@ -2,12 +2,31 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { createPool, type VercelPool } from "@vercel/postgres";
-import type { Proposta } from "./types";
+import { SERVICO_OUTRO, type Proposta } from "./types";
 import { getDbUrl } from "../tasks/postgres-store";
-import { buildReference } from "../format";
+import { buildReference, clientSlug } from "../format";
 import { getService } from "@/services/registry";
 
 const prefixo = (serviceKey: string) => getService(serviceKey)?.referencePrefix ?? serviceKey.toUpperCase();
+
+/**
+ * Prefixo da referência. Nos 12 serviços vem do registro; na proposta avulsa
+ * ("outro") vem do nome que a pessoa digitou, senão o código sairia
+ * GTA-2026-CLIENTE-OUTRO-001 e não diria de que serviço se trata.
+ *
+ * Usa a PRIMEIRA palavra, e não o nome inteiro cortado: "Consultoria
+ * tarifária" vira CONSULTORIA, não CONSULTORIAT. Cortar no meio da palavra
+ * deixa o código com cara de defeito, e os prefixos do registro são curtos e
+ * inteiros ("SOLAR", "PROJSE", "EV").
+ */
+function prefixoDe(serviceKey: string, dados: Record<string, unknown>): string {
+  if (serviceKey === SERVICO_OUTRO) {
+    const bruto = typeof dados?.servicoOutro === "string" ? dados.servicoOutro : "";
+    const nome = clientSlug(bruto.trim().split(/\s+/)[0] ?? "").slice(0, 12);
+    if (nome) return nome;
+  }
+  return prefixo(serviceKey);
+}
 
 /** Maior sequencial já usado por (serviço, ano) a partir das referências existentes. */
 function maiorSeq(items: Proposta[], serviceKey: string, year: number): number {
@@ -35,7 +54,7 @@ function referenciaAuto(
 ): string {
   const seqForm = Number(dados?.referenciaSeq);
   const seq = Number.isFinite(seqForm) && seqForm > 0 ? seqForm : proximoSeq;
-  return buildReference(prefixo(serviceKey), cliente || "cliente", seq, new Date().getFullYear());
+  return buildReference(prefixoDe(serviceKey, dados), cliente || "cliente", seq, new Date().getFullYear());
 }
 
 /**

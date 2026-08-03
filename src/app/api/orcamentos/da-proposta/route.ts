@@ -74,7 +74,10 @@ export async function POST(req: Request) {
   };
   // `SERVICO_OUTRO` não está no registro de serviços, então o fallback pela
   // chave crua escreveria "outro" em minúscula na descrição.
-  const rotulo = service?.label ?? (proposta.serviceKey === SERVICO_OUTRO ? SERVICO_OUTRO_LABEL : proposta.serviceKey);
+  const nomeAvulso = typeof src.servicoOutro === "string" ? src.servicoOutro.trim() : "";
+  const rotulo =
+    service?.label ??
+    (proposta.serviceKey === SERVICO_OUTRO ? nomeAvulso || SERVICO_OUTRO_LABEL : proposta.serviceKey);
   const descricao = proposta.referencia ? `${rotulo} — ${proposta.referencia}` : rotulo;
 
   const me = guard.me;

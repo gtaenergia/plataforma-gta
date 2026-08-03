@@ -31,6 +31,7 @@ export function RegistrarPropostaForm() {
   const router = useRouter();
   const [servicos, setServicos] = useState<ServiceMeta[]>([]);
   const [serviceKey, setServiceKey] = useState(SERVICO_OUTRO);
+  const [servicoOutro, setServicoOutro] = useState("");
   const [cliente, setCliente] = useState("");
   const [cidadeUf, setCidadeUf] = useState("");
   const [valor, setValor] = useState("");
@@ -66,6 +67,10 @@ export function RegistrarPropostaForm() {
       setErro("Informe o cliente.");
       return;
     }
+    if (serviceKey === SERVICO_OUTRO && !servicoOutro.trim()) {
+      setErro("Informe o nome do serviço — ele vai para a referência da proposta.");
+      return;
+    }
     setSalvando(true);
     setErro(null);
     try {
@@ -86,6 +91,7 @@ export function RegistrarPropostaForm() {
           // interface o conceito se chama REGISTRAR, para contrastar com gerar.
           manual: true,
           dados: {
+            servicoOutro: serviceKey === SERVICO_OUTRO ? servicoOutro.trim() : undefined,
             cidadeUf: cidadeUf.trim() || undefined,
             valor: Number.isFinite(numero) && numero > 0 ? numero : undefined,
             dataEmissao,
@@ -132,7 +138,7 @@ export function RegistrarPropostaForm() {
     <div className="space-y-6">
       {erro && <Alert tone="red">{erro}</Alert>}
 
-      <SectionCard title="Proposta">
+      <SectionCard title="Proposta" subtitle="O que foi proposto e para qual cliente.">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
           <Campo className="sm:col-span-3" label="Serviço *">
             <select className="field-input" value={serviceKey} onChange={(e) => setServiceKey(e.target.value)}>
@@ -142,6 +148,24 @@ export function RegistrarPropostaForm() {
               <option value={SERVICO_OUTRO}>{SERVICO_OUTRO_LABEL}</option>
             </select>
           </Campo>
+          {/* Só com "Outro": é o nome que entra na referência no lugar do
+              literal OUTRO, e não faz sentido para os 12 do registro, que já
+              têm prefixo próprio. */}
+          {serviceKey === SERVICO_OUTRO && (
+            <Campo
+              className="sm:col-span-3"
+              label="Nome do serviço *"
+              hint={<p className="mt-1 hint">A primeira palavra vira o prefixo da referência.</p>}
+            >
+              <input
+                className="field-input"
+                value={servicoOutro}
+                onChange={(e) => setServicoOutro(e.target.value)}
+                maxLength={60}
+                placeholder="Ex.: Consultoria tarifária"
+              />
+            </Campo>
+          )}
           <Campo className="sm:col-span-3" label="Cliente *">
             <ClienteInput
               className="field-input"
@@ -164,7 +188,7 @@ export function RegistrarPropostaForm() {
               className="field-input min-h-[70px]"
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}
-              placeholder="O que esta proposta tem de específico, para quem for consultar o histórico depois."
+              placeholder="Ex.: escopo fora do padrão, condição especial combinada…"
             />
           </Campo>
         </div>
@@ -172,7 +196,7 @@ export function RegistrarPropostaForm() {
 
       <SectionCard
         title="Documento"
-        subtitle="O PDF da proposta, para anexar à aprovação. Opcional — sem ele a proposta fica só no histórico."
+        subtitle="O PDF da proposta. Opcional."
       >
         <div className="flex flex-wrap items-center gap-3">
           <input
@@ -205,10 +229,10 @@ export function RegistrarPropostaForm() {
           )}
         </div>
         {arquivo && (
-          <Alert tone="amber" className="mt-3">
-            Com o PDF, a proposta já entra na esteira de aprovação. O anexo segue a retenção da
-            esteira: é apagado 7 dias depois de aprovada. O registro da proposta permanece.
-          </Alert>
+          <p className="mt-3 hint">
+            Com o PDF, a proposta já entra na esteira. O anexo é apagado 7 dias depois de aprovada; o
+            registro permanece.
+          </p>
         )}
       </SectionCard>
 

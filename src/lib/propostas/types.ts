@@ -62,6 +62,12 @@ export const updatePropostaSchema = createPropostaSchema.partial();
  * coluna a mais é uma migração a mais em produção.
  */
 export const dadosManualSchema = z.object({
+  /**
+   * Nome do serviço quando `serviceKey` é "outro". Vira o prefixo da
+   * referência, no lugar do literal "OUTRO" — sem ele o código não diria do
+   * que a proposta trata.
+   */
+  servicoOutro: z.string().trim().max(60).optional(),
   valor: z.number().nonnegative().optional(),
   dataEmissao: z.string().trim().max(10).optional(),
   observacoes: z.string().trim().max(2000).optional(),
