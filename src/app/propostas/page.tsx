@@ -11,7 +11,7 @@ export default async function PropostasPage() {
 
   return (
     <div className="min-h-screen">
-      <AppHeader userName={user.name} isAdmin={user.role === "admin"} />
+      <AppHeader userName={user.name} avatarUrl={user.avatarUrl} isAdmin={user.role === "admin"} />
       <main className="app-container py-8">
         <div className="mb-6">
           <PageHeader

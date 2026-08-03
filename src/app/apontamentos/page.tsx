@@ -13,7 +13,7 @@ export default async function ApontamentosPage() {
 
   return (
     <div className="min-h-screen">
-      <AppHeader userName={user.name} isAdmin={user.role === "admin"} />
+      <AppHeader userName={user.name} avatarUrl={user.avatarUrl} isAdmin={user.role === "admin"} />
       <main className="app-container py-8">
         <PageHeader title="Apontamentos" subtitle="Registre o tempo dedicado a cada tarefa — cronômetro ou lançamento manual." />
         <div className="mt-6">

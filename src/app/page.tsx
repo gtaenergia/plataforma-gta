@@ -18,7 +18,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen">
-      <AppHeader userName={user.name} isAdmin={isAdmin} />
+      <AppHeader userName={user.name} avatarUrl={user.avatarUrl} isAdmin={isAdmin} />
       <main className="app-container py-8">
         <PageHeader title="Nova proposta" subtitle="Escolha o serviço para gerar uma proposta comercial." />
 

@@ -16,28 +16,25 @@ const NAV = [
   { href: "/apontamentos", label: "Apontamentos" },
 ];
 
-export function AppHeader({ userName, isAdmin }: { userName?: string; isAdmin?: boolean }) {
+/**
+ * `avatarUrl` chega por prop, e não por fetch. A versão anterior buscava
+ * `/api/conta` num efeito, em TODAS as páginas, para obter um campo que o
+ * componente de servidor já tinha em mãos — `requirePageUser()` devolve o
+ * usuário inteiro. Era uma ida ao servidor por página só para isso, com a
+ * consulta de sessão junto, e ainda fazia a foto aparecer depois do resto.
+ */
+export function AppHeader({ userName, avatarUrl, isAdmin }: { userName?: string; avatarUrl?: string; isAdmin?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const [menuAberto, setMenuAberto] = useState(false);
   const [navAberto, setNavAberto] = useState(false);
   const [dark, setDark] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
 
   // estado inicial do tema (o script no <head> já aplicou a classe)
   useEffect(() => {
     setDark(document.documentElement.classList.contains("dark"));
   }, []);
-
-  // busca a foto de perfil (não vem por prop — evita ter que passar por todas as páginas)
-  useEffect(() => {
-    if (!userName) return;
-    fetch("/api/conta")
-      .then((r) => r.json())
-      .then((d) => setAvatarUrl(d.avatarUrl ?? ""))
-      .catch(() => {});
-  }, [userName]);
 
   // fecha o menu do usuário ao clicar fora
   useEffect(() => {

@@ -8,7 +8,7 @@ export default async function TarefasPage() {
 
   return (
     <div className="min-h-screen">
-      <AppHeader userName={user.name} isAdmin={user.role === "admin"} />
+      <AppHeader userName={user.name} avatarUrl={user.avatarUrl} isAdmin={user.role === "admin"} />
       <main className="app-container py-8">
         <PageHeader title="Tarefas" subtitle="Organize e acompanhe as tarefas da equipe GTA." />
         <div className="mt-6">

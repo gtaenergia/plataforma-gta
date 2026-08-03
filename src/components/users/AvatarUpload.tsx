@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Avatar } from "../ui";
 
 import { Alert } from "@/components/ui";
@@ -10,6 +11,9 @@ export function AvatarUpload({ avatarUrl: inicial, name }: { avatarUrl: string; 
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // O cabeçalho recebe a foto do componente de servidor. Sem revalidar, ele
+  // continuaria mostrando a anterior até a próxima carga completa.
+  const router = useRouter();
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -24,6 +28,7 @@ export function AvatarUpload({ avatarUrl: inicial, name }: { avatarUrl: string; 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Falha ao enviar a foto.");
       setAvatarUrl(data.avatarUrl ?? "");
+      router.refresh();
     } catch (err) {
       setErro(err instanceof Error ? err.message : "Erro ao enviar a foto.");
     } finally {
@@ -40,6 +45,7 @@ export function AvatarUpload({ avatarUrl: inicial, name }: { avatarUrl: string; 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Falha ao remover a foto.");
       setAvatarUrl("");
+      router.refresh();
     } catch (err) {
       setErro(err instanceof Error ? err.message : "Erro ao remover a foto.");
     } finally {

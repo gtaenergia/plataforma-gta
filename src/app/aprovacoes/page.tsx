@@ -9,7 +9,7 @@ export default async function AprovacoesPage() {
 
   return (
     <div className="min-h-screen">
-      <AppHeader userName={user.name} isAdmin={user.role === "admin"} />
+      <AppHeader userName={user.name} avatarUrl={user.avatarUrl} isAdmin={user.role === "admin"} />
       <main className="app-container py-8">
         <PageHeader
           title="Aprovação de orçamentos"

@@ -9,7 +9,7 @@ export default async function AdminUsuariosPage() {
 
   return (
     <div className="min-h-screen">
-      <AppHeader userName={user.name} isAdmin />
+      <AppHeader userName={user.name} avatarUrl={user.avatarUrl} isAdmin />
       <main className="app-container py-8">
         <PageHeader title="Usuários" subtitle="Cadastre e gerencie quem tem acesso à plataforma." />
         <div className="mt-6">

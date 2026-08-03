@@ -61,7 +61,7 @@ export default async function AjudaServicoPage({ params }: { params: Promise<{ s
 
   return (
     <div className="min-h-screen">
-      <AppHeader userName={user.name} isAdmin={user.role === "admin"} />
+      <AppHeader userName={user.name} avatarUrl={user.avatarUrl} isAdmin={user.role === "admin"} />
       <main className="app-container-leitura py-8">
         <div className="mb-6">
           <BackLink href={`/nova/${servico}`}>Voltar ao configurador</BackLink>

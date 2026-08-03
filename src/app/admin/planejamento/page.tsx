@@ -14,7 +14,7 @@ export default async function AdminPlanejamentoPage() {
 
   return (
     <div className="min-h-screen">
-      <AppHeader userName={user.name} isAdmin />
+      <AppHeader userName={user.name} avatarUrl={user.avatarUrl} isAdmin />
       <main className="app-container py-8">
         <div className="mb-6">
           <BackLink href="/tarefas">Voltar para Tarefas</BackLink>
