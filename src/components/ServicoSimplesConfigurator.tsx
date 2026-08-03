@@ -187,7 +187,7 @@ export function ServicoSimplesConfigurator({ serviceKey, propostaId }: { service
         <div className="flex items-center justify-between">
           <h2 className="section-title">Preço</h2>
           {precoSugerido > 0 && precoTocado.current && (
-            <button type="button" className="toque text-xs text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => { precoTocado.current = false; setForm((f) => ({ ...f, valorServico: nf(precoSugerido, 2) })); }}>Usar sugerido {brl(precoSugerido)}</button>
+            <button type="button" className="btn-link text-xs" onClick={() => { precoTocado.current = false; setForm((f) => ({ ...f, valorServico: nf(precoSugerido, 2) })); }}>Usar sugerido {brl(precoSugerido)}</button>
           )}
         </div>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
@@ -225,7 +225,7 @@ export function ServicoSimplesConfigurator({ serviceKey, propostaId }: { service
           itens: [{ descricao: config.montarDescricao(driver()), valor: valorServico }],
           total: valorServico,
         })} />
-        <button className="toque text-sm text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => router.push("/propostas")}>Ver propostas</button>
+        <button className="btn-link" onClick={() => router.push("/propostas")}>Ver propostas</button>
         {statusMsg && <span className="text-sm text-green-600 dark:text-green-400">{statusMsg}</span>}
       </div>
     </div>

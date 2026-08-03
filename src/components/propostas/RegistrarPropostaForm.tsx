@@ -203,11 +203,11 @@ export function RegistrarPropostaForm() {
             ref={inputArquivo}
             type="file"
             accept="application/pdf"
-            /* `sr-only` esconde da vista mas mantém no foco e no leitor de
-               tela, então o campo precisa de nome próprio — o botão ao lado é
-               só o gatilho estilizado. */
-            aria-label="Arquivo PDF da proposta"
-            className="sr-only"
+            /* `hidden` e não `sr-only`, igual ao upload de foto do perfil:
+               `display:none` tira o campo da árvore de acessibilidade, então
+               não vira uma parada de tabulação duplicada ao lado do botão que
+               já o aciona — e nem precisa de nome próprio. */
+            className="hidden"
             onChange={(e) => {
               escolherArquivo(e.target.files?.[0] ?? null);
               e.target.value = "";

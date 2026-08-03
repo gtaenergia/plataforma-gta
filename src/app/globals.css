@@ -240,8 +240,8 @@ select.field-input::-ms-expand,
    plataforma (mesmo do sino e do excluir das Tarefas); 44px no toque. */
 .icon-btn {
   @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded text-slate-400 transition
-         hover:bg-red-50 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2
-         focus-visible:ring-red-400/40 dark:hover:bg-red-900/20;
+         hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2
+         focus-visible:ring-red-400/40 dark:hover:bg-red-900/20 dark:hover:text-red-400;
 }
 
 /* Alternador de dia da semana: quadrado com a inicial, ligado/desligado por

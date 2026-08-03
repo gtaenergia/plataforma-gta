@@ -497,8 +497,11 @@ export function OrcamentoDetalhe({
                     <span className="shrink-0 rounded bg-gta-navy/10 px-1.5 py-0.5 text-xs font-semibold text-gta-navy dark:bg-white/10 dark:text-slate-200">
                       {revLabel(a.revisao)}
                     </span>
-                    <a href={`/api/orcamentos/${orc.id}/anexos/${a.id}/download`} className="truncate font-medium text-gta-indigo dark:text-indigo-300 hover:underline">
-                      {a.nome}
+                    {/* `min-w-0` + o <span> interno: `.btn-link` é inline-flex, e
+                        `truncate` só corta o texto se ele estiver num filho que
+                        possa encolher. Direto no <a> as reticências sumiam. */}
+                    <a href={`/api/orcamentos/${orc.id}/anexos/${a.id}/download`} className="btn-link min-w-0">
+                      <span className="truncate">{a.nome}</span>
                     </a>
                   </div>
                   <div className="mt-0.5 hint">

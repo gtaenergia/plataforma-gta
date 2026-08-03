@@ -438,7 +438,7 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
         <div className="flex items-center justify-between">
           <h2 className="section-title">Preço</h2>
           {preco && precoTocado.current && (
-            <button type="button" className="toque -my-1 px-1 py-2 text-xs text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => { precoTocado.current = false; setForm((f) => ({ ...f, valorServico: nf(preco.preco, 2) })); }}>Usar sugerido {brl(preco.preco)}</button>
+            <button type="button" className="toque -my-1 px-1 py-2 text-xs btn-link" onClick={() => { precoTocado.current = false; setForm((f) => ({ ...f, valorServico: nf(preco.preco, 2) })); }}>Usar sugerido {brl(preco.preco)}</button>
           )}
         </div>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
@@ -510,7 +510,7 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
           fatorK: params?.fatorK ?? 1.65,
           aliqImpostos: params?.aliqImpostos ?? 0.0701,
         })} />
-        <button className="toque text-sm text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => router.push("/propostas")}>Ver propostas</button>
+        <button className="btn-link" onClick={() => router.push("/propostas")}>Ver propostas</button>
         {status && <span className="text-sm text-green-600 dark:text-green-400">{status}</span>}
       </div>
     </div>

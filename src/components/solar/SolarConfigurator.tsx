@@ -890,7 +890,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
                 Quantidade definida por você ({calc.micro.qtdMicros}). Para este arranjo o cálculo sugeriria{" "}
                 {calc.micro.qtdSugerida}
                 {" — "}
-                <button type="button" className="toque text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => set("microQtd", 0)}>
+                <button type="button" className="btn-link" onClick={() => set("microQtd", 0)}>
                   voltar ao sugerido
                 </button>
                 .
@@ -976,7 +976,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="section-title">Lista de materiais (para cotar)</h2>
             <div className="flex items-center gap-3">
-              {calc?.bom && <button type="button" className="toque text-xs text-gta-indigo dark:text-indigo-300 hover:underline" onClick={restaurarMat}>Restaurar sugestão</button>}
+              {calc?.bom && <button type="button" className="btn-link text-xs" onClick={restaurarMat}>Restaurar sugestão</button>}
               <CopyButton label="Copiar lista" text={() => materiais.filter((m) => m.descricao.trim()).map((m) => `${m.qtde}\t${m.descricao}`).join("\n")} />
             </div>
           </div>
@@ -1003,7 +1003,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
               </div>
             ))}
           </div>
-          <button type="button" className="toque mt-3 text-sm font-medium text-gta-indigo dark:text-indigo-300 hover:underline" onClick={addMat}>+ Adicionar material</button>
+          <button type="button" className="toque mt-3 btn-link" onClick={addMat}>+ Adicionar material</button>
         </section>
       )}
 
@@ -1211,7 +1211,7 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
               : undefined,
           })}
         />
-        <button className="toque text-sm text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => router.push("/propostas")}>
+        <button className="btn-link" onClick={() => router.push("/propostas")}>
           Ver propostas
         </button>
         {!calc?.pricing && <span className="hint">Informe o valor do kit para habilitar a geração.</span>}

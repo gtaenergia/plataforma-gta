@@ -280,7 +280,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex flex-wrap gap-2 text-xs">
-                      <button className="text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => resetar(u)}>
+                      <button className="btn-link" onClick={() => resetar(u)}>
                         Resetar senha
                       </button>
                       <button

@@ -324,7 +324,10 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
                     {on && (
                       <p className="mt-1 flex items-center justify-end gap-1.5 text-right text-[11px] text-slate-500 dark:text-slate-400">
                         <span>{areaM2 > 0 ? `${brl(taxa)}/m² × ${nf(areaM2, 0)}${mult !== 1 ? ` × ${nf(mult, 1)}` : ""} → ` : `piso `}{brl(sug)}</span>
-                        {editado && <button type="button" className="text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => { valoresTocados.current.delete(d.id); set(`v_${d.id}`, nf(sug, 2)); }}>usar</button>}
+                        {/* Alvo inline dentro de uma legenda de 11px: aqui `.btn-link` não serve,
+                            porque forçaria text-sm e 24px de altura no meio da frase. A
+                            WCAG isenta alvo embutido em texto corrido. */}
+                        {editado && <button type="button" className="text-gta-indigo underline dark:text-indigo-300" onClick={() => { valoresTocados.current.delete(d.id); set(`v_${d.id}`, nf(sug, 2)); }}>usar</button>}
                       </p>
                     )}
                   </div>
@@ -359,7 +362,7 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
                   "Recompor automático"; a associação vai no id explícito. */}
               <label htmlFor="projeto-bt-objeto" className="field-label">Objeto <span className="font-normal text-slate-500 dark:text-slate-400">(gerado a partir das disciplinas)</span></label>
               {objetoTocado.current && (
-                <button type="button" className="toque text-xs text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => { objetoTocado.current = false; setForm((f) => ({ ...f, objeto: montarObjeto(idsSelecionados ? idsSelecionados.split(",") : []) })); }}>Recompor automático</button>
+                <button type="button" className="btn-link text-xs" onClick={() => { objetoTocado.current = false; setForm((f) => ({ ...f, objeto: montarObjeto(idsSelecionados ? idsSelecionados.split(",") : []) })); }}>Recompor automático</button>
               )}
             </div>
             <textarea id="projeto-bt-objeto" className="field-input min-h-[70px]" value={form.objeto} onChange={(e) => { objetoTocado.current = true; set("objeto", e.target.value); }} />
@@ -392,7 +395,7 @@ export function ProjetoBtConfigurator({ propostaId }: { propostaId?: string }) {
             piso: params[`piso${cap(d.id)}`] ?? d.piso,
           })),
         })} />
-        <button className="toque text-sm text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => router.push("/propostas")}>Ver propostas</button>
+        <button className="btn-link" onClick={() => router.push("/propostas")}>Ver propostas</button>
         {statusMsg && <span className="text-sm text-green-600 dark:text-green-400">{statusMsg}</span>}
       </div>
     </div>

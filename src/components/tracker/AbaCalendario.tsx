@@ -129,7 +129,7 @@ export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
           <button type="button" className="icon-btn" onClick={() => setSemanaBase((d) => addDias(d, 7))} aria-label="Próxima semana">
             <ChevronRight className="h-4 w-4" aria-hidden />
           </button>
-          <button type="button" className="toque text-xs text-gta-indigo dark:text-indigo-300 hover:underline" onClick={() => setSemanaBase(segundaDaSemana(new Date()))}>
+          <button type="button" className="btn-link text-xs" onClick={() => setSemanaBase(segundaDaSemana(new Date()))}>
             Esta semana
           </button>
         </div>
