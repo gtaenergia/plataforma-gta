@@ -142,6 +142,25 @@ input[list].field-input {
   background-position: right 0.3rem center;
   background-size: 0.8rem 0.8rem;
 }
+/* DUAS setas no mesmo campo: além da nossa, o navegador desenha o indicador
+   dele em todo `input[list]`. `appearance: none` não o remove, porque ele é um
+   pseudo-elemento e não a decoração do controle.
+
+   `opacity: 0` e não `display: none`: o indicador continua ali, invisível e
+   CLICÁVEL, então clicar sobre a seta desenhada segue abrindo a lista. Com
+   `display: none` a seta viraria enfeite e o campo só abriria ao digitar.
+
+   O seletor exige o atributo `[list]` de propósito: é o mesmo pseudo-elemento
+   que desenha o calendário em `input[type=date]`, e lá ele tem que continuar
+   visível — os campos de data não têm `list`. */
+input[list].field-input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+}
+/* Edge legado desenhava a própria seta no <select>, que `appearance` não tira. */
+select.field-input::-ms-expand,
+.select-pilula::-ms-expand {
+  display: none;
+}
 /* Mensagem presa a UM campo. Falha de operação (não salvou, não carregou) usa
    o componente <Alert tone="red">, que tem caixa e ícone. */
 .field-error {
