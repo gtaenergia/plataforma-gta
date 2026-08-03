@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MessageSquare, X } from "lucide-react";
 import {
   PRIORIDADES,
@@ -18,6 +18,7 @@ import {
 import { Alert, Loading } from "@/components/ui";
 import { Paginacao, usePaginacao } from "@/components/Paginacao";
 import { MarcaPrioridade, PontoStatus } from "./marcadores";
+import { lerFiltros, paraQuery, type Filtros } from "./filtros";
 
 interface Usuario {
   email: string;
@@ -80,13 +81,24 @@ export function TaskList() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
-  // filtros
-  const [fStatus, setFStatus] = useState<string>("ativas");
-  const [fResp, setFResp] = useState<string>("todos");
-  const [fCliente, setFCliente] = useState<string>("todos");
-  const [fCategoria, setFCategoria] = useState<string>("todos");
-  const [fDemandante, setFDemandante] = useState<string>("todos");
-  const [busca, setBusca] = useState("");
+  // Filtros: o estado nasce da URL e volta para ela a cada mudança, para que
+  // abrir uma tarefa e voltar não perca o que estava filtrado.
+  const searchParams = useSearchParams();
+  const [filtros, setFiltros] = useState<Filtros>(() => lerFiltros(new URLSearchParams(searchParams.toString())));
+  const { status: fStatus, resp: fResp, cliente: fCliente, categoria: fCategoria, demandante: fDemandante, busca } = filtros;
+  const query = paraQuery(filtros);
+
+  const definir = useCallback((chave: keyof Filtros, valor: string) => {
+    setFiltros((prev) => ({ ...prev, [chave]: valor }));
+  }, []);
+
+  // `history.replaceState` e não `router.replace`: depois de montado o
+  // componente é a fonte da verdade dos filtros, então uma navegação do App
+  // Router custaria uma ida ao servidor a cada tecla digitada na busca — e
+  // encheria o histórico, quebrando o botão Voltar.
+  useEffect(() => {
+    window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname);
+  }, [query]);
 
 
   useEffect(() => {
@@ -223,10 +235,10 @@ export function TaskList() {
       {/* toolbar — `.card` em vez de Tailwind solto: a definição estava
           duplicada, e mudar o cartão do sistema deixaria a barra para trás. */}
       <div className="card flex flex-col gap-2 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-        <Link href="/tarefas/nova" className="btn-primary w-full justify-center sm:w-auto">
+        <Link href={query ? `/tarefas/nova?${query}` : "/tarefas/nova"} className="btn-primary w-full justify-center sm:w-auto">
           + Nova tarefa
         </Link>
-        <select aria-label="Filtrar por status" className="field-input w-full sm:!w-auto" value={fStatus} onChange={(e) => setFStatus(e.target.value)}>
+        <select aria-label="Filtrar por status" className="field-input w-full sm:!w-auto" value={fStatus} onChange={(e) => definir("status", e.target.value)}>
           <option value="ativas">Ativas (padrão)</option>
           <option value="todas">Todas</option>
           {STATUS_TAREFA.map((s) => (
@@ -235,7 +247,7 @@ export function TaskList() {
             </option>
           ))}
         </select>
-        <select aria-label="Filtrar por responsável" className="field-input w-full sm:!w-auto" value={fResp} onChange={(e) => setFResp(e.target.value)}>
+        <select aria-label="Filtrar por responsável" className="field-input w-full sm:!w-auto" value={fResp} onChange={(e) => definir("resp", e.target.value)}>
           <option value="todos">Todos os responsáveis</option>
           {responsaveis.map((r) => (
             <option key={r} value={r}>
@@ -244,7 +256,7 @@ export function TaskList() {
           ))}
         </select>
         {clientes.length > 0 && (
-          <select aria-label="Filtrar por cliente" className="field-input w-full sm:!w-auto" value={fCliente} onChange={(e) => setFCliente(e.target.value)}>
+          <select aria-label="Filtrar por cliente" className="field-input w-full sm:!w-auto" value={fCliente} onChange={(e) => definir("cliente", e.target.value)}>
             <option value="todos">Todos os clientes</option>
             {clientes.map((c) => (
               <option key={c} value={c}>
@@ -253,7 +265,7 @@ export function TaskList() {
             ))}
           </select>
         )}
-        <select aria-label="Filtrar por categoria" className="field-input w-full sm:!w-auto" value={fCategoria} onChange={(e) => setFCategoria(e.target.value)}>
+        <select aria-label="Filtrar por categoria" className="field-input w-full sm:!w-auto" value={fCategoria} onChange={(e) => definir("categoria", e.target.value)}>
           <option value="todos">Todas as categorias</option>
           {categorias.map((c) => (
             <option key={c} value={c}>
@@ -261,7 +273,7 @@ export function TaskList() {
             </option>
           ))}
         </select>
-        <select aria-label="Filtrar por demandante" className="field-input w-full sm:!w-auto" value={fDemandante} onChange={(e) => setFDemandante(e.target.value)}>
+        <select aria-label="Filtrar por demandante" className="field-input w-full sm:!w-auto" value={fDemandante} onChange={(e) => definir("demandante", e.target.value)}>
           <option value="todos">Todos os demandantes</option>
           {DEMANDANTES.map((d) => (
             <option key={d.value} value={d.value}>
@@ -275,7 +287,7 @@ export function TaskList() {
           className="field-input w-full sm:!w-56"
           placeholder="Buscar…"
           value={busca}
-          onChange={(e) => setBusca(e.target.value)}
+          onChange={(e) => definir("busca", e.target.value)}
         />
         <span className="hint sm:ml-auto">
           {visiveis.length} tarefa{visiveis.length === 1 ? "" : "s"}
@@ -315,6 +327,7 @@ export function TaskList() {
                 key={t.id}
                 task={t}
                 nomeDe={nomeDe}
+                href={`/tarefas/${t.id}${query ? `?${query}` : ""}`}
                 onStatus={(s) => atualizar(t.id, { status: s })}
                 onExcluir={() => excluir(t.id, t.titulo)}
               />
@@ -333,11 +346,14 @@ export function TaskList() {
 
 function TaskRow({
   task: t,
+  href,
   nomeDe,
   onStatus,
   onExcluir,
 }: {
   task: Task;
+  /** Endereço da tarefa JÁ com os filtros da lista, para o Voltar reencontrá-los. */
+  href: string;
   nomeDe: (email: string) => string;
   onStatus: (s: StatusTarefa) => void;
   onExcluir: () => void;
@@ -352,7 +368,7 @@ function TaskRow({
        param a propagação para não navegar junto. O título continua sendo um
        link de verdade — é o que dá acesso por teclado e "abrir em nova aba". */
     <tr
-      onClick={() => router.push(`/tarefas/${t.id}`)}
+      onClick={() => router.push(href)}
       className={`cursor-pointer transition hover:bg-slate-50 dark:hover:bg-slate-700/40 ${concluida ? "opacity-50" : ""}`}
     >
       <td className="px-3 py-2.5 align-top md:px-4 md:py-2 md:align-middle">
@@ -379,7 +395,7 @@ function TaskRow({
       </td>
       <td className="px-3 py-2.5 md:px-4 md:py-2">
         <Link
-          href={`/tarefas/${t.id}`}
+          href={href}
           onClick={(e) => e.stopPropagation()}
           className={`text-left font-medium text-gta-navy hover:text-gta-indigo dark:text-slate-100 ${concluida ? "line-through" : ""}`}
         >

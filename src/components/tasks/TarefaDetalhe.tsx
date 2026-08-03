@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { urlDaLista } from "./filtros";
 import { Alert, PageHeader, SectionCard } from "@/components/ui";
 import { SeletorTipoDemanda } from "@/components/capacidade/SeletorTipoDemanda";
 import { SugestaoResponsavel } from "./SugestaoResponsavel";
@@ -74,6 +75,9 @@ export function TarefaDetalhe({
   podeEditarCatalogo: boolean;
 }) {
   const router = useRouter();
+  // A lista repassa os filtros na query; voltar sem eles obrigaria a
+  // refiltrar a cada tarefa editada.
+  const voltarPara = urlDaLista(useSearchParams().toString());
   const { config: capacidade, setConfig } = useCapacidade();
   const [tarefa, setTarefa] = useState<Task>(inicial);
   const [editando, setEditando] = useState(false);
@@ -163,7 +167,7 @@ export function TarefaDetalhe({
       const res = await fetch(`/api/tarefas/${tarefa.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Falha ao excluir.");
       router.refresh();
-      router.push("/tarefas");
+      router.push(voltarPara);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao excluir.");
       setSalvando(false);

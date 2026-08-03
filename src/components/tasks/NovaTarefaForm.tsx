@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { urlDaLista } from "./filtros";
 import { Alert, Loading, SectionCard } from "@/components/ui";
 import { SeletorTipoDemanda } from "@/components/capacidade/SeletorTipoDemanda";
 import { SugestaoResponsavel } from "./SugestaoResponsavel";
@@ -36,6 +37,9 @@ interface Usuario {
 
 export function NovaTarefaForm({ podeEditarCatalogo }: { podeEditarCatalogo: boolean }) {
   const router = useRouter();
+  // A lista repassa os filtros na query; voltar sem eles obrigaria a
+  // refiltrar a cada tarefa editada.
+  const voltarPara = urlDaLista(useSearchParams().toString());
   const { config: capacidade, setConfig } = useCapacidade();
   const [form, setForm] = useState<FormState>(FORM_VAZIO);
   const [tarefas, setTarefas] = useState<Task[]>([]);
@@ -107,7 +111,7 @@ export function NovaTarefaForm({ podeEditarCatalogo }: { podeEditarCatalogo: boo
         // `refresh` antes de navegar: sem ele a lista volta do cache do
         // roteador e a tarefa recém-criada demora a aparecer.
         router.refresh();
-        router.push("/tarefas");
+        router.push(voltarPara);
         return;
       }
       // Em lote (a demanda da reunião de segunda vira várias tarefas), a
@@ -352,7 +356,7 @@ export function NovaTarefaForm({ podeEditarCatalogo }: { podeEditarCatalogo: boo
         <button type="button" className="btn-secondary" disabled={salvando} onClick={() => criar(true)}>
           Criar e abrir outra
         </button>
-        <button type="button" className="btn-ghost" onClick={() => router.push("/tarefas")}>
+        <button type="button" className="btn-ghost" onClick={() => router.push(voltarPara)}>
           Cancelar
         </button>
       </div>
