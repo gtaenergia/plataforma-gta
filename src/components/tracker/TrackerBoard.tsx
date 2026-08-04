@@ -109,7 +109,12 @@ export function TrackerBoard({ meEmail, podeVerEquipe }: { meEmail: string; pode
         <AbaRelatorios usuarioSelecionado={usuarioSelecionado} nomeDe={nomeDe} mostrarUsuario={mostrarUsuario} />
       )}
       {aba === "calendario" && (
-        <AbaCalendario usuarioSelecionado={usuarioSelecionado} nomeDe={nomeDe} mostrarUsuario={mostrarUsuario} />
+        <AbaCalendario
+          usuarioSelecionado={usuarioSelecionado}
+          usuarios={usuarios}
+          nomeDe={nomeDe}
+          mostrarUsuario={mostrarUsuario}
+        />
       )}
     </div>
   );

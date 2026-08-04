@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Alert, EmptyState, Loading } from "@/components/ui";
+import { coresDaEquipe, corDePessoa } from "@/lib/cor-de-pessoa";
 import { duracaoMin, formatarDuracao, type TimeEntry } from "@/lib/tracker/types";
 
-import { addDias, DIA_SEMANA_CURTO, fmtCurta, segundaDaSemana, useEntradas } from "./comum";
+import { addDias, DIA_SEMANA_CURTO, fmtCurta, segundaDaSemana, useEntradas, type Usuario } from "./comum";
 
 /** Altura de uma hora na grade, em px. */
 const PX_POR_HORA = 44;
@@ -15,8 +16,9 @@ const PX_POR_HORA = 44;
  * pelo horário real. A faixa de horas exibida se adapta aos lançamentos da
  * semana (nunca menor que 8h–18h) para não mostrar madrugada vazia à toa.
  */
-export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
+export function AbaCalendario({ usuarioSelecionado, usuarios, nomeDe, mostrarUsuario }: {
   usuarioSelecionado: string;
+  usuarios: Usuario[];
   nomeDe: (email: string) => string;
   mostrarUsuario: boolean;
 }) {
@@ -24,6 +26,19 @@ export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
   const semanaFim = useMemo(() => addDias(semanaBase, 7), [semanaBase]);
   const { entradas, carregando, erro } = useEntradas(semanaBase, semanaFim, usuarioSelecionado);
   const agora = new Date();
+
+  /**
+   * Cor de cada pessoa. Vem da equipe INTEIRA, não de quem lançou horas nesta
+   * semana — senão a cor de cada um mudaria conforme os colegas trabalhassem
+   * ou não, e ninguém conseguiria associar cor a pessoa.
+   */
+  const cores = useMemo(() => coresDaEquipe(usuarios.map((u) => u.email)), [usuarios]);
+
+  /** Quem aparece nesta semana — a legenda lista só isso, não a equipe toda. */
+  const naSemana = useMemo(() => {
+    const vistos = [...new Set(entradas.map((e) => e.usuarioEmail))];
+    return vistos.sort((a, b) => nomeDe(a).localeCompare(nomeDe(b)));
+  }, [entradas, nomeDe]);
 
   const dias = useMemo(() => Array.from({ length: 7 }, (_, i) => addDias(semanaBase, i)), [semanaBase]);
 
@@ -176,10 +191,14 @@ export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
                       {blocosDoDia(dia).map(({ entrada, top, altura, faixa, faixas }) => (
                         <div
                           key={entrada.id}
-                          className={`absolute overflow-hidden rounded border border-white/25 px-1 py-0.5 text-[10px] leading-tight text-white bg-gta-indigo ${!entrada.fim ? "animate-pulse" : ""}`}
+                          className={`absolute overflow-hidden rounded border border-white/25 px-1 py-0.5 text-[10px] leading-tight text-white ${!entrada.fim ? "animate-pulse" : ""}`}
                           style={{
                             top,
                             height: altura,
+                            // A borda clara acima não é enfeite: contra o cartão
+                            // escuro a cor cheia fica em torno de 2,4:1, e é ela
+                            // que dá o limite visível do bloco.
+                            background: corDePessoa(entrada.usuarioEmail, cores),
                             // Cada faixa ocupa sua fatia da coluna; a borda clara
                             // separa blocos vizinhos que encostam.
                             left: `calc(${(faixa / faixas) * 100}% + 2px)`,
@@ -188,7 +207,15 @@ export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
                           title={`${entrada.descricao || "(sem descrição)"}${mostrarUsuario ? ` — ${nomeDe(entrada.usuarioEmail)}` : ""}\n${formatarDuracao(duracaoMin(entrada, agora))}${entrada.cliente ? `\n${entrada.cliente}` : ""}`}
                         >
                           <div className="truncate font-medium">{entrada.descricao || "(sem descrição)"}</div>
-                          {altura > 30 && entrada.cliente && <div className="truncate opacity-80">{entrada.cliente}</div>}
+                          {/* O nome vem antes do cliente: com várias pessoas na
+                              tela, a cor sozinha não pode ser a única pista de
+                              quem fez o quê (WCAG 1.4.1). */}
+                          {mostrarUsuario && altura > 30 && (
+                            <div className="truncate opacity-90">{nomeDe(entrada.usuarioEmail)}</div>
+                          )}
+                          {entrada.cliente && altura > (mostrarUsuario ? 44 : 30) && (
+                            <div className="truncate opacity-80">{entrada.cliente}</div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -197,7 +224,18 @@ export function AbaCalendario({ usuarioSelecionado, nomeDe, mostrarUsuario }: {
               })}
             </div>
           </div>
-          <p className="mt-2 flex flex-wrap items-center gap-3 hint">
+          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 hint">
+            {mostrarUsuario &&
+              naSemana.map((email) => (
+                <span key={email} className="inline-flex items-center gap-1.5">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                    style={{ background: corDePessoa(email, cores) }}
+                    aria-hidden
+                  />
+                  {nomeDe(email)}
+                </span>
+              ))}
             <span>Pisca = cronômetro em andamento</span>
           </p>
         </div>
