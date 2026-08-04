@@ -176,6 +176,26 @@ describe("configuração inválida", () => {
     expect(motivoPushIndisponivel()).not.toContain("VAPID_PUBLIC_KEY");
   });
 
+  it("absorve chave partida por quebra de linha do terminal", async () => {
+    // Aconteceu de verdade: a chave foi copiada de uma saída de terminal que
+    // quebrou linha no meio dos 87 caracteres, e o `web-push` recusou com
+    // "must be a URL safe Base 64". Espaço em branco nunca é legítimo dentro
+    // de base64 — limpar aqui não esconde erro, evita que um detalhe de
+    // terminal derrube o recurso.
+    process.env.VAPID_PUBLIC_KEY = "BNGTI4PuCryX7RSJ\n-wg3l9lW4Dt7Zg6Ia";
+    process.env.VAPID_PRIVATE_KEY = "  chave \r\n privada  ";
+    const { pushDisponivel } = await carregar();
+    expect(pushDisponivel()).toBe(true);
+  });
+
+  it("continua reclamando de variável realmente vazia", async () => {
+    // Só espaço em branco vira vazio — não pode passar por chave válida.
+    process.env.VAPID_PUBLIC_KEY = "   \n  ";
+    const { pushDisponivel, motivoPushIndisponivel } = await carregar();
+    expect(pushDisponivel()).toBe(false);
+    expect(motivoPushIndisponivel()).toContain("VAPID_PUBLIC_KEY");
+  });
+
   it("motivo fica vazio quando está tudo certo", async () => {
     const { pushDisponivel, motivoPushIndisponivel } = await carregar();
     expect(pushDisponivel()).toBe(true);

@@ -19,11 +19,28 @@ const ASSUNTO_PADRAO = "mailto:gtaenergiago@gmail.com";
 let configurado: boolean | null = null;
 let motivo = "";
 
+/**
+ * Tira TODO espaço em branco, não só o das pontas.
+ *
+ * Uma chave VAPID é base64 url-safe: espaço, tabulação e quebra de linha nunca
+ * são legítimos ali dentro. Mas o caminho até a variável de ambiente passa por
+ * copiar e colar de terminal, e terminal quebra linha no meio de um texto de
+ * 87 caracteres. Aconteceu na configuração desta plataforma: a chave chegou
+ * partida ao meio e o `web-push` recusou com "must be a URL safe Base 64".
+ *
+ * `trim()` limpa as pontas e deixa passar o miolo — que é exatamente onde a
+ * quebra cai. Como o caractere é sempre inválido, absorvê-lo aqui não esconde
+ * erro nenhum: só evita que um detalhe de terminal derrube o recurso.
+ */
+function limpar(valor: string | undefined): string {
+  return (valor ?? "").replace(/\s+/g, "");
+}
+
 /** `false` quando faltam as chaves — a plataforma segue funcionando sem push. */
 function configurar(): boolean {
   if (configurado !== null) return configurado;
-  const publica = process.env.VAPID_PUBLIC_KEY?.trim();
-  const privada = process.env.VAPID_PRIVATE_KEY?.trim();
+  const publica = limpar(process.env.VAPID_PUBLIC_KEY);
+  const privada = limpar(process.env.VAPID_PRIVATE_KEY);
   const faltando = [
     !publica && "VAPID_PUBLIC_KEY",
     !privada && "VAPID_PRIVATE_KEY",
@@ -34,7 +51,7 @@ function configurar(): boolean {
     return false;
   }
   try {
-    webpush.setVapidDetails(process.env.VAPID_SUBJECT?.trim() || ASSUNTO_PADRAO, publica!, privada!);
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT?.trim() || ASSUNTO_PADRAO, publica, privada);
     motivo = "";
     configurado = true;
     return true;
