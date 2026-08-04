@@ -20,7 +20,14 @@ export async function middleware(req: NextRequest) {
     pathname === "/api/logout" ||
     pathname === "/icon.png" ||
     pathname.startsWith("/api/cron/") || // cron da Vercel (protegido por CRON_SECRET na rota)
-    pathname.startsWith("/brand/"); // logo e ícone da marca (acessíveis no login)
+    pathname.startsWith("/brand/") || // logo e ícone da marca (acessíveis no login)
+    // PWA: o navegador busca estes três SEM a sessão, e às vezes sem cookie
+    // nenhum. Protegidos, o service worker chega como HTML da tela de login e
+    // o registro falha — junto com ele, toda a notificação push. Nenhum
+    // contém dado: são script estático, metadados do app e ícones.
+    pathname === "/sw.js" ||
+    pathname === "/manifest.webmanifest" ||
+    pathname.startsWith("/icons/");
   if (isPublic) return NextResponse.next();
 
   const session = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);

@@ -1,6 +1,7 @@
 import { AppHeader } from "@/components/AppHeader";
 import { ChangePasswordForm } from "@/components/users/ChangePasswordForm";
 import { AvatarUpload } from "@/components/users/AvatarUpload";
+import { NotificacoesAparelho } from "@/components/push/NotificacoesAparelho";
 import { PageHeader } from "@/components/ui";
 import { requirePageUser } from "@/lib/session";
 import { ROLE_LABEL } from "@/lib/users/types";
@@ -61,6 +62,16 @@ export default async function ContaPage() {
               ? " Configurável em Planejamento e capacidade, no menu do perfil."
               : " Alterações devem ser solicitadas a um administrador."}
           </p>
+        </section>
+
+        <section className="section-card mt-6">
+          <h2 className="section-title">Notificações no celular</h2>
+          <p className="hint mb-4 mt-1">
+            Avisa sobre tarefa atribuída a você, orçamento que mudou de situação e estouro de
+            capacidade — mesmo com a plataforma fechada. Novidades da plataforma continuam só no
+            sino. A permissão vale por aparelho: ative em cada um que você usa.
+          </p>
+          <NotificacoesAparelho />
         </section>
 
         <section className="section-card mt-6">

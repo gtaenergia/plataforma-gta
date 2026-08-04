@@ -189,6 +189,10 @@ export function getNotificacaoStore(): NotificacaoStore {
 /**
  * Cria uma notificação sem nunca lançar (best-effort): um efeito colateral de
  * notificação jamais deve quebrar o fluxo principal (ex.: aprovar/rejeitar).
+ *
+ * O sino é o registro; o push é o aviso. Os dois saem daqui, mas o push é
+ * carregado sob demanda: o `web-push` só existe no runtime Node, e importá-lo
+ * no topo arrastaria a dependência para qualquer rota que notifique.
  */
 export async function notificar(data: NovaNotificacao): Promise<void> {
   try {
@@ -197,5 +201,13 @@ export async function notificar(data: NovaNotificacao): Promise<void> {
     await getNotificacaoStore().criar(data);
   } catch (e) {
     console.error("Notificação in-app: falha ao criar —", e);
+  }
+  // Fora do try acima de propósito: o sino ter falhado não é motivo para o
+  // celular também ficar mudo, e vice-versa.
+  try {
+    const { enviarPush } = await import("../push/enviar");
+    await enviarPush(data);
+  } catch (e) {
+    console.error("Push: falha ao despachar —", e);
   }
 }
