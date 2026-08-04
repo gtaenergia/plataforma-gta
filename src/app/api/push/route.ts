@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/session";
-import { pushDisponivel } from "@/lib/push/enviar";
+import { motivoPushIndisponivel, pushDisponivel } from "@/lib/push/enviar";
 import { getPushStore } from "@/lib/push/store";
 
 export const runtime = "nodejs";
@@ -33,6 +33,9 @@ export async function GET() {
     disponivel,
     chavePublica: disponivel ? (process.env.VAPID_PUBLIC_KEY ?? "").trim() : "",
     aparelhos,
+    // A frase exata do que está errado. Sem ela, quem configurou fica
+    // procurando às cegas qual das três variáveis tem problema.
+    motivo: disponivel ? "" : motivoPushIndisponivel(),
   });
 }
 

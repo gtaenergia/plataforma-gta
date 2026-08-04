@@ -17,23 +17,51 @@ import { getPushStore } from "./store";
 const ASSUNTO_PADRAO = "mailto:gtaenergiago@gmail.com";
 
 let configurado: boolean | null = null;
+let motivo = "";
 
 /** `false` quando faltam as chaves — a plataforma segue funcionando sem push. */
 function configurar(): boolean {
   if (configurado !== null) return configurado;
   const publica = process.env.VAPID_PUBLIC_KEY?.trim();
   const privada = process.env.VAPID_PRIVATE_KEY?.trim();
-  if (!publica || !privada) {
+  const faltando = [
+    !publica && "VAPID_PUBLIC_KEY",
+    !privada && "VAPID_PRIVATE_KEY",
+  ].filter(Boolean);
+  if (faltando.length > 0) {
+    motivo = `Faltam as variáveis ${faltando.join(" e ")}.`;
     configurado = false;
     return false;
   }
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT?.trim() || ASSUNTO_PADRAO, publica, privada);
-  configurado = true;
-  return true;
+  try {
+    webpush.setVapidDetails(process.env.VAPID_SUBJECT?.trim() || ASSUNTO_PADRAO, publica!, privada!);
+    motivo = "";
+    configurado = true;
+    return true;
+  } catch (e) {
+    // `setVapidDetails` LANÇA com assunto sem `mailto:`, chave truncada na
+    // cópia ou tamanho errado. Sem este catch a exceção sobe até a rota e
+    // vira 500 — e a tela mostra "não configurado", escondendo justamente a
+    // frase que diz o que está errado. Erro de digitação em variável de
+    // ambiente tem que se apresentar, não se disfarçar.
+    motivo = e instanceof Error ? e.message : "Configuração VAPID inválida.";
+    console.error("Push: configuração inválida —", motivo);
+    configurado = false;
+    return false;
+  }
 }
 
 export function pushDisponivel(): boolean {
   return configurar();
+}
+
+/**
+ * Por que o push está indisponível, em uma frase. Vazio quando está tudo bem.
+ * Não contém segredo: o `web-push` reclama do formato, nunca do valor da chave.
+ */
+export function motivoPushIndisponivel(): string {
+  configurar();
+  return motivo;
 }
 
 /**

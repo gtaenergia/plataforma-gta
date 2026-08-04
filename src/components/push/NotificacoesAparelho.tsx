@@ -17,6 +17,7 @@ type Estado =
   | "sem_suporte"
   | "ios_precisa_instalar"
   | "sem_chave"
+  | "sessao_expirada"
   | "bloqueado"
   | "desligado"
   | "ligado";
@@ -58,6 +59,7 @@ function descreverAparelho(): string {
 export function NotificacoesAparelho() {
   const [estado, setEstado] = useState<Estado>("carregando");
   const [chave, setChave] = useState("");
+  const [motivo, setMotivo] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -73,8 +75,17 @@ export function NotificacoesAparelho() {
     }
 
     const r = await fetch("/api/push");
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok || !d.disponivel || !d.chavePublica) {
+    const d = await r.json().catch(() => null);
+    // Sessão vencida não devolve JSON: o middleware redireciona para o login e
+    // a resposta vem como HTML. Sem separar este caso, "faça login de novo"
+    // aparecia como "o servidor não está configurado" — e a pessoa ia procurar
+    // erro em variável de ambiente.
+    if (r.status === 401 || d === null) {
+      setEstado("sessao_expirada");
+      return;
+    }
+    if (!d.disponivel || !d.chavePublica) {
+      setMotivo(typeof d.motivo === "string" ? d.motivo : "");
       setEstado("sem_chave");
       return;
     }
@@ -206,9 +217,21 @@ export function NotificacoesAparelho() {
         <Alert tone="amber">Este navegador não oferece notificações. No Android, use o Chrome.</Alert>
       )}
 
+      {estado === "sessao_expirada" && (
+        <Alert tone="amber" titulo="Sessão expirada">
+          Entre novamente e volte a esta tela.
+        </Alert>
+      )}
+
       {estado === "sem_chave" && (
-        <Alert tone="indigo">
-          As notificações push ainda não foram configuradas no servidor. Fale com um administrador.
+        <Alert tone="indigo" titulo="Push ainda não configurado no servidor">
+          Fale com um administrador.
+          {motivo && (
+            <>
+              {" "}
+              Detalhe técnico: <span className="font-medium">{motivo}</span>
+            </>
+          )}
         </Alert>
       )}
     </div>

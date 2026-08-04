@@ -12,12 +12,17 @@ import type { InscricaoPush } from "@/lib/push/types";
 
 const enviados: { endpoint: string; corpo: string }[] = [];
 let proximoErro: { statusCode: number } | null = null;
+let erroDeConfiguracao: string | null = null;
 const removidos: string[] = [];
 let inscricoes: InscricaoPush[] = [];
 
 vi.mock("web-push", () => ({
   default: {
-    setVapidDetails: vi.fn(),
+    setVapidDetails: vi.fn(() => {
+      // O `web-push` de verdade LANÇA com assunto sem `mailto:` ou chave de
+      // tamanho errado.
+      if (erroDeConfiguracao) throw new Error(erroDeConfiguracao);
+    }),
     sendNotification: vi.fn(async (sub: { endpoint: string }, corpo: string) => {
       if (proximoErro) throw proximoErro;
       enviados.push({ endpoint: sub.endpoint, corpo });
@@ -64,6 +69,7 @@ beforeEach(() => {
   enviados.length = 0;
   removidos.length = 0;
   proximoErro = null;
+  erroDeConfiguracao = null;
   inscricoes = [inscricao("https://fcm.googleapis.com/aparelho-1")];
   process.env.VAPID_PUBLIC_KEY = "publica-de-teste";
   process.env.VAPID_PRIVATE_KEY = "privada-de-teste";
@@ -142,5 +148,37 @@ describe("enviarPush", () => {
     const { enviarPush } = await carregar();
     await enviarPush(notificacao);
     expect(enviados).toEqual([]);
+  });
+});
+
+describe("configuração inválida", () => {
+  it("não lança — vira indisponível com motivo", async () => {
+    // Sem isso a exceção sobe até a rota, vira 500, e a tela mostra
+    // "não configurado" escondendo justamente a frase que diz o que houve.
+    erroDeConfiguracao = "Vapid subject is not a valid URL. gtaenergiago@gmail.com";
+    const { pushDisponivel, motivoPushIndisponivel } = await carregar();
+    expect(() => pushDisponivel()).not.toThrow();
+    expect(pushDisponivel()).toBe(false);
+    expect(motivoPushIndisponivel()).toContain("not a valid URL");
+  });
+
+  it("com configuração inválida, enviar não quebra nem entrega", async () => {
+    erroDeConfiguracao = "Vapid public key should be 65 bytes long";
+    const { enviarPush } = await carregar();
+    await expect(enviarPush(notificacao)).resolves.toBeUndefined();
+    expect(enviados).toEqual([]);
+  });
+
+  it("diz QUAL variável falta, não só que falta alguma", async () => {
+    delete process.env.VAPID_PRIVATE_KEY;
+    const { motivoPushIndisponivel } = await carregar();
+    expect(motivoPushIndisponivel()).toContain("VAPID_PRIVATE_KEY");
+    expect(motivoPushIndisponivel()).not.toContain("VAPID_PUBLIC_KEY");
+  });
+
+  it("motivo fica vazio quando está tudo certo", async () => {
+    const { pushDisponivel, motivoPushIndisponivel } = await carregar();
+    expect(pushDisponivel()).toBe(true);
+    expect(motivoPushIndisponivel()).toBe("");
   });
 });
