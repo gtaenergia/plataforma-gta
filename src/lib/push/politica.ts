@@ -2,7 +2,7 @@ import type { NovaNotificacao } from "../notificacoes/types";
 import type { PayloadPush } from "./types";
 
 /**
- * Quais notificações merecem vibrar o celular — e quais ficam só no sino.
+ * Quais notificações merecem interromper a pessoa — e quais ficam só no sino.
  *
  * ## Por que uma lista de PERMITIDOS, e não de bloqueados
  *

@@ -1,4 +1,9 @@
-/** Notificações push (Web Push) — o celular vibra mesmo com o site fechado. */
+/**
+ * Notificações push (Web Push) — o aviso chega com a plataforma fechada.
+ *
+ * Não é recurso de celular: o mesmo mecanismo vale no computador, no tablet e
+ * no telefone. O que muda de um para outro é só onde a notificação aparece.
+ */
 
 /**
  * Uma inscrição é um APARELHO, não uma pessoa. A mesma pessoa no celular e no

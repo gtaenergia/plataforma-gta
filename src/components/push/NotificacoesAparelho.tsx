@@ -209,8 +209,8 @@ export function NotificacoesAparelho() {
 
       {estado === "bloqueado" && (
         <Alert tone="amber" titulo="Bloqueadas pelo navegador">
-          A permissão foi negada neste aparelho, e só o navegador pode reverter. No Chrome do Android:
-          menu ⋮ → Configurações do site → Notificações → Permitir. Depois volte aqui e ative.
+          A permissão foi negada neste aparelho, e só o navegador pode reverter. No Chrome, abra o
+          cadeado ao lado do endereço → Notificações → Permitir. Depois volte aqui e ative.
         </Alert>
       )}
 
@@ -223,7 +223,10 @@ export function NotificacoesAparelho() {
       )}
 
       {estado === "sem_suporte" && (
-        <Alert tone="amber">Este navegador não oferece notificações. No Android, use o Chrome.</Alert>
+        <Alert tone="amber">
+          Este navegador não oferece notificações. Chrome, Edge e Firefox oferecem, no computador e
+          no Android.
+        </Alert>
       )}
 
       {estado === "sessao_expirada" && (

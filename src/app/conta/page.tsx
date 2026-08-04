@@ -65,11 +65,12 @@ export default async function ContaPage() {
         </section>
 
         <section className="section-card mt-6">
-          <h2 className="section-title">Notificações no celular</h2>
+          <h2 className="section-title">Notificações</h2>
           <p className="hint mb-4 mt-1">
             Avisa sobre tarefa atribuída a você, orçamento que mudou de situação e estouro de
-            capacidade — mesmo com a plataforma fechada. Novidades da plataforma continuam só no
-            sino. A permissão vale por aparelho: ative em cada um que você usa.
+            capacidade — no computador ou no celular, mesmo com a plataforma fechada. Novidades da
+            plataforma continuam só no sino. A permissão vale por aparelho: ative em cada um que
+            você usa.
           </p>
           <NotificacoesAparelho />
         </section>
