@@ -29,8 +29,14 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(dados.titulo, {
       body: dados.mensagem,
+      // O ícone tem fundo sólido da marca de propósito: transparente vira um
+      // quadrado branco no meio da barra escura do Android, que foi como esta
+      // notificação nasceu feia.
       icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
+      // O badge é a marquinha da barra de status. O Android descarta a cor e
+      // usa SÓ o alfa, pintando com a cor do sistema — daí ser uma silhueta,
+      // e não o logo colorido, que virava um borrão.
+      badge: "/icons/badge-96.png",
       // Mesma tag = substitui em vez de empilhar (ver lib/push/politica.ts).
       tag: dados.tag || "gta",
       renotify: true,

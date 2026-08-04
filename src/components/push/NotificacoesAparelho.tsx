@@ -140,7 +140,16 @@ export function NotificacoesAparelho() {
       }
       setEstado("ligado");
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Não foi possível ativar.");
+      const msg = e instanceof Error ? e.message : "Não foi possível ativar.";
+      // "push service error" é o navegador avisando que NÃO conseguiu falar
+      // com o serviço de push do Google. Não é a plataforma: costuma ser rede
+      // corporativa, VPN ou notificação desligada no sistema operacional.
+      // Sem essa tradução, a frase crua manda a pessoa procurar defeito aqui.
+      setErro(
+        /push service/i.test(msg)
+          ? `${msg}. O navegador não conseguiu falar com o serviço de push do Google — normalmente é a rede (VPN, firewall) ou a notificação desligada no sistema, não a plataforma.`
+          : msg,
+      );
     } finally {
       setOcupado(false);
     }
