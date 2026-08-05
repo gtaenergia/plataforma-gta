@@ -122,10 +122,8 @@ export function CustoInterno({
     <div className="section-card">
       <h2 className="section-title">Custo administrativo</h2>
       <p className="hint mt-1">
-        Horas da própria equipe neste trabalho. Não vai para a proposta do cliente —
-        {orcamento.serviceKey === "servico-hora"
-          ? " aqui ela entra no preço, porque o preço deste serviço é custo × markup."
-          : " serve para medir se o preço vale a pena."}
+        Horas da própria equipe neste trabalho. Não vai para a proposta do cliente e não altera o
+        preço — serve para medir se ele vale a pena.
       </p>
 
       {erro && <Alert tone="red" className="mt-4">{erro}</Alert>}

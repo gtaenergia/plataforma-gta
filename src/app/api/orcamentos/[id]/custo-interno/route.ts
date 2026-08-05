@@ -69,48 +69,32 @@ export async function POST(req: Request, ctx: Ctx) {
   const custoAdministrativo = interna.custoCent / 100;
   const custoBase = custoTerceirizado + custoAdministrativo;
 
-  let ficha: FichaExterna;
-  let valor = orc.valor;
+  /*
+   * O preço do orçamento MANDA, e não é tocado aqui.
+   *
+   * Todo orçamento chega com preço vindo do seu configurador — dimensionamento
+   * solar, Fator K, tabela. A margem é MEDIDA: é o que sobrou depois do custo e
+   * do imposto. Pode dar negativo, e é justamente esse o aviso que o dono quer
+   * ver — "o custo que eu tô tendo com gente interna tem que valer a pena perto
+   * do faturamento".
+   *
+   * (A calculadora de mão de obra, em Propostas, faz o caminho inverso — do
+   * custo para o preço — mas ela entrega uma planilha e não cria orçamento.)
+   */
+  const faturamento = orc.valor ?? 0;
+  const impostoValor = faturamento * imposto;
+  const lucro = faturamento - custoBase - impostoValor;
+  const ficha: FichaExterna = {
+    custoBase,
+    fator: custoBase > 0 ? faturamento / custoBase : 0,
+    faturamento: faturamento > 0 ? faturamento : 0.01, // o schema exige positivo
+    impostosPct: imposto,
+    margemLiquida: faturamento > 0 ? Math.max(-1, Math.min(1, lucro / faturamento)) : 0,
+    custoAdministrativo,
+    custoTerceirizado,
+  };
 
-  if (orc.serviceKey === "servico-hora") {
-    const p = aplicarMarkup(Math.round(custoBase * 100), { imposto, margem });
-    if (p.impedimento) {
-      return NextResponse.json(
-        { error: "Imposto e margem somados chegam a 100% — não há preço possível." },
-        { status: 422 },
-      );
-    }
-    valor = p.precoCent / 100;
-    ficha = {
-      custoBase,
-      fator: p.markup,
-      faturamento: valor,
-      impostosPct: imposto,
-      margemLiquida: margem,
-      custoAdministrativo,
-      custoTerceirizado,
-    };
-  } else {
-    /*
-     * O preço já existe e manda. Aqui a margem é MEDIDA, não imposta: é o que
-     * sobrou depois do custo e do imposto — e pode dar negativo, que é
-     * exatamente o aviso que o dono quer ver.
-     */
-    const faturamento = orc.valor ?? 0;
-    const impostoValor = faturamento * imposto;
-    const lucro = faturamento - custoBase - impostoValor;
-    ficha = {
-      custoBase,
-      fator: custoBase > 0 ? faturamento / custoBase : 0,
-      faturamento: faturamento > 0 ? faturamento : 0.01, // o schema exige positivo
-      impostosPct: imposto,
-      margemLiquida: faturamento > 0 ? Math.max(-1, Math.min(1, lucro / faturamento)) : 0,
-      custoAdministrativo,
-      custoTerceirizado,
-    };
-  }
-
-  const atualizado = await store.update(id, { ficha, valor });
+  const atualizado = await store.update(id, { ficha });
   return NextResponse.json({
     orcamento: redigirOrcamento(atualizado, true),
     incompleta: interna.incompleta,

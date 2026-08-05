@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { PropostasList } from "@/components/propostas/PropostasList";
+import { CalculadoraMaoDeObra } from "@/components/propostas/CalculadoraMaoDeObra";
 import { PageHeader } from "@/components/ui";
 import { requirePageUser } from "@/lib/session";
 import { temPermissao } from "@/lib/rbac/resolve";
@@ -37,6 +38,12 @@ export default async function PropostasPage() {
               </>
             }
           />
+        </div>
+
+        {/* Ferramenta, não listagem: fica acima do histórico porque é o que se
+            vem fazer, e some sozinha para quem não tem `financeiro.ver`. */}
+        <div className="mb-6">
+          <CalculadoraMaoDeObra />
         </div>
 
         <PropostasList podeEnviar={podeEnviar} />

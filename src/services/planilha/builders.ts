@@ -8,6 +8,7 @@ import { planilhaSpda } from "./spda";
 import { planilhaProjetoBt } from "./projeto-bt";
 import { planilhaSubestacao } from "./subestacao";
 import { planilhaSolar } from "./solar";
+import { planilhaMaoDeObra } from "./mao-de-obra";
 
 /**
  * Registro de builders de planilha por serviço. Cada builder monta um .xlsx com
@@ -38,6 +39,9 @@ export const BUILDERS: Record<string, (d: Record<string, unknown>) => ExcelJS.Wo
   "projeto-bt": (d) => planilhaProjetoBt(d as Parameters<typeof planilhaProjetoBt>[0]),
   "projeto-subestacao": (d) => planilhaSubestacao(d as Parameters<typeof planilhaSubestacao>[0]),
   solar: (d) => planilhaSolar(d as Parameters<typeof planilhaSolar>[0]),
+  // Único que NÃO vem de um configurador de proposta: é a calculadora de mão
+  // de obra, em Propostas, cuja entrega É a planilha.
+  "mao-de-obra": (d) => planilhaMaoDeObra(d as Parameters<typeof planilhaMaoDeObra>[0]),
 };
 
 export function construirPlanilha(serviceKey: string, data: Record<string, unknown>): ExcelJS.Workbook {

@@ -16,8 +16,8 @@ const ORCAMENTO = {
   cliente: "Cliente Teste",
   fonte: "interno",
   estacao: "rascunho",
-  serviceKey: "servico-hora",
-  descricao: "Serviço por hora",
+  serviceKey: "solar",
+  descricao: "Energia Solar Fotovoltaica",
   valor: 1428.57,
   ficha: {
     custoBase: 1203,
