@@ -8,6 +8,7 @@ import { CONFIG_CAPACIDADE_PADRAO, type ConfigCapacidade, type TipoDemanda } fro
 import { chaveCategoria } from "@/lib/capacidade/motor";
 import { CargaEquipe } from "./CargaEquipe";
 import { SeletorDias } from "./SeletorDias";
+import { CustoEquipeAdmin } from "@/components/custo-equipe/CustoEquipeAdmin";
 
 /**
  * Parâmetros de planejamento: jornada da equipe, catálogo de tipos de demanda
@@ -278,6 +279,10 @@ export function PlanejamentoAdmin() {
           </div>
         )}
       </SectionCard>
+
+      {/* Mesma lista de gente, dado de outra natureza: o bloco carrega de
+          `/api/custo-equipe` e some sozinho para quem não tem `financeiro.ver`. */}
+      <CustoEquipeAdmin usuarios={usuarios} />
 
       <SectionCard
         title="Catálogo de demandas"
