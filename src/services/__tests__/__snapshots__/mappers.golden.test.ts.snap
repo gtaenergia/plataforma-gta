@@ -37,7 +37,7 @@ exports[`mappers CPQ (molde compartilhado) > analisador: form validado → marca
 }
 `;
 
-exports[`mappers CPQ (molde compartilhado) > cobre os 10 serviços que usam o molde padrão 1`] = `
+exports[`mappers CPQ (molde compartilhado) > cobre todos os serviços que usam o molde padrão 1`] = `
 [
   "analisador",
   "conexao",
@@ -48,6 +48,7 @@ exports[`mappers CPQ (molde compartilhado) > cobre os 10 serviços que usam o mo
   "projeto-subestacao",
   "qgbt",
   "rede-mt",
+  "servico-hora",
   "spda",
 ]
 `;
@@ -341,6 +342,43 @@ exports[`mappers CPQ (molde compartilhado) > rede-mt: form validado → marcador
   ],
   "prazoExecucao": "30 dias corridos",
   "referencia": "GTA-2026-CLIENTEGOLDENLTDA-REDEMT-007",
+  "tituloProposta": "PROPOSTA TÉCNICA E COMERCIAL — TESTE",
+  "validade": "21 de julho de 2026 (20 dias corridos)",
+  "valorTotal": "R$ 1.234,56",
+  "valorTotalExtenso": "Mil, duzentos e trinta e quatro reais e cinquenta e seis centavos.",
+}
+`;
+
+exports[`mappers CPQ (molde compartilhado) > servico-hora: form validado → marcadores do .docx 1`] = `
+{
+  "cidadeUf": "Goiânia/GO",
+  "clienteNome": "Cliente Golden Ltda",
+  "clienteNomeUpper": "CLIENTE GOLDEN LTDA",
+  "dataEmissao": "Goiânia, 01 de julho de 2026",
+  "formaPagamento": "50% na assinatura e 50% na entrega",
+  "itens": [
+    {
+      "condicao": "na entrega",
+      "descricao": "Item principal do escopo",
+      "num": 1,
+      "valor": "R$ 1.234,56",
+    },
+    {
+      "condicao": "",
+      "descricao": "Item incluso (sem preço destacado)",
+      "num": 2,
+      "valor": "Incluso no escopo",
+    },
+  ],
+  "localAtividade": "Goiânia/GO",
+  "objeto": "Objeto de teste do serviço, fixo para o snapshot.",
+  "observacoes": [
+    {
+      "texto": "Observação de teste.",
+    },
+  ],
+  "prazoExecucao": "30 dias corridos",
+  "referencia": "GTA-2026-CLIENTEGOLDENLTDA-HORA-007",
   "tituloProposta": "PROPOSTA TÉCNICA E COMERCIAL — TESTE",
   "validade": "21 de julho de 2026 (20 dias corridos)",
   "valorTotal": "R$ 1.234,56",

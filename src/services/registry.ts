@@ -11,6 +11,7 @@ import { limpezaPlacasService } from "./limpeza";
 import { conexaoConcessionariaService } from "./conexao-concessionaria";
 import { analisadorEnergiaService } from "./analisador-energia";
 import { projetoEletricoBtService } from "./projeto-bt";
+import { servicoHoraService } from "./servico-hora";
 
 /**
  * Registro central de serviços da plataforma.
@@ -36,6 +37,9 @@ export const SERVICES: ServiceModule[] = [
   qgbtService,
   projetoEletricoBtService,
   limpezaPlacasService,
+  // Último de propósito: é a saída para o que NÃO se encaixa nos anteriores,
+  // e quem procura deve esbarrar nos configuradores específicos primeiro.
+  servicoHoraService,
 ];
 
 export function getService(key: string): ServiceModule | undefined {

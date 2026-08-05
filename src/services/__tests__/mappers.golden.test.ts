@@ -31,7 +31,8 @@ const FIXTURE = {
 const cpq = SERVICES.filter((s) => s.templateFile === TEMPLATE_SERVICOS);
 
 describe("mappers CPQ (molde compartilhado)", () => {
-  it("cobre os 10 serviços que usam o molde padrão", () => {
+  // Sem número no título: ele já mentiu uma vez, ao entrar o 11º serviço.
+  it("cobre todos os serviços que usam o molde padrão", () => {
     expect(cpq.map((s) => s.key).sort()).toMatchSnapshot();
   });
 

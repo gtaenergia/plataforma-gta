@@ -15,6 +15,7 @@ import { RedeMtConfigurator } from "@/components/rede-mt/RedeMtConfigurator";
 import { QgbtConfigurator } from "@/components/qgbt/QgbtConfigurator";
 import { ProjetoBtConfigurator } from "@/components/projeto-bt/ProjetoBtConfigurator";
 import { ServicoSimplesConfigurator } from "@/components/ServicoSimplesConfigurator";
+import { ServicoHoraConfigurator } from "@/components/servico-hora/ServicoHoraConfigurator";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { requirePageUser } from "@/lib/session";
 
@@ -75,6 +76,8 @@ export default async function NovaPropostaPage({
           <QgbtConfigurator propostaId={proposta} />
         ) : service.key === "projeto-bt" ? (
           <ProjetoBtConfigurator propostaId={proposta} />
+        ) : service.key === "servico-hora" ? (
+          <ServicoHoraConfigurator propostaId={proposta} />
         ) : ["conexao", "analisador", "laudo-inspecao", "limpeza"].includes(service.key) ? (
           <ServicoSimplesConfigurator serviceKey={service.key} propostaId={proposta} />
         ) : (
