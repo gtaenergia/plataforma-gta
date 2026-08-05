@@ -62,9 +62,13 @@ export async function DELETE(req: Request) {
   const parsed = cancelamentoSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Endpoint inválido." }, { status: 400 });
 
-  // Sem checar o dono de propósito: quem está no aparelho pode desligar o
-  // aviso daquele aparelho. Exigir que a conta bata deixaria a inscrição órfã
-  // vibrando para sempre quando alguém trocasse de conta no mesmo navegador.
-  await getPushStore().remover(parsed.data.endpoint);
+  // Só apaga a inscrição da PRÓPRIA pessoa.
+  //
+  // Antes eu não conferia o dono, argumentando que quem está no aparelho pode
+  // desligar o aviso dele. O argumento era fraco: quem entra com outra conta no
+  // mesmo navegador já sobrescreve o registro, porque `salvar` é upsert pelo
+  // endpoint. Sem essa justificativa, sobrava só o buraco — qualquer
+  // autenticado que descobrisse um endpoint desinscrevia o aparelho alheio.
+  await getPushStore().removerDoDono(parsed.data.endpoint, user.email);
   return NextResponse.json({ ok: true });
 }

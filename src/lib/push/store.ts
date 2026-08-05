@@ -19,8 +19,14 @@ export interface PushStore {
   listPara(email: string): Promise<InscricaoPush[]>;
   /** Cria ou atualiza pelo endpoint. */
   salvar(data: NovaInscricao): Promise<void>;
-  /** Remove um aparelho. Usado no cancelamento e na limpeza de inscrição morta. */
+  /**
+   * Remove um aparelho SEM conferir o dono. Só para a limpeza automática de
+   * inscrição morta, que roda no servidor a partir do 404/410 do serviço de
+   * push — ali não há usuário na jogada.
+   */
   remover(endpoint: string): Promise<boolean>;
+  /** Remove só se a inscrição pertencer a esta pessoa. É o caminho da API. */
+  removerDoDono(endpoint: string, email: string): Promise<boolean>;
   /** Quantos aparelhos a pessoa tem ativos — alimenta o interruptor em /conta. */
   contarPara(email: string): Promise<number>;
 }
@@ -70,6 +76,13 @@ class JsonPushStore implements PushStore {
   async remover(endpoint: string) {
     return this.mutate((items) => {
       const next = items.filter((i) => i.endpoint !== endpoint);
+      return { items: next, result: next.length !== items.length };
+    });
+  }
+  async removerDoDono(endpoint: string, email: string) {
+    const alvo = norm(email);
+    return this.mutate((items) => {
+      const next = items.filter((i) => !(i.endpoint === endpoint && norm(i.email) === alvo));
       return { items: next, result: next.length !== items.length };
     });
   }
@@ -149,6 +162,13 @@ class PostgresPushStore implements PushStore {
   async remover(endpoint: string) {
     await this.ensureSchema();
     const { rowCount } = await this.pool.sql`DELETE FROM push_subscriptions WHERE endpoint = ${endpoint}`;
+    return (rowCount ?? 0) > 0;
+  }
+  async removerDoDono(endpoint: string, email: string) {
+    await this.ensureSchema();
+    const { rowCount } = await this.pool.sql`
+      DELETE FROM push_subscriptions WHERE endpoint = ${endpoint} AND lower(email) = ${norm(email)}
+    `;
     return (rowCount ?? 0) > 0;
   }
   async contarPara(email: string) {
