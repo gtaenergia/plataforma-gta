@@ -109,3 +109,54 @@ export interface Composicao {
   /** Presente = não há preço. A tela mostra o motivo em vez de um número. */
   impedimento?: ImpedimentoComposicao;
 }
+
+// ------------------------------------------------- equipe interna da GTA
+
+/**
+ * Horas da PRÓPRIA equipe num trabalho.
+ *
+ * Só o total de horas, sem divisão diária. A folha do dono escreve "44 dias ×
+ * 4,8 h/dia" porque é assim que ele raciocina PRAZO — mas para custo os dois
+ * jeitos dão o mesmo dinheiro, e o catálogo de demandas já guarda o total.
+ */
+export interface LinhaEquipe {
+  email: string;
+  horas: number;
+}
+
+export const linhaEquipeSchema = z.object({
+  email: z.string().trim().min(1).max(200),
+  horas: z.coerce.number().min(0).max(10_000),
+});
+
+export interface LinhaEquipeCalculada {
+  linha: LinhaEquipe;
+  /** R$/h aplicado. 0 quando a pessoa não tem custo cadastrado. */
+  custoHora: number;
+  custoCent: number;
+  /** Pessoa sem custo cadastrado — o total mente por baixo. */
+  incompleta: boolean;
+}
+
+/**
+ * Composição com as DUAS fontes de custo.
+ *
+ * O áudio pede exatamente isso: "tem orçamento que vai ser só custo
+ * administrativo, e vai ter orçamento que vai ser custo administrativo mais o
+ * custo da terceirização". As duas somam ANTES do markup.
+ */
+export interface ComposicaoTotal {
+  terceirizada: LinhaCalculada[];
+  interna: LinhaEquipeCalculada[];
+  /** Detalhamento que a ficha do orçamento grava separado. */
+  custoTerceirizadoCent: number;
+  custoAdministrativoCent: number;
+  /** A soma dos dois — é sobre ela que o markup incide. */
+  custoCent: number;
+  impostoCent: number;
+  lucroCent: number;
+  precoCent: number;
+  markup: number;
+  incompleta: boolean;
+  impedimento?: ImpedimentoComposicao;
+}
