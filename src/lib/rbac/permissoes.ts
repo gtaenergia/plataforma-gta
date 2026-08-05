@@ -17,6 +17,11 @@ export const PERMISSOES = {
   "usuarios.administrar": "Gerenciar usuários",
   "cargos.administrar": "Gerenciar cargos e permissões",
   "parametros.editar": "Editar parâmetros e limiares de preço",
+  // Custo, markup e margem são o que a GTA ganha em cima do cliente. Quem
+  // INFORMA as horas não precisa enxergar isso — o dono disse que "qualquer
+  // pessoa, do comercial ou do campo" pode lançar as horas. Por isso a leitura
+  // do dinheiro é uma permissão separada de `servicos.editar`.
+  "financeiro.ver": "Ver custo, markup e margem dos orçamentos",
   // A chave fica "tracker.*" por compatibilidade: ela está gravada nos cargos
   // (jsonb no banco) e renomear revogaria em silêncio quem já a tem.
   "tracker.ver_equipe": "Ver os apontamentos de horas de outros usuários",
