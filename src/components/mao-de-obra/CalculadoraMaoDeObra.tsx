@@ -56,7 +56,6 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
    */
   const [estado, setEstado] = useState<"carregando" | "erro" | "pronto">("carregando");
   const [falha, setFalha] = useState("");
-  const [aberto, setAberto] = useState(false);
 
   const [cliente, setCliente] = useState("");
   const [tipoId, setTipoId] = useState("");
@@ -232,21 +231,9 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
 
   return (
     <section className="section-card">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="section-title">Calculadora de mão de obra</h2>
-          <p className="hint mt-1">
-            Quanto cobrar por um trabalho executado por equipe contratada. Não gera proposta — a
-            entrega é uma planilha com a conta aberta.
-          </p>
-        </div>
-        <button type="button" className="btn-secondary" onClick={() => setAberto((v) => !v)}>
-          {aberto ? "Fechar" : "Abrir calculadora"}
-        </button>
-      </div>
-
-      {!aberto ? null : (
-        <div className="mt-5 space-y-5">
+      {/* Sem título nem descrição aqui: a página já os traz no `PageHeader`, e
+          repetir viraria dois cabeçalhos empilhados dizendo a mesma coisa. */}
+      <div className="space-y-5">
           {erro && <Alert tone="red">{erro}</Alert>}
 
           {/* O cadastro mora AQUI, e não numa tela de administração à parte:
@@ -475,8 +462,7 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
             <Download className="h-4 w-4" aria-hidden />
             {baixando ? "Gerando…" : "Baixar planilha"}
           </button>
-        </div>
-      )}
+      </div>
     </section>
   );
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SERVICES } from "@/services/registry";
 import { AppHeader } from "@/components/AppHeader";
 import { ServiceIcon } from "@/components/ServiceIcon";
-import { Wrench } from "lucide-react";
+import { Calculator, Wrench } from "lucide-react";
 import { PageHeader, Badge } from "@/components/ui";
 import { requirePageUser } from "@/lib/session";
 import { temPermissao } from "@/lib/rbac/resolve";
@@ -62,7 +62,23 @@ export default async function DashboardPage() {
 
         {podeVerFinanceiro && (
           <div className="mt-4">
-            <CalculadoraMaoDeObra podeConfigurar={isAdmin} />
+            <Link
+              href="/mao-de-obra"
+              className="group flex items-start gap-4 card p-4 transition hover:-translate-y-0.5 hover:border-gta-indigo hover:shadow-md sm:p-5 dark:hover:border-gta-indigo"
+            >
+              <span className="inline-flex shrink-0 rounded-lg bg-gta-indigo/10 p-2.5 text-gta-indigo dark:bg-gta-indigo/20 dark:text-indigo-300">
+                <Calculator className="h-6 w-6" aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <span className="font-semibold text-gta-navy group-hover:text-gta-indigo dark:text-slate-100">
+                  Calculadora de mão de obra
+                </span>
+                <p className="mt-1 subtitle">
+                  Quanto cobrar por um trabalho executado por equipe contratada. Gera uma planilha
+                  com a conta aberta, em vez de proposta.
+                </p>
+              </div>
+            </Link>
           </div>
         )}
 
