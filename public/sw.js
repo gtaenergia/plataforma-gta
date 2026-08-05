@@ -29,13 +29,20 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(dados.titulo, {
       body: dados.mensagem,
-      // O ícone tem fundo sólido da marca de propósito: transparente vira um
-      // quadrado branco no meio da barra escura do Android, que foi como esta
-      // notificação nasceu feia.
-      icon: "/icons/icon-192.png",
-      // O badge é a marquinha da barra de status. O Android descarta a cor e
-      // usa SÓ o alfa, pintando com a cor do sistema — daí ser uma silhueta,
-      // e não o logo colorido, que virava um borrão.
+      // SEM `icon`, de propósito.
+      //
+      // No Android o `icon` vira uma imagem grande à DIREITA da notificação, e
+      // é ela que fazia a nossa destoar: WhatsApp, banco e mensageiro mostram
+      // só o ícone do app à esquerda e o texto. Repetir a marca num quadrado
+      // ao lado não informa nada — quem recebe já sabe de onde veio pelo ícone
+      // do aplicativo.
+      //
+      // No computador a notificação fica mais nua sem ele. É o preço, e vale:
+      // o celular é onde o aviso importa.
+      //
+      // O badge continua: é a marquinha da barra de status. O Android descarta
+      // a cor e usa SÓ o alfa, pintando com a cor do sistema — daí ser uma
+      // silhueta, e não o logo colorido, que virava um borrão.
       badge: "/icons/badge-96.png",
       // Mesma tag = substitui em vez de empilhar (ver lib/push/politica.ts).
       tag: dados.tag || "gta",
