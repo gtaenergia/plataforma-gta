@@ -38,8 +38,8 @@ self.addEventListener("push", (event) => {
        * remover.
        *
        * Então a saída é fazer o espaço parecer intencional. Este arquivo é
-       * feito para o recorte CIRCULAR do Android: fundo sólido de borda a
-       * borda e logotipo a 56%, para o corte não comer nada. Fica com cara de
+       * feito para o recorte CIRCULAR do Android: fundo branco de borda a
+       * borda e logotipo a 61%, para o corte não comer nada. Fica com cara de
        * foto de contato, que é como o sistema trata esse espaço.
        */
       icon: "/icons/notificacao-192.png",
@@ -47,10 +47,10 @@ self.addEventListener("push", (event) => {
        * O badge é a marquinha da barra de status. O Android descarta a cor e
        * usa SÓ o alfa, pintando de branco — ou seja, é sempre uma silhueta.
        *
-       * O logotipo inteiro não serve: ele depende do laranja em volta E do
-       * azul por cima para ser lido, e as duas peças viram uma mancha só
-       * quando a cor some. Este badge é apenas a forma laranja, que é uma peça
-       * fechada e continua reconhecível a 24dp.
+       * É a silhueta INTEIRA — laranja e roxo. Cheguei a recortar só a forma
+       * laranja, supondo que as duas peças virariam uma mancha sem a cor; era
+       * suposição errada. As folgas do desenho original sobrevivem à perda de
+       * cor, e a silhueta completa lê melhor que a metade.
        */
       badge: "/icons/badge-96.png",
       // Mesma tag = substitui em vez de empilhar (ver lib/push/politica.ts).
