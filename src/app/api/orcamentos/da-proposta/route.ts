@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { requirePermissaoApi } from "@/lib/rbac/guards";
+import { temPermissao } from "@/lib/rbac/resolve";
 import { getOrcamentoStore, redigirOrcamento } from "@/lib/orcamentos/store";
-import { criarDaPropostaSchema, type OrcamentoMeta } from "@/lib/orcamentos/types";
+import { z } from "zod";
+import { criarDaPropostaSchema, type FichaExterna, type OrcamentoMeta } from "@/lib/orcamentos/types";
+import { getConfigMaoDeObra } from "@/lib/mao-de-obra/config";
+import { calcularComposicao } from "@/lib/mao-de-obra/motor";
+import { linhaMaoDeObraSchema } from "@/lib/mao-de-obra/types";
 import { getPropostaStore } from "@/lib/propostas/store";
 import { SERVICO_OUTRO, SERVICO_OUTRO_LABEL } from "@/lib/propostas/types";
 import { getService } from "@/services/registry";
@@ -32,7 +37,7 @@ export async function POST(req: Request) {
 
   // Evita duplicar: se já existe um orçamento para esta proposta, reabre-o.
   const existente = (await store.list()).find((o) => o.propostaId === proposta.id);
-  if (existente) return NextResponse.json({ orcamento: redigirOrcamento(existente), reaberto: true });
+  if (existente) return NextResponse.json({ orcamento: redigirOrcamento(existente, await temPermissao(guard.me, "financeiro.ver")), reaberto: true });
 
   const service = getService(proposta.serviceKey);
   const src = (proposta.formGerado ?? proposta.dados) as Record<string, unknown>;
@@ -80,6 +85,44 @@ export async function POST(req: Request) {
     (proposta.serviceKey === SERVICO_OUTRO ? nomeAvulso || SERVICO_OUTRO_LABEL : proposta.serviceKey);
   const descricao = proposta.referencia ? `${rotulo} — ${proposta.referencia}` : rotulo;
 
+  /*
+   * Serviço por hora: a composição de preço é RECALCULADA aqui e gravada na
+   * ficha do orçamento.
+   *
+   * Recalcular, em vez de copiar o que o navegador mandou, tem duas razões. A
+   * primeira é confiança: o preço que entra na esteira de aprovação não pode
+   * vir de um corpo de requisição que qualquer um monta. A segunda é que a
+   * ficha vira o registro histórico — se o catálogo mudar amanhã, o orçamento
+   * de hoje continua mostrando com que números foi fechado.
+   */
+  let ficha: FichaExterna | undefined;
+  if (proposta.serviceKey === "servico-hora") {
+    const linhas = Array.isArray(src.linhas) ? src.linhas : [];
+    const parsedLinhas = z.array(linhaMaoDeObraSchema).safeParse(linhas);
+    if (parsedLinhas.success && parsedLinhas.data.length > 0) {
+      const config = await getConfigMaoDeObra();
+      const pct = (v: unknown, padrao: number) => {
+        const n = Number(String(v ?? "").replace(",", "."));
+        return Number.isFinite(n) && n > 0 ? n / 100 : padrao;
+      };
+      const imposto = pct(src.imposto, config.impostoPadrao);
+      const margem = pct(src.margem, config.margemPadrao);
+      const c = calcularComposicao(parsedLinhas.data, config, { imposto, margem });
+      if (!c.impedimento && c.precoCent > 0) {
+        ficha = {
+          custoBase: c.custoCent / 100,
+          fator: c.markup,
+          faturamento: c.precoCent / 100,
+          impostosPct: imposto,
+          margemLiquida: margem,
+        };
+        // O preço da ficha manda: é o que a plataforma calculou a partir do
+        // catálogo, não o que o formulário trouxe.
+        valor = c.precoCent / 100;
+      }
+    }
+  }
+
   const me = guard.me;
   const novo = await store.create({
     cliente: proposta.cliente || "—",
@@ -90,9 +133,10 @@ export async function POST(req: Request) {
     descricao,
     meta,
     valor,
+    ficha,
     expiraEm: null,
     criadoPor: me.email,
     criadoPorNome: me.name || me.email,
   });
-  return NextResponse.json({ orcamento: redigirOrcamento(novo) }, { status: 201 });
+  return NextResponse.json({ orcamento: redigirOrcamento(novo, await temPermissao(guard.me, "financeiro.ver")) }, { status: 201 });
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApi } from "@/lib/rbac/guards";
+import { temPermissao } from "@/lib/rbac/resolve";
 import { getOrcamentoStore, redigirOrcamento } from "@/lib/orcamentos/store";
 import { removerAnexo } from "@/lib/orcamentos/anexo-store";
 import { atualizarOrcamentoSchema } from "@/lib/orcamentos/types";
@@ -15,7 +16,7 @@ export async function GET(_req: Request, ctx: Ctx) {
   const { id } = await ctx.params;
   const orc = await getOrcamentoStore().get(id);
   if (!orc) return NextResponse.json({ error: "Orçamento não encontrado." }, { status: 404 });
-  return NextResponse.json({ orcamento: redigirOrcamento(orc) });
+  return NextResponse.json({ orcamento: redigirOrcamento(orc, await temPermissao(guard.me, "financeiro.ver")) });
 }
 
 /** Edita dados do orçamento — apenas o criador (ou admin) e somente em rascunho. */
@@ -52,7 +53,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
   // (ex.: `regeneravel`, que habilita o botão de regerar o .docx).
   const patch = parsed.data.meta !== undefined ? { ...parsed.data, meta: { ...orc.meta, ...parsed.data.meta } } : parsed.data;
   const atualizado = await store.update(id, patch);
-  return NextResponse.json({ orcamento: redigirOrcamento(atualizado) });
+  return NextResponse.json({ orcamento: redigirOrcamento(atualizado, await temPermissao(guard.me, "financeiro.ver")) });
 }
 
 /** Exclui o orçamento e seus anexos — apenas o criador ou admin. */

@@ -121,5 +121,5 @@ export async function PATCH(req: Request, ctx: Ctx) {
     });
   }
 
-  return NextResponse.json({ orcamento: redigirOrcamento(final) });
+  return NextResponse.json({ orcamento: redigirOrcamento(final, await temPermissao(guard.me, "financeiro.ver")) });
 }

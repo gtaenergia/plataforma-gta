@@ -42,5 +42,5 @@ export async function POST(_req: Request, ctx: Ctx) {
     resultado = { pasta: "", url: "", arquivos: 0, enviadoEm: new Date().toISOString(), erro: e instanceof Error ? e.message : "Falha ao enviar ao OneDrive." };
   }
   const atualizado = await store.update(id, { oneDrive: resultado });
-  return NextResponse.json({ orcamento: redigirOrcamento(atualizado) });
+  return NextResponse.json({ orcamento: redigirOrcamento(atualizado, await temPermissao(guard.me, "financeiro.ver")) });
 }

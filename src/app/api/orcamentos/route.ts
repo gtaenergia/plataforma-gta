@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApi, requirePermissaoApi } from "@/lib/rbac/guards";
+import { temPermissao } from "@/lib/rbac/resolve";
 import { getOrcamentoStore, redigirOrcamento } from "@/lib/orcamentos/store";
 import { criarOrcamentoSchema } from "@/lib/orcamentos/types";
 
@@ -10,7 +11,8 @@ export async function GET() {
   const guard = await requireApi();
   if ("error" in guard) return guard.error;
   const store = getOrcamentoStore();
-  return NextResponse.json({ orcamentos: (await store.list()).map(redigirOrcamento) });
+  const verFinanceiro = await temPermissao(guard.me, "financeiro.ver");
+  return NextResponse.json({ orcamentos: (await store.list()).map((o) => redigirOrcamento(o, verFinanceiro)) });
 }
 
 /** Cria um orçamento (entra como rascunho). */
@@ -44,5 +46,6 @@ export async function POST(req: Request) {
     criadoPor: me.email,
     criadoPorNome: me.name || me.email,
   });
-  return NextResponse.json({ orcamento: redigirOrcamento(novo) }, { status: 201 });
+  const verFinanceiro = await temPermissao(me, "financeiro.ver");
+  return NextResponse.json({ orcamento: redigirOrcamento(novo, verFinanceiro) }, { status: 201 });
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePermissaoApi } from "@/lib/rbac/guards";
+import { temPermissao } from "@/lib/rbac/resolve";
 import { getOrcamentoStore, redigirOrcamento } from "@/lib/orcamentos/store";
 import { comentarioSchema } from "@/lib/orcamentos/types";
 
@@ -28,5 +29,5 @@ export async function POST(req: Request, ctx: Ctx) {
   const store = getOrcamentoStore();
   const atualizado = await store.addComentario(id, { autor: me.name || me.email, texto: parsed.data.texto });
   if (!atualizado) return NextResponse.json({ error: "Orçamento não encontrado." }, { status: 404 });
-  return NextResponse.json({ orcamento: redigirOrcamento(atualizado) }, { status: 201 });
+  return NextResponse.json({ orcamento: redigirOrcamento(atualizado, await temPermissao(guard.me, "financeiro.ver")) }, { status: 201 });
 }

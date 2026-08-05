@@ -505,11 +505,25 @@ export function getOrcamentoStore(): OrcamentoStore {
 }
 
 /**
- * Remove a URL crua dos anexos antes de enviar o orçamento ao cliente. O download
- * sempre passa pela rota autenticada (que relê a URL do store), então o cliente
- * nunca precisa da URL do Blob — evitando que ela vaze/seja repassada sem auth.
+ * Prepara o orçamento para sair da API. Duas redações:
+ *
+ * 1. A URL crua dos anexos. O download sempre passa pela rota autenticada (que
+ *    relê a URL do store), então o cliente nunca precisa da URL do Blob —
+ *    evitando que ela vaze ou seja repassada sem auth.
+ *
+ * 2. A FICHA (custo, markup, margem), quando quem pediu não tem
+ *    `financeiro.ver`. É o quanto a GTA paga e o quanto ganha: informação que
+ *    não pode viajar na resposta só porque a tela não a desenha.
+ *
+ * `verFinanceiro` é OBRIGATÓRIO de propósito. Um valor padrão faria a ficha
+ * vazar por esquecimento no próximo endpoint que alguém escrever; assim o
+ * compilador obriga cada chamada a decidir.
  */
-export function redigirOrcamento(orc: Orcamento | null): Orcamento | null {
+export function redigirOrcamento(orc: Orcamento | null, verFinanceiro: boolean): Orcamento | null {
   if (!orc) return null;
-  return { ...orc, anexos: orc.anexos.map((a) => ({ ...a, url: "" })) };
+  const semUrls = { ...orc, anexos: orc.anexos.map((a) => ({ ...a, url: "" })) };
+  if (verFinanceiro) return semUrls;
+  const { ficha: _ficha, ...semFicha } = semUrls;
+  void _ficha;
+  return semFicha as Orcamento;
 }

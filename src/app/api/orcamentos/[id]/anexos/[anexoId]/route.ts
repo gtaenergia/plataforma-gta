@@ -33,5 +33,5 @@ export async function DELETE(_req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Não foi possível remover o arquivo agora. Tente novamente." }, { status: 502 });
   }
   const atualizado = await store.setAnexos(id, orc.anexos.filter((a) => a.id !== anexoId));
-  return NextResponse.json({ orcamento: redigirOrcamento(atualizado) });
+  return NextResponse.json({ orcamento: redigirOrcamento(atualizado, await temPermissao(guard.me, "financeiro.ver")) });
 }

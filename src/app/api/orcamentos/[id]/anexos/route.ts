@@ -101,5 +101,5 @@ export async function POST(req: Request, ctx: Ctx) {
     await removerAnexo(anexo);
     return NextResponse.json({ error: "Essa revisão já existe. Recarregue e tente novamente." }, { status: 409 });
   }
-  return NextResponse.json({ orcamento: redigirOrcamento(atualizado) }, { status: 201 });
+  return NextResponse.json({ orcamento: redigirOrcamento(atualizado, await temPermissao(guard.me, "financeiro.ver")) }, { status: 201 });
 }
