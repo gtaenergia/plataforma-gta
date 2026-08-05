@@ -29,20 +29,29 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(dados.titulo, {
       body: dados.mensagem,
-      // SEM `icon`, de propósito.
-      //
-      // No Android o `icon` vira uma imagem grande à DIREITA da notificação, e
-      // é ela que fazia a nossa destoar: WhatsApp, banco e mensageiro mostram
-      // só o ícone do app à esquerda e o texto. Repetir a marca num quadrado
-      // ao lado não informa nada — quem recebe já sabe de onde veio pelo ícone
-      // do aplicativo.
-      //
-      // No computador a notificação fica mais nua sem ele. É o preço, e vale:
-      // o celular é onde o aviso importa.
-      //
-      // O badge continua: é a marquinha da barra de status. O Android descarta
-      // a cor e usa SÓ o alfa, pintando com a cor do sistema — daí ser uma
-      // silhueta, e não o logo colorido, que virava um borrão.
+      /*
+       * O `icon` é a imagem grande à direita da notificação. Tentei tirá-lo
+       * para a notificação ficar como as dos outros aplicativos, que só têm
+       * ícone à esquerda — e descobri que NÃO DÁ: sem `icon`, o Chrome promove
+       * o badge para esse lugar, e a silhueta monocromática aparece como um
+       * borrão branco num círculo cinza. Pior que a imagem que eu queria
+       * remover.
+       *
+       * Então a saída é fazer o espaço parecer intencional. Este arquivo é
+       * feito para o recorte CIRCULAR do Android: fundo sólido de borda a
+       * borda e logotipo a 56%, para o corte não comer nada. Fica com cara de
+       * foto de contato, que é como o sistema trata esse espaço.
+       */
+      icon: "/icons/notificacao-192.png",
+      /*
+       * O badge é a marquinha da barra de status. O Android descarta a cor e
+       * usa SÓ o alfa, pintando de branco — ou seja, é sempre uma silhueta.
+       *
+       * O logotipo inteiro não serve: ele depende do laranja em volta E do
+       * azul por cima para ser lido, e as duas peças viram uma mancha só
+       * quando a cor some. Este badge é apenas a forma laranja, que é uma peça
+       * fechada e continua reconhecível a 24dp.
+       */
       badge: "/icons/badge-96.png",
       // Mesma tag = substitui em vez de empilhar (ver lib/push/politica.ts).
       tag: dados.tag || "gta",
