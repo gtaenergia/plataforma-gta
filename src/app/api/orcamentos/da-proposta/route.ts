@@ -5,7 +5,7 @@ import { getOrcamentoStore, redigirOrcamento } from "@/lib/orcamentos/store";
 import { z } from "zod";
 import { criarDaPropostaSchema, type FichaExterna, type OrcamentoMeta } from "@/lib/orcamentos/types";
 import { getConfigMaoDeObra } from "@/lib/mao-de-obra/config";
-import { calcularComposicao } from "@/lib/mao-de-obra/motor";
+import { calcularComposicaoTotal } from "@/lib/mao-de-obra/motor";
 import { linhaMaoDeObraSchema } from "@/lib/mao-de-obra/types";
 import { getPropostaStore } from "@/lib/propostas/store";
 import { SERVICO_OUTRO, SERVICO_OUTRO_LABEL } from "@/lib/propostas/types";
@@ -107,7 +107,11 @@ export async function POST(req: Request) {
       };
       const imposto = pct(src.imposto, config.impostoPadrao);
       const margem = pct(src.margem, config.margemPadrao);
-      const c = calcularComposicao(parsedLinhas.data, config, { imposto, margem });
+      const c = calcularComposicaoTotal(
+        { terceirizada: parsedLinhas.data },
+        { funcoes: config.funcoes, pessoas: {} },
+        { imposto, margem },
+      );
       if (!c.impedimento && c.precoCent > 0) {
         ficha = {
           custoBase: c.custoCent / 100,
@@ -115,6 +119,11 @@ export async function POST(req: Request) {
           faturamento: c.precoCent / 100,
           impostosPct: imposto,
           margemLiquida: margem,
+          // O detalhamento que o dono pede por atividade. O administrativo
+          // nasce zero e é preenchido na tela do orçamento, onde o catálogo de
+          // demandas informa as horas da equipe.
+          custoTerceirizado: c.custoTerceirizadoCent / 100,
+          custoAdministrativo: c.custoAdministrativoCent / 100,
         };
         // O preço da ficha manda: é o que a plataforma calculou a partir do
         // catálogo, não o que o formulário trouxe.

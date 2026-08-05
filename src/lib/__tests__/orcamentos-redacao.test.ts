@@ -20,11 +20,13 @@ const ORCAMENTO = {
   descricao: "Serviço por hora",
   valor: 1428.57,
   ficha: {
-    custoBase: 900,
+    custoBase: 1203,
     fator: 1.5873,
-    faturamento: 1428.57,
+    faturamento: 1909.52,
     impostosPct: 0.07,
     margemLiquida: 0.3,
+    custoTerceirizado: 900,
+    custoAdministrativo: 303,
   },
   comentarios: [],
   historico: [],
@@ -64,8 +66,11 @@ describe("redigirOrcamento", () => {
 
   it("entrega a ficha a quem tem financeiro.ver", () => {
     const r = redigirOrcamento(ORCAMENTO, true)!;
-    expect(r.ficha?.custoBase).toBe(900);
+    expect(r.ficha?.custoBase).toBe(1203);
     expect(r.ficha?.fator).toBeCloseTo(1.5873, 4);
+    // O detalhamento que o dono pede por atividade.
+    expect(r.ficha?.custoAdministrativo).toBe(303);
+    expect(r.ficha?.custoTerceirizado).toBe(900);
   });
 
   it("REMOVE a ficha de quem não tem", () => {
@@ -80,9 +85,17 @@ describe("redigirOrcamento", () => {
     // A checagem que pega o vazamento por outro caminho: o valor 900 (custo)
     // não pode aparecer em lugar NENHUM da resposta, nem aninhado.
     const texto = JSON.stringify(redigirOrcamento(ORCAMENTO, false));
-    expect(texto).not.toContain("custoBase");
-    expect(texto).not.toContain("margemLiquida");
-    expect(texto).not.toContain("blob.vercel-storage.com");
+    for (const proibido of [
+      "custoBase",
+      "margemLiquida",
+      "custoAdministrativo",
+      "custoTerceirizado",
+      "blob.vercel-storage.com",
+    ]) {
+      expect(texto, proibido).not.toContain(proibido);
+    }
+    // E os VALORES, não só os nomes dos campos: 303 é o custo administrativo.
+    expect(texto).not.toContain("303");
   });
 
   it("o preço CONTINUA visível sem a permissão", () => {

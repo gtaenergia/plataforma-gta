@@ -12,6 +12,7 @@ import {
 import type { PermissaoKey } from "@/lib/rbac/permissoes";
 import { Alert, BackLink, Badge, Marca, type Tone } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { CustoInterno } from "@/components/orcamentos/CustoInterno";
 
 const ESTACAO_TONE: Record<string, Tone> = {
   rascunho: "slate",
@@ -479,6 +480,11 @@ export function OrcamentoDetalhe({
           </div>
         </form>
       )}
+
+      {/* Custo administrativo: só para quem pode ver a margem. A seção NÃO é
+          renderizada sem a permissão, e a ficha nem chega do servidor — a
+          redação acontece em `redigirOrcamento`. */}
+      {pode("financeiro.ver") && <CustoInterno orcamento={orc} onAtualizado={setOrc} />}
 
       {/* Revisões */}
       <div className="section-card">

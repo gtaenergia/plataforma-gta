@@ -40,11 +40,23 @@ export interface RegistroValidacao {
 
 /** Ficha leve preenchida pelo revisor para orçamentos EXTERNOS. */
 export interface FichaExterna {
+  /** Custo TOTAL: administrativo + terceirizado. */
   custoBase: number;
   fator: number;
   faturamento: number;
   impostosPct: number; // 0..1
   margemLiquida: number; // 0..1 (informada/calculada)
+  /**
+   * Detalhamento do `custoBase`, quando conhecido.
+   *
+   * O dono pede para ver, por atividade, "os custos administrativos" e "os
+   * custos de terceirização" — separados. Um total não responde isso.
+   *
+   * Opcionais porque a ficha já existe em produção: sem eles, uma ficha antiga
+   * continua válida, e `custoBase` segue sendo a verdade.
+   */
+  custoAdministrativo?: number;
+  custoTerceirizado?: number;
   observacoes?: string;
 }
 
@@ -174,6 +186,8 @@ export const fichaExternaSchema = z.object({
   faturamento: z.number().positive(),
   impostosPct: z.number().min(0).max(1),
   margemLiquida: z.number().min(-1).max(1),
+  custoAdministrativo: z.number().nonnegative().optional(),
+  custoTerceirizado: z.number().nonnegative().optional(),
   observacoes: z.string().trim().max(2000).optional(),
 });
 
