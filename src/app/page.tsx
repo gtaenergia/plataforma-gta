@@ -5,8 +5,10 @@ import { ServiceIcon } from "@/components/ServiceIcon";
 import { Wrench } from "lucide-react";
 import { PageHeader, Badge } from "@/components/ui";
 import { requirePageUser } from "@/lib/session";
+import { temPermissao } from "@/lib/rbac/resolve";
 import { getPrecos } from "@/lib/precos/store";
 import { diasDesde } from "@/lib/precos/catalogo";
+import { CalculadoraMaoDeObra } from "@/components/mao-de-obra/CalculadoraMaoDeObra";
 
 export default async function DashboardPage() {
   const user = await requirePageUser();
@@ -15,6 +17,17 @@ export default async function DashboardPage() {
   // quem monta a proposta precisa saber com que custo está orçando.
   const precos = await getPrecos();
   const diasPrecos = diasDesde(precos.atualizadoEm);
+  /*
+   * A visibilidade da calculadora é resolvida AQUI, no servidor, e não por um
+   * `fetch` dentro do componente.
+   *
+   * A primeira versão se escondia sozinha enquanto esperava a API responder, e
+   * qualquer tropeço nesse caminho deixava a tela idêntica à de quem não tem
+   * permissão — sem card, sem erro, sem nada para investigar. Resolvido no
+   * servidor, o card está no HTML da primeira pintura ou não está, e o motivo é
+   * sempre a permissão.
+   */
+  const podeVerFinanceiro = await temPermissao(user, "financeiro.ver");
 
   return (
     <div className="min-h-screen">
@@ -43,7 +56,17 @@ export default async function DashboardPage() {
           ))}
         </div>
 
-        <div className="mt-8">
+        {/* Ferramentas — não geram proposta, ajudam a montar o preço. Ficam
+            abaixo dos serviços, que é o que a maioria vem buscar. */}
+        <h2 className="section-title mt-10">Ferramentas</h2>
+
+        {podeVerFinanceiro && (
+          <div className="mt-4">
+            <CalculadoraMaoDeObra podeConfigurar={isAdmin} />
+          </div>
+        )}
+
+        <div className="mt-4">
           <Link
             href="/precos"
             className={`group flex items-start gap-4 card p-4 transition hover:-translate-y-0.5 hover:shadow-md sm:p-5 ${

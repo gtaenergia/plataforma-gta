@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Download, Plus, Trash2 } from "lucide-react";
-import { Alert, Badge } from "@/components/ui";
+import { ChevronRight, Download, Plus, Trash2 } from "lucide-react";
+import { Alert, Badge, Kpi, KpiGrid } from "@/components/ui";
 import { Campo } from "@/components/Campo";
 import { calcularComposicao, markupDe } from "@/lib/mao-de-obra/motor";
 import { lerHoras } from "@/lib/custo-equipe/sugestao";
@@ -17,11 +17,19 @@ import type { TipoDemanda } from "@/lib/capacidade/types";
  * FÓRMULAS, então quem receber muda a margem e vê o preço se mover sem
  * precisar da plataforma.
  *
- * Exige `financeiro.ver`: uma calculadora que mostra custo e margem não faz
- * sentido para quem não pode enxergá-los. Sem a permissão a rota nem devolve
- * o R$/h das funções, e o card não aparece.
+ * Mora na página inicial, junto dos serviços — é ferramenta de CRIAR preço, e
+ * não histórico. Ficou um tempo em /propostas, que é o registro do que já foi
+ * feito, e por isso ninguém a encontrava.
  *
- * O cálculo roda AQUI, no navegador, porque quem tem a permissão já recebeu os
+ * Exige `financeiro.ver`, decidido NO SERVIDOR (ver app/page.tsx): custo e
+ * margem não são para todo mundo. A decisão não passa por `fetch` — assim o
+ * card nunca some por causa da rede, só por causa da permissão.
+ *
+ * O cadastro das funções mora aqui dentro, e não numa tela de administração
+ * separada: é uma ferramenta só, e quem calcula é quem sabe quanto custa a
+ * hora de cada função.
+ *
+ * O cálculo roda no NAVEGADOR, porque quem tem a permissão já recebeu os
  * custos — e uma calculadora precisa responder a cada tecla.
  */
 
@@ -243,59 +251,80 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
 
           {/* O cadastro mora AQUI, e não numa tela de administração à parte:
               quem calcula é quem sabe quanto custa a hora de cada função. */}
+          {/* Mesmo desenho de bloco recolhível do Planejamento: `group` com a
+              seta girando em `group-open`. */}
           {podeConfigurar && (
-            <details className="rounded-lg border border-slate-200 p-4 dark:border-slate-700" open={funcoes.length === 0}>
-              <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">
-                Funções e custo por hora
-                {semCusto > 0 && <Badge tone="amber" className="ml-2">{semCusto} sem custo</Badge>}
+            <details className="group rounded-lg border border-slate-200 dark:border-slate-700" open={funcoes.length === 0}>
+              <summary className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2.5 transition hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                <span className="flex items-center gap-2">
+                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition group-open:rotate-90" aria-hidden />
+                  <span className="font-medium text-gta-navy dark:text-slate-100">Funções e custo por hora</span>
+                </span>
+                <span className="hint">
+                  {funcoes.length} {funcoes.length === 1 ? "função" : "funções"}
+                  {semCusto > 0 && ` · ${semCusto} sem custo`}
+                </span>
               </summary>
 
-              <div className="mt-4 space-y-3">
-                {funcoes.map((f) => (
-                  <div key={f.id} className="grid grid-cols-1 gap-3 sm:grid-cols-12">
-                    <Campo className="sm:col-span-7" label="">
-                      <input
-                        className="field-input"
-                        value={f.nome}
-                        placeholder="Ex.: Eletricista"
-                        aria-label="Nome da função"
-                        onChange={(e) =>
-                          setFuncoes((fs) => fs.map((x) => (x.id === f.id ? { ...x, nome: e.target.value } : x)))
-                        }
-                      />
-                    </Campo>
-                    <Campo className="sm:col-span-4" label="">
-                      <div className="flex items-center gap-2">
-                        <span className="hint shrink-0">R$/h</span>
-                        <input
-                          className="field-input tabular-nums"
-                          inputMode="decimal"
-                          aria-label={`Custo por hora de ${f.nome || "função sem nome"}`}
-                          value={f.custoHora > 0 ? String(f.custoHora).replace(".", ",") : ""}
-                          placeholder="0,00"
-                          onChange={(e) =>
-                            setFuncoes((fs) =>
-                              fs.map((x) => (x.id === f.id ? { ...x, custoHora: pctParaNumero(e.target.value) } : x)),
-                            )
-                          }
-                        />
-                      </div>
-                    </Campo>
-                    <div className="flex items-end sm:col-span-1">
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        aria-label={`Remover ${f.nome || "função sem nome"}`}
-                        onClick={() => setFuncoes((fs) => fs.filter((x) => x.id !== f.id))}
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <div className="border-t border-slate-200 p-3 dark:border-slate-700">
+                <div className="overflow-x-auto">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Função</th>
+                        <th className="w-44">Custo por hora</th>
+                        <th className="w-16 text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {funcoes.map((f) => (
+                        <tr key={f.id}>
+                          <td>
+                            <input
+                              className="field-input !py-1.5"
+                              value={f.nome}
+                              placeholder="Ex.: Eletricista"
+                              aria-label="Nome da função"
+                              onChange={(e) =>
+                                setFuncoes((fs) => fs.map((x) => (x.id === f.id ? { ...x, nome: e.target.value } : x)))
+                              }
+                            />
+                          </td>
+                          <td>
+                            <div className="flex items-center gap-2">
+                              <span className="hint shrink-0">R$</span>
+                              <input
+                                className="field-input !py-1.5 tabular-nums"
+                                inputMode="decimal"
+                                aria-label={`Custo por hora de ${f.nome || "função sem nome"}`}
+                                value={f.custoHora > 0 ? String(f.custoHora).replace(".", ",") : ""}
+                                placeholder="0,00"
+                                onChange={(e) =>
+                                  setFuncoes((fs) =>
+                                    fs.map((x) => (x.id === f.id ? { ...x, custoHora: pctParaNumero(e.target.value) } : x)),
+                                  )
+                                }
+                              />
+                              {f.custoHora <= 0 && <Badge tone="amber">sem custo</Badge>}
+                            </div>
+                          </td>
+                          <td className="text-right">
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              aria-label={`Remover ${f.nome || "função sem nome"}`}
+                              onClick={() => setFuncoes((fs) => fs.filter((x) => x.id !== f.id))}
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <div className="mt-3 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
                   className="btn-secondary"
@@ -310,7 +339,8 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
                 <button type="button" className="btn-primary" onClick={salvarFuncoes} disabled={salvandoConfig}>
                   {salvandoConfig ? "Salvando…" : "Salvar funções"}
                 </button>
-                {salvouConfig && <span className="hint">Salvo.</span>}
+                  {salvouConfig && <span className="hint">Salvo.</span>}
+                </div>
               </div>
             </details>
           )}
@@ -344,7 +374,7 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
           {origemHoras && <Alert tone="indigo">{origemHoras}</Alert>}
 
           <div>
-            <h3 className="text-sm font-semibold text-gta-navy dark:text-slate-100">Equipe</h3>
+            <h3 className="font-medium text-gta-navy dark:text-slate-100">Equipe</h3>
             <div className="mt-3 space-y-3">
               {linhas.map((l, i) => (
                 <div key={i} className="grid grid-cols-1 gap-3 sm:grid-cols-12">
@@ -426,26 +456,19 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
               Não existe preço para essa combinação: os dois são percentuais do preço final.
             </Alert>
           ) : (
-            <div className="border-t border-slate-200 pt-4 dark:border-slate-700">
-              <p className="text-3xl font-semibold tabular-nums text-gta-navy dark:text-slate-100">
-                {moeda(composicao.precoCent)}
-              </p>
-              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">
-                <dt className="text-slate-600 dark:text-slate-400">Custo</dt>
-                <dd className="tabular-nums text-slate-700 dark:text-slate-300">{moeda(composicao.custoCent)}</dd>
-                <dt className="text-slate-600 dark:text-slate-400">Imposto</dt>
-                <dd className="tabular-nums text-slate-700 dark:text-slate-300">{moeda(composicao.impostoCent)}</dd>
-                <dt className="text-slate-600 dark:text-slate-400">Lucro</dt>
-                <dd className="tabular-nums text-slate-700 dark:text-slate-300">{moeda(composicao.lucroCent)}</dd>
-                <dt className="text-slate-600 dark:text-slate-400">Horas</dt>
-                <dd className="tabular-nums text-slate-700 dark:text-slate-300">
-                  {composicao.linhas.reduce((s, l) => s + l.horasTotais, 0).toLocaleString("pt-BR")} h
-                </dd>
-              </dl>
+            <>
+              {/* `KpiGrid` é o padrão de "resumo dos cálculos" da plataforma —
+                  o mesmo que os configuradores de serviço usam. */}
+              <KpiGrid>
+                <Kpi label="Custo" value={moeda(composicao.custoCent)} />
+                <Kpi label="Imposto" value={moeda(composicao.impostoCent)} />
+                <Kpi label="Lucro" value={moeda(composicao.lucroCent)} />
+                <Kpi label="Preço ao cliente" value={moeda(composicao.precoCent)} destaque />
+              </KpiGrid>
               {composicao.incompleta && (
-                <Badge tone="amber" className="mt-3">alguma função está sem custo cadastrado</Badge>
+                <Badge tone="amber">alguma função está sem custo cadastrado</Badge>
               )}
-            </div>
+            </>
           )}
 
           <button type="button" className="btn-primary" onClick={baixar} disabled={baixando || !temResultado}>
