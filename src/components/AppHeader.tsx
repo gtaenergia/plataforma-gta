@@ -167,11 +167,6 @@ export function AppHeader({ userName, avatarUrl, isAdmin }: { userName?: string;
                   </MenuLink>
                 )}
                 {isAdmin && (
-                  <MenuLink href="/admin/mao-de-obra" onNavigate={() => setMenuAberto(false)}>
-                    Mão de obra terceirizada
-                  </MenuLink>
-                )}
-                {isAdmin && (
                   <MenuLink href="/admin/armazenamento" onNavigate={() => setMenuAberto(false)}>
                     Armazenamento
                   </MenuLink>

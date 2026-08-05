@@ -9,6 +9,19 @@ import { temPermissao } from "@/lib/rbac/resolve";
 export default async function PropostasPage() {
   const user = await requirePageUser();
   const podeEnviar = await temPermissao(user, "orcamentos.criar");
+  /*
+   * A visibilidade da calculadora é decidida AQUI, no servidor, e não por um
+   * `fetch` dentro do componente.
+   *
+   * Na primeira versão o card se escondia sozinho enquanto esperava a API
+   * responder — e qualquer tropeço nesse caminho (sessão vencida, resposta que
+   * não é JSON) fazia ele sumir sem deixar rastro na tela. Foi exatamente o que
+   * aconteceu: "não tá aparecendo", sem nada para investigar.
+   *
+   * Resolvido no servidor, o card está no HTML da primeira pintura ou não está
+   * — e o motivo é sempre a permissão, nunca a rede.
+   */
+  const podeVerFinanceiro = await temPermissao(user, "financeiro.ver");
 
   return (
     <div className="min-h-screen">
@@ -41,10 +54,12 @@ export default async function PropostasPage() {
         </div>
 
         {/* Ferramenta, não listagem: fica acima do histórico porque é o que se
-            vem fazer, e some sozinha para quem não tem `financeiro.ver`. */}
-        <div className="mb-6">
-          <CalculadoraMaoDeObra />
-        </div>
+            vem fazer aqui. */}
+        {podeVerFinanceiro && (
+          <div className="mb-6">
+            <CalculadoraMaoDeObra podeConfigurar={user.role === "admin"} />
+          </div>
+        )}
 
         <PropostasList podeEnviar={podeEnviar} />
       </main>

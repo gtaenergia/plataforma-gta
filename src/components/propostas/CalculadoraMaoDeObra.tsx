@@ -35,7 +35,7 @@ interface Linha {
 
 const LINHA_VAZIA: Linha = { funcaoId: "", pessoas: "1", horas: "" };
 
-export function CalculadoraMaoDeObra() {
+export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boolean }) {
   const [funcoes, setFuncoes] = useState<Funcao[]>([]);
   const [tipos, setTipos] = useState<TipoDemanda[]>([]);
   /**
@@ -46,7 +46,7 @@ export function CalculadoraMaoDeObra() {
    * intencional só quando falta permissão; falha de carregamento tem que
    * dizer o que houve.
    */
-  const [estado, setEstado] = useState<"carregando" | "sem_permissao" | "erro" | "pronto">("carregando");
+  const [estado, setEstado] = useState<"carregando" | "erro" | "pronto">("carregando");
   const [falha, setFalha] = useState("");
   const [aberto, setAberto] = useState(false);
 
@@ -58,6 +58,8 @@ export function CalculadoraMaoDeObra() {
   const [baixando, setBaixando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [origemHoras, setOrigemHoras] = useState<string | null>(null);
+  const [salvandoConfig, setSalvandoConfig] = useState(false);
+  const [salvouConfig, setSalvouConfig] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -72,9 +74,6 @@ export function CalculadoraMaoDeObra() {
           return setEstado("erro");
         }
         const d = await r.json();
-        // Sem `financeiro.ver` a resposta vem sem custoHora e sem as taxas.
-        // Aqui o sumiço É a resposta certa: a calculadora mostra custo e margem.
-        if (r.status === 403 || (r.ok && !d.podeVerFinanceiro)) return setEstado("sem_permissao");
         if (!r.ok || !d.config) {
           setFalha(d.error ?? "Não foi possível carregar o catálogo de mão de obra.");
           return setEstado("erro");
@@ -112,16 +111,22 @@ export function CalculadoraMaoDeObra() {
       ),
     [linhas, funcoes, taxas],
   );
-
-  // Sem permissão o card não existe — é o comportamento certo, e silencioso.
-  if (estado === "sem_permissao") return null;
-  if (estado === "carregando") return null;
-
-  if (estado === "erro") {
+  /*
+   * O cabeçalho aparece SEMPRE. Quem chegou até aqui já tem permissão — isso
+   * foi decidido no servidor — então o card não tem mais motivo para sumir.
+   *
+   * Devolver `null` enquanto carrega foi o que produziu "não tá aparecendo":
+   * qualquer tropeço na API deixava a tela idêntica à de quem não tem acesso.
+   */
+  if (estado !== "pronto") {
     return (
       <section className="section-card">
         <h2 className="section-title">Calculadora de mão de obra</h2>
-        <Alert tone="amber" className="mt-3">{falha}</Alert>
+        {estado === "carregando" ? (
+          <p className="hint mt-2">Carregando o catálogo de funções…</p>
+        ) : (
+          <Alert tone="amber" className="mt-3">{falha}</Alert>
+        )}
       </section>
     );
   }
@@ -141,6 +146,32 @@ export function CalculadoraMaoDeObra() {
     setOrigemHoras(
       `${horas.toLocaleString("pt-BR")} h vindas do catálogo de demandas, que foi cadastrado para a equipe interna. Ajuste para a realidade da equipe contratada.`,
     );
+  }
+
+  async function salvarFuncoes() {
+    setSalvandoConfig(true);
+    setErro(null);
+    setSalvouConfig(false);
+    try {
+      const r = await fetch("/api/mao-de-obra", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          // Linha em branco é rascunho de quem clicou em acrescentar e desistiu.
+          funcoes: funcoes.filter((f) => f.nome.trim() !== ""),
+          impostoPadrao: taxas.imposto,
+          margemPadrao: taxas.margem,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error ?? "Falha ao salvar.");
+      setFuncoes(d.config.funcoes ?? []);
+      setSalvouConfig(true);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro ao salvar as funções.");
+    } finally {
+      setSalvandoConfig(false);
+    }
   }
 
   async function baixar() {
@@ -187,6 +218,7 @@ export function CalculadoraMaoDeObra() {
     }
   }
 
+  const semCusto = funcoes.filter((f) => f.custoHora <= 0).length;
   const semSolucao = composicao.impedimento === "divisor_invalido";
   const temResultado = composicao.precoCent > 0;
 
@@ -209,9 +241,84 @@ export function CalculadoraMaoDeObra() {
         <div className="mt-5 space-y-5">
           {erro && <Alert tone="red">{erro}</Alert>}
 
-          {funcoes.length === 0 && (
+          {/* O cadastro mora AQUI, e não numa tela de administração à parte:
+              quem calcula é quem sabe quanto custa a hora de cada função. */}
+          {podeConfigurar && (
+            <details className="rounded-lg border border-slate-200 p-4 dark:border-slate-700" open={funcoes.length === 0}>
+              <summary className="cursor-pointer text-sm font-semibold text-gta-navy dark:text-slate-100">
+                Funções e custo por hora
+                {semCusto > 0 && <Badge tone="amber" className="ml-2">{semCusto} sem custo</Badge>}
+              </summary>
+
+              <div className="mt-4 space-y-3">
+                {funcoes.map((f) => (
+                  <div key={f.id} className="grid grid-cols-1 gap-3 sm:grid-cols-12">
+                    <Campo className="sm:col-span-7" label="">
+                      <input
+                        className="field-input"
+                        value={f.nome}
+                        placeholder="Ex.: Eletricista"
+                        aria-label="Nome da função"
+                        onChange={(e) =>
+                          setFuncoes((fs) => fs.map((x) => (x.id === f.id ? { ...x, nome: e.target.value } : x)))
+                        }
+                      />
+                    </Campo>
+                    <Campo className="sm:col-span-4" label="">
+                      <div className="flex items-center gap-2">
+                        <span className="hint shrink-0">R$/h</span>
+                        <input
+                          className="field-input tabular-nums"
+                          inputMode="decimal"
+                          aria-label={`Custo por hora de ${f.nome || "função sem nome"}`}
+                          value={f.custoHora > 0 ? String(f.custoHora).replace(".", ",") : ""}
+                          placeholder="0,00"
+                          onChange={(e) =>
+                            setFuncoes((fs) =>
+                              fs.map((x) => (x.id === f.id ? { ...x, custoHora: pctParaNumero(e.target.value) } : x)),
+                            )
+                          }
+                        />
+                      </div>
+                    </Campo>
+                    <div className="flex items-end sm:col-span-1">
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        aria-label={`Remover ${f.nome || "função sem nome"}`}
+                        onClick={() => setFuncoes((fs) => fs.filter((x) => x.id !== f.id))}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() =>
+                    // `randomUUID` para o id NUNCA colidir com o de uma função
+                    // apagada — uma planilha antiga apontaria para o custo errado.
+                    setFuncoes((fs) => [...fs, { id: crypto.randomUUID(), nome: "", custoHora: 0 }])
+                  }
+                >
+                  <Plus className="h-4 w-4" aria-hidden /> Acrescentar função
+                </button>
+                <button type="button" className="btn-primary" onClick={salvarFuncoes} disabled={salvandoConfig}>
+                  {salvandoConfig ? "Salvando…" : "Salvar funções"}
+                </button>
+                {salvouConfig && <span className="hint">Salvo.</span>}
+              </div>
+            </details>
+          )}
+
+          {funcoes.length === 0 && !podeConfigurar && (
             <Alert tone="amber" titulo="Nenhuma função cadastrada">
-              Cadastre as funções e o custo por hora em Mão de obra terceirizada, no menu do perfil.
+              Um administrador precisa cadastrar as funções e o custo por hora antes de a calculadora
+              montar um preço.
             </Alert>
           )}
 
@@ -349,6 +456,11 @@ export function CalculadoraMaoDeObra() {
       )}
     </section>
   );
+}
+
+function pctParaNumero(txt: string): number {
+  const n = Number(String(txt ?? "").trim().replace(",", "."));
+  return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
 function pctParaFracao(txt: string): number {
