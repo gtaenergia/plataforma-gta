@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Download, Plus, Trash2 } from "lucide-react";
-import { Alert, Badge, Loading } from "@/components/ui";
+import { Alert, Badge } from "@/components/ui";
 import { Campo } from "@/components/Campo";
 import { calcularComposicao, markupDe } from "@/lib/mao-de-obra/motor";
 import { lerHoras } from "@/lib/custo-equipe/sugestao";
@@ -38,8 +38,16 @@ const LINHA_VAZIA: Linha = { funcaoId: "", pessoas: "1", horas: "" };
 export function CalculadoraMaoDeObra() {
   const [funcoes, setFuncoes] = useState<Funcao[]>([]);
   const [tipos, setTipos] = useState<TipoDemanda[]>([]);
-  const [permitido, setPermitido] = useState(false);
-  const [carregando, setCarregando] = useState(true);
+  /**
+   * Quatro estados, e não um booleano, porque "não aparece" precisa ter causa.
+   *
+   * A primeira versão engolia qualquer falha e devolvia `null` — some o card,
+   * some a explicação, e quem olha a tela não tem o que reportar. Sumir é
+   * intencional só quando falta permissão; falha de carregamento tem que
+   * dizer o que houve.
+   */
+  const [estado, setEstado] = useState<"carregando" | "sem_permissao" | "erro" | "pronto">("carregando");
+  const [falha, setFalha] = useState("");
   const [aberto, setAberto] = useState(false);
 
   const [cliente, setCliente] = useState("");
@@ -55,21 +63,35 @@ export function CalculadoraMaoDeObra() {
     (async () => {
       try {
         const r = await fetch("/api/mao-de-obra");
+        // Sessão vencida não devolve JSON: o middleware desvia para o login e
+        // o `fetch` segue o desvio, entregando 200 com HTML. Olhar só o status
+        // diria que deu certo.
+        const tipo = r.headers.get("content-type") ?? "";
+        if (!tipo.includes("application/json")) {
+          setFalha("Sua sessão expirou. Entre novamente para usar a calculadora.");
+          return setEstado("erro");
+        }
         const d = await r.json();
         // Sem `financeiro.ver` a resposta vem sem custoHora e sem as taxas.
-        if (!r.ok || !d.podeVerFinanceiro) return;
+        // Aqui o sumiço É a resposta certa: a calculadora mostra custo e margem.
+        if (r.status === 403 || (r.ok && !d.podeVerFinanceiro)) return setEstado("sem_permissao");
+        if (!r.ok || !d.config) {
+          setFalha(d.error ?? "Não foi possível carregar o catálogo de mão de obra.");
+          return setEstado("erro");
+        }
+
         setFuncoes(d.config.funcoes ?? []);
         setImposto(String((d.config.impostoPadrao ?? 0) * 100).replace(".", ","));
         setMargem(String((d.config.margemPadrao ?? 0) * 100).replace(".", ","));
-        setPermitido(true);
+        setEstado("pronto");
 
+        // O catálogo de demandas é opcional: falhar aqui não impede calcular.
         const rc = await fetch("/api/planejamento");
-        const dc = await rc.json();
-        if (rc.ok) setTipos((dc.config?.tipos ?? []).filter((t: TipoDemanda) => t.minutos > 0));
-      } catch {
-        /* o card simplesmente não aparece */
-      } finally {
-        setCarregando(false);
+        const dc = await rc.json().catch(() => null);
+        if (rc.ok && dc) setTipos((dc.config?.tipos ?? []).filter((t: TipoDemanda) => t.minutos > 0));
+      } catch (e) {
+        setFalha(e instanceof Error ? e.message : "Falha ao carregar a calculadora.");
+        setEstado("erro");
       }
     })();
   }, []);
@@ -91,7 +113,18 @@ export function CalculadoraMaoDeObra() {
     [linhas, funcoes, taxas],
   );
 
-  if (carregando || !permitido) return null;
+  // Sem permissão o card não existe — é o comportamento certo, e silencioso.
+  if (estado === "sem_permissao") return null;
+  if (estado === "carregando") return null;
+
+  if (estado === "erro") {
+    return (
+      <section className="section-card">
+        <h2 className="section-title">Calculadora de mão de obra</h2>
+        <Alert tone="amber" className="mt-3">{falha}</Alert>
+      </section>
+    );
+  }
 
   function escolherTipo(id: string) {
     setTipoId(id);
