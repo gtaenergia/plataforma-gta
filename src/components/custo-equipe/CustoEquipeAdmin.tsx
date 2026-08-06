@@ -21,10 +21,15 @@ import { precisaRevisao, type ConfigCustoEquipe } from "@/lib/custo-equipe/types
  * outra.
  */
 
-const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
 function paraTexto(v: number): string {
   return v > 0 ? String(v).replace(".", ",") : "";
+}
+
+/** Texto inicial de cada campo, a partir do que veio do servidor. */
+function semearTextos(config: ConfigCustoEquipe): Record<string, string> {
+  const t: Record<string, string> = {};
+  for (const [email, p] of Object.entries(config.pessoas ?? {})) t[email] = paraTexto(p.custoHora);
+  return t;
 }
 function paraNumero(txt: string): number {
   const n = Number(txt.trim().replace(",", "."));
@@ -37,6 +42,19 @@ export function CustoEquipeAdmin({ usuarios }: { usuarios: { email: string; name
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
+  /**
+   * O TEXTO digitado em cada campo, separado do número.
+   *
+   * O campo era controlado direto pelo número, e a vírgula não sobrevivia: ao
+   * digitar "30," o valor virava 30, voltava formatado como "30", e a vírgula
+   * sumia no mesmo instante. "30,30" virava "30,3" pelo mesmo motivo — o zero
+   * à direita não existe num número.
+   *
+   * É o padrão que o resto da plataforma já usa (`type Vals = Record<string,
+   * string>` no configurador de serviços): o formulário guarda texto, e a
+   * conversão para número acontece no uso.
+   */
+  const [textos, setTextos] = useState<Record<string, string>>({});
 
   useEffect(() => {
     (async () => {
@@ -46,6 +64,7 @@ export function CustoEquipeAdmin({ usuarios }: { usuarios: { email: string; name
         const d = await r.json();
         if (!r.ok) throw new Error(d.error ?? "Falha ao carregar.");
         setConfig(d.config);
+        setTextos(semearTextos(d.config));
         setPermitido(true);
       } catch (e) {
         setErro(e instanceof Error ? e.message : "Erro ao carregar o custo da equipe.");
@@ -64,6 +83,8 @@ export function CustoEquipeAdmin({ usuarios }: { usuarios: { email: string; name
 
   function alterar(email: string, valor: string) {
     setOk(false);
+    // O que fica na tela é exatamente o que foi digitado; o número acompanha.
+    setTextos((t) => ({ ...t, [email]: valor }));
     setConfig((c) =>
       c
         ? {
@@ -147,7 +168,7 @@ export function CustoEquipeAdmin({ usuarios }: { usuarios: { email: string; name
                           className="field-input !py-1.5 tabular-nums"
                           inputMode="decimal"
                           aria-label={`Custo por hora de ${u.name || u.email}`}
-                          value={paraTexto(p?.custoHora ?? 0)}
+                          value={textos[u.email] ?? paraTexto(p?.custoHora ?? 0)}
                           placeholder="0,00"
                           onChange={(e) => alterar(u.email, e.target.value)}
                         />
@@ -172,19 +193,13 @@ export function CustoEquipeAdmin({ usuarios }: { usuarios: { email: string; name
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
+      {/* Botão próprio de propósito: estes valores vão para outra chave e outra
+          rota, e um salvamento único faria uma escrita depender da outra. */}
+      <div className="mt-4">
         <button type="button" className="btn-primary" onClick={salvar} disabled={salvando}>
           {salvando ? "Salvando…" : "Salvar custos"}
         </button>
-        <span className="hint">
-          Botão próprio: estes valores são gravados separados da jornada, em outro destino.
-        </span>
       </div>
-
-      <p className="hint mt-3">
-        Exemplo: {moeda(30.3)} por hora × 44 h de acompanhamento = {moeda(30.3 * 44)} de custo
-        administrativo no orçamento.
-      </p>
     </SectionCard>
   );
 }

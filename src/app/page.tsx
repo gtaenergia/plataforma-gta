@@ -8,7 +8,6 @@ import { requirePageUser } from "@/lib/session";
 import { temPermissao } from "@/lib/rbac/resolve";
 import { getPrecos } from "@/lib/precos/store";
 import { diasDesde } from "@/lib/precos/catalogo";
-import { CalculadoraMaoDeObra } from "@/components/mao-de-obra/CalculadoraMaoDeObra";
 
 export default async function DashboardPage() {
   const user = await requirePageUser();

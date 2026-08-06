@@ -67,6 +67,8 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
   const [origemHoras, setOrigemHoras] = useState<string | null>(null);
   const [salvandoConfig, setSalvandoConfig] = useState(false);
   const [salvouConfig, setSalvouConfig] = useState(false);
+  /** Texto digitado no R$/h de cada função — ver o comentário no `onChange`. */
+  const [textosCusto, setTextosCusto] = useState<Record<string, string>>({});
 
   useEffect(() => {
     (async () => {
@@ -284,13 +286,19 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
                                 className="field-input !py-1.5 tabular-nums"
                                 inputMode="decimal"
                                 aria-label={`Custo por hora de ${f.nome || "função sem nome"}`}
-                                value={f.custoHora > 0 ? String(f.custoHora).replace(".", ",") : ""}
+                                value={textosCusto[f.id] ?? (f.custoHora > 0 ? String(f.custoHora).replace(".", ",") : "")}
                                 placeholder="0,00"
-                                onChange={(e) =>
+                                onChange={(e) => {
+                                  // O que fica na tela é o que foi digitado; o
+                                  // número acompanha. Controlar o campo pelo
+                                  // número come a vírgula assim que ela é
+                                  // digitada, e o zero à direita junto.
+                                  const digitado = e.target.value;
+                                  setTextosCusto((t) => ({ ...t, [f.id]: digitado }));
                                   setFuncoes((fs) =>
-                                    fs.map((x) => (x.id === f.id ? { ...x, custoHora: pctParaNumero(e.target.value) } : x)),
-                                  )
-                                }
+                                    fs.map((x) => (x.id === f.id ? { ...x, custoHora: pctParaNumero(digitado) } : x)),
+                                  );
+                                }}
                               />
                               {f.custoHora <= 0 && <Badge tone="amber">sem custo</Badge>}
                             </div>
