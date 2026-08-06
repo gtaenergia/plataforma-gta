@@ -2,60 +2,47 @@ import { custoDaEquipe } from "@/lib/mao-de-obra/motor";
 import type { LinhaEquipe, LinhaEquipeCalculada } from "@/lib/mao-de-obra/types";
 
 /**
- * Como as horas da equipe entram no preço de uma proposta.
+ * O detalhamento de preço que a tela de geração mostra, já com as horas da
+ * própria equipe.
  *
- * A plataforma precifica de dois jeitos, e eles reagem de forma OPOSTA a
- * acrescentar o custo da equipe. Tratar os dois igual foi a armadilha que este
- * módulo existe para evitar.
+ * ## Este módulo NÃO calcula preço
  *
- * ## Fator K — o custo forma o preço
+ * Quem calcula é o engine de cada serviço, e não por acaso: o carregador
+ * arredonda o faturamento para múltiplo de R$ 10, o SPDA aplica piso mínimo,
+ * o solar tem regra própria. Uma segunda fórmula aqui produziria um número
+ * parecido e diferente — e "parecido e diferente" em preço é o pior resultado
+ * possível, porque ninguém percebe.
  *
- * `preço = (materiais + mão de obra) × K`. Aquela "mão de obra" é INSTALAÇÃO
- * (no carregador, R$ 800 por ponto de recarga), não hora de engenheiro: as
- * horas de projeto simplesmente não estão na base. Somá-las é acrescentar um
- * custo que existia e não era contado, e o preço sobe `K ×` o custo delas.
- *
- * ## Métrica — a tabela já remunera o projeto
- *
- * `preço = R$/m² × área`, `R$/bloco × blocos`. Não há base de custo: as taxas
- * saíram de planilhas reais da GTA e já embutem o trabalho de projetar. Somar
- * as horas por cima cobraria duas vezes pelo mesmo serviço — então aqui o preço
- * NÃO muda. O custo aparece no detalhamento e na margem, que é onde ele
- * responde à pergunta do dono: vale a pena?
- *
- * O módulo é puro: nenhuma leitura de banco, nenhum fetch. Quem chama traz o
- * mapa de R$/h já resolvido.
+ * Então o configurador entrega os dois preços já prontos e este módulo só
+ * compõe a conta. A diferença entre os dois paradigmas de preço vira DADO
+ * (`precoSemEquipeCent` igual ou diferente de `precoCent`) em vez de um `if`
+ * aqui dentro — ver `equipeFormaPreco`.
  */
-
-/** De onde o preço vem — e, por consequência, se o custo da equipe o altera. */
-export type OrigemDoPreco =
-  /** `preço = custo × K`. As horas entram na base, antes do markup. */
-  | { paradigma: "fator_k"; custoConfiguradorCent: number; fatorK: number }
-  /** `preço = métrica × taxa`. As horas não mexem no preço. */
-  | { paradigma: "metrica"; precoCent: number };
 
 export interface EntradaComposicao {
   /** Quem executa e por quantas horas. Vazio = ninguém apontado ainda. */
   linhas: readonly LinhaEquipe[];
   /** R$/h por e-mail. Ausente ou zero = pessoa sem custo cadastrado. */
   custos: Readonly<Record<string, number>>;
-  preco: OrigemDoPreco;
+  /** Preço final do configurador — já com a equipe, quando o serviço é Fator K. */
+  precoCent: number;
+  /** O que sairia sem ninguém apontado. Igual a `precoCent` nos por métrica. */
+  precoSemEquipeCent: number;
+  /** Custo que o configurador já contava (materiais, instalação). 0 na métrica. */
+  custoConfiguradorCent: number;
   /** Alíquota sobre o faturamento, 0..1. */
   imposto: number;
 }
 
 export interface ComposicaoProposta {
   linhas: LinhaEquipeCalculada[];
-  /** Horas da própria equipe, em centavos. */
   custoEquipeCent: number;
-  /** O que o configurador já contava como custo. Zero nos serviços por métrica. */
   custoConfiguradorCent: number;
   custoTotalCent: number;
 
-  /** O preço ANTES de considerar a equipe — para mostrar o quanto mudou. */
-  precoOriginalCent: number;
+  precoSemEquipeCent: number;
   precoCent: number;
-  /** `precoCent − precoOriginalCent`. Zero nos serviços por métrica. */
+  /** Quanto a escolha do responsável mudou o preço. Zero nos por métrica. */
   acrescimoCent: number;
 
   impostoCent: number;
@@ -71,39 +58,49 @@ export interface ComposicaoProposta {
 
 export function comporProposta(e: EntradaComposicao): ComposicaoProposta {
   const equipe = custoDaEquipe(e.linhas, e.custos);
+  const custoTotalCent = e.custoConfiguradorCent + equipe.custoCent;
 
-  const custoConfiguradorCent = e.preco.paradigma === "fator_k" ? e.preco.custoConfiguradorCent : 0;
-  const custoTotalCent = custoConfiguradorCent + equipe.custoCent;
-
-  /*
-   * O preço "original" é sempre calculado SEM a equipe, mesmo no Fator K, para
-   * a tela poder dizer quanto a escolha do responsável mudou o valor. Sem esse
-   * par, o acréscimo seria invisível — e ele é o efeito que o usuário precisa
-   * enxergar antes de mandar a proposta.
-   */
-  const precoOriginalCent =
-    e.preco.paradigma === "fator_k"
-      ? Math.round(e.preco.custoConfiguradorCent * e.preco.fatorK)
-      : e.preco.precoCent;
-
-  const precoCent =
-    e.preco.paradigma === "fator_k" ? Math.round(custoTotalCent * e.preco.fatorK) : precoOriginalCent;
-
-  const impostoCent = Math.round(precoCent * e.imposto);
-  const lucroCent = precoCent - custoTotalCent - impostoCent;
+  const impostoCent = Math.round(e.precoCent * e.imposto);
+  const lucroCent = e.precoCent - custoTotalCent - impostoCent;
 
   return {
     linhas: equipe.linhas,
     custoEquipeCent: equipe.custoCent,
-    custoConfiguradorCent,
+    custoConfiguradorCent: e.custoConfiguradorCent,
     custoTotalCent,
-    precoOriginalCent,
-    precoCent,
-    acrescimoCent: precoCent - precoOriginalCent,
+    precoSemEquipeCent: e.precoSemEquipeCent,
+    precoCent: e.precoCent,
+    acrescimoCent: e.precoCent - e.precoSemEquipeCent,
     impostoCent,
     lucroCent,
-    margem: precoCent > 0 ? lucroCent / precoCent : 0,
+    margem: e.precoCent > 0 ? lucroCent / e.precoCent : 0,
     incompleta: equipe.incompleta,
     prejuizo: lucroCent < 0,
   };
+}
+
+/**
+ * O custo da equipe entra no preço deste serviço?
+ *
+ * **Fator K** (`preço = custo × K`): entra. A "mão de obra" que já estava na
+ * base é INSTALAÇÃO — no carregador, R$ 800 por ponto de recarga — e não hora
+ * de engenheiro. As horas de projeto não estavam contadas em lugar nenhum, e
+ * acrescentá-las faz o preço subir `K ×` o custo delas.
+ *
+ * **Métrica** (`preço = R$/m² × área`): não entra. Não existe base de custo; as
+ * taxas saíram de planilhas reais da GTA e já remuneram o trabalho de projetar.
+ * Somar por cima cobraria duas vezes pelo mesmo serviço. Ali o custo aparece no
+ * detalhamento e na margem — que é onde ele responde "vale a pena?".
+ *
+ * A lista é explícita, e não derivada de "o engine tem fatorK?": um serviço novo
+ * precisa de uma decisão de precificação tomada por gente, não de uma dedução.
+ */
+const FORMAM_PRECO: readonly string[] = ["carregador", "qgbt", "rede-mt", "execucao-subestacao"];
+
+export function equipeFormaPreco(chaveServico: string): boolean {
+  return FORMAM_PRECO.includes(chaveServico);
+}
+
+export function servicosQueFormamPreco(): readonly string[] {
+  return FORMAM_PRECO;
 }
