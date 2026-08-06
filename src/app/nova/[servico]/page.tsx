@@ -64,7 +64,7 @@ export default async function NovaPropostaPage({
         ) : service.key === "projeto-subestacao" ? (
           <SubestacaoConfigurator propostaId={proposta} />
         ) : service.key === "carregador" ? (
-          <CarregadorConfigurator propostaId={proposta} />
+          <CarregadorConfigurator propostaId={proposta} criadoPor={user.email} />
         ) : service.key === "spda" ? (
           <SpdaConfigurator propostaId={proposta} />
         ) : service.key === "execucao-subestacao" ? (

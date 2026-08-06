@@ -11,6 +11,7 @@ import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
 import { POTENCIAS_CA, acharPotencia } from "@/services/carregador/potencias";
 import { Campo } from "@/components/Campo";
+import { EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -76,8 +77,14 @@ const seedRow = (it: BomItem): MatRow => ({
 const rowTotal = (m: MatRow) => parseBR(m.qtd) * parseBR(m.precoUnit);
 const serializarBom = (itens: MatRow[]) => itens.map((m) => `${m.qtd}|${m.descricao}|${m.precoUnit}`).join("\n");
 
-export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) {
+export function CarregadorConfigurator({ propostaId, criadoPor }: { propostaId?: string; criadoPor?: string }) {
   const router = useRouter();
+  /*
+   * Fator K: as horas da GTA entram na base de custo, então escolher o
+   * responsável MUDA o preço. O hook guarda quem executa; o cálculo logo
+   * abaixo soma o custo antes do markup. Ver `equipeFormaPreco`.
+   */
+  const equipe = useEquipeResponsavel({ servicoKey: "carregador", criadoPor });
   const [form, setForm] = useState<Form>(FORM_INICIAL);
   const [sizing, setSizing] = useState<Sizing | null>(null);
   const [bom, setBom] = useState<Bom | null>(null);
@@ -161,12 +168,28 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
   const preco = params
     ? (() => {
         const maoObra = params.maoObraPorPonto * Math.max(1, form.qtdPontos);
-        const custoGeral = custoMateriais + maoObra;
+        /*
+         * `maoObra` é INSTALAÇÃO — R$ 800 por ponto de recarga. As horas de
+         * engenharia da GTA não estavam contadas em lugar nenhum, e entram
+         * aqui, na base, antes do Fator K.
+         *
+         * O par com e sem equipe existe para a tela poder mostrar o quanto a
+         * escolha do responsável mudou o preço. Os dois passam pelo MESMO
+         * arredondamento a múltiplo de R$ 10, senão a diferença carregaria
+         * um resto que ninguém saberia explicar.
+         */
+        const custoSemEquipe = custoMateriais + maoObra;
+        const custoGeral = custoSemEquipe + equipe.custoEquipe;
         const faturamento = Math.round((custoGeral * params.fatorK) / 10) * 10;
+        const faturamentoSemEquipe = Math.round((custoSemEquipe * params.fatorK) / 10) * 10;
         const impostos = faturamento * params.aliqImpostos;
         const lucro = faturamento - impostos - custoGeral;
         const margem = faturamento > 0 ? lucro / faturamento : 0;
-        return { custoMateriais, maoObra, custoGeral, fatorK: params.fatorK, preco: faturamento, impostos, lucro, margem };
+        return {
+          custoMateriais, maoObra, custoSemEquipe, custoEquipe: equipe.custoEquipe, custoGeral,
+          fatorK: params.fatorK, preco: faturamento, precoSemEquipe: faturamentoSemEquipe,
+          impostos, lucro, margem,
+        };
       })()
     : null;
 
@@ -461,7 +484,8 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Composição do faturamento (uso interno)</p>
             <div className="mt-2 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4 dark:bg-slate-900/50">
               <Kpi label="Custo materiais" value={brl(preco.custoMateriais)} />
-              <Kpi label="Mão de obra" value={brl(preco.maoObra)} />
+              <Kpi label="Instalação" value={brl(preco.maoObra)} />
+              <Kpi label="Equipe GTA" value={brl(preco.custoEquipe)} />
               <Kpi label="Custo geral" value={brl(preco.custoGeral)} />
               <Kpi label="Fator K (markup)" value={`× ${nf(preco.fatorK, 2)}`} />
               <Kpi label="Faturamento" value={brl(preco.preco)} destaque />
@@ -475,6 +499,16 @@ export function CarregadorConfigurator({ propostaId }: { propostaId?: string }) 
           </div>
         )}
       </section>
+
+      {preco && (
+        <EquipeResponsavelCard
+          estado={equipe}
+          precoCent={Math.round(preco.preco * 100)}
+          precoSemEquipeCent={Math.round(preco.precoSemEquipe * 100)}
+          custoConfiguradorCent={Math.round(preco.custoSemEquipe * 100)}
+          imposto={params?.aliqImpostos ?? 0}
+        />
+      )}
 
       <CondicoesPagamento total={totalCliente} value={cond} onChange={setCond} />
 
