@@ -8,6 +8,7 @@ import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } f
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -53,11 +54,14 @@ const FORM_INICIAL: Form = {
 
 interface Preco {
   custoUnitario: number; qtdQuadros: number; custo: number; fatorK: number;
+  custoSemEquipe: number; custoEquipe: number; faturamentoSemEquipe: number;
   faturamento: number; impostos: number; lucro: number; margem: number;
 }
 
-export function QgbtConfigurator({ propostaId }: { propostaId?: string }) {
+export function QgbtConfigurator({ propostaId, criadoPor }: { propostaId?: string; criadoPor?: string }) {
   const router = useRouter();
+  // Fator K: as horas da GTA entram na base e o preço sobe. Ver `equipeFormaPreco`.
+  const equipe = useEquipeResponsavel({ servicoKey: "qgbt", criadoPor });
   const [form, setForm] = useState<Form>(FORM_INICIAL);
   const [preco, setPreco] = useState<Preco | null>(null);
   const [recalcNonce, setRecalcNonce] = useState(0);
@@ -88,7 +92,8 @@ export function QgbtConfigurator({ propostaId }: { propostaId?: string }) {
     }
   }, [propostaId]);
 
-  const calcKey = JSON.stringify([form.custoUnitario, form.qtdQuadros, recalcNonce]);
+  // `custoEquipe` entra na chave: trocar o responsável precisa refazer o preço.
+  const calcKey = JSON.stringify([form.custoUnitario, form.qtdQuadros, equipe.custoEquipe, recalcNonce]);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
@@ -96,7 +101,7 @@ export function QgbtConfigurator({ propostaId }: { propostaId?: string }) {
       try {
         const res = await fetch("/api/qgbt/calcular", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ custoUnitario: parseBR(form.custoUnitario), qtdQuadros: form.qtdQuadros }),
+          body: JSON.stringify({ custoUnitario: parseBR(form.custoUnitario), qtdQuadros: form.qtdQuadros, custoEquipe: equipe.custoEquipe }),
         });
         if (res.ok) {
           const d = await res.json();
@@ -234,6 +239,8 @@ export function QgbtConfigurator({ propostaId }: { propostaId?: string }) {
           <div className="mt-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Composição do faturamento (uso interno)</p>
             <div className="mt-2 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4 dark:bg-slate-900/50">
+              <Kpi label="Materiais e montagem" value={brl(preco.custoSemEquipe)} />
+              <Kpi label="Equipe GTA" value={brl(preco.custoEquipe)} />
               <Kpi label="Custo total" value={brl(preco.custo)} />
               <Kpi label="Fator K (markup)" value={`× ${nf(preco.fatorK, 2)}`} />
               <Kpi label="Faturamento" value={brl(preco.faturamento)} destaque />
@@ -245,6 +252,16 @@ export function QgbtConfigurator({ propostaId }: { propostaId?: string }) {
           </div>
         )}
       </section>
+
+      {preco && (
+        <EquipeResponsavelCard
+          estado={equipe}
+          precoCent={Math.round(preco.faturamento * 100)}
+          precoSemEquipeCent={Math.round(preco.faturamentoSemEquipe * 100)}
+          custoConfiguradorCent={Math.round(preco.custoSemEquipe * 100)}
+          imposto={preco.faturamento > 0 ? preco.impostos / preco.faturamento : 0}
+        />
+      )}
 
       <CondicoesPagamento total={valorServico} value={cond} onChange={setCond} />
 

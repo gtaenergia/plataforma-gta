@@ -10,6 +10,9 @@ const schema = z.object({
   custoMateriais: z.coerce.number().min(0).default(0),
   custoMaoObra: z.coerce.number().min(0).default(0),
   custoProjetoOutros: z.coerce.number().min(0).default(0),
+  /* Vem do navegador: é lá que a pessoa escolhe quem executa. Quem não tem
+     `financeiro.ver` não recebe o bloco, manda zero, e o preço não muda. */
+  custoEquipe: z.coerce.number().min(0).default(0),
 });
 
 export async function POST(req: Request) {

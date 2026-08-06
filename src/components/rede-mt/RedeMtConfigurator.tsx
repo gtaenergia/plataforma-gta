@@ -9,6 +9,7 @@ import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } f
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -57,7 +58,7 @@ const FORM_INICIAL: Form = {
 };
 
 interface Preco {
-  custoProjeto: number; faturamentoProjeto: number; impostosProjeto: number; lucroProjeto: number; margemProjeto: number; fatorKProjeto: number;
+  custoProjeto: number; custoProjetoSemEquipe: number; custoEquipe: number; faturamentoProjetoSemEquipe: number; faturamentoProjeto: number; impostosProjeto: number; lucroProjeto: number; margemProjeto: number; fatorKProjeto: number;
   custoExecucao: number; faturamentoExecucao: number; impostosExecucao: number; lucroExecucao: number; margemExecucao: number; fatorKExecucao: number;
   faturamentoTotal: number;
 }
@@ -70,7 +71,9 @@ const CUSTO_ROWS_PADRAO: CustoRow[] = [
   { etapa: "execucao", descricao: "Mão de obra e comissionamento", qtd: "1", valorUnit: "" },
 ];
 
-export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
+export function RedeMtConfigurator({ propostaId, criadoPor }: { propostaId?: string; criadoPor?: string }) {
+  // Fator K: as horas da GTA entram no custo do PROJETO e o preço sobe.
+  const equipe = useEquipeResponsavel({ servicoKey: "rede-mt", criadoPor });
   const router = useRouter();
   const [form, setForm] = useState<Form>(FORM_INICIAL);
   const [cond, setCond] = useState<CondPag>(COND_PADRAO);
@@ -107,7 +110,8 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
     }
   }, [propostaId]);
 
-  const calcKey = JSON.stringify([custoProjeto, custoExecucao, recalcNonce]);
+  // `custoEquipe` na chave: trocar o responsável precisa refazer o preço.
+  const calcKey = JSON.stringify([custoProjeto, custoExecucao, equipe.custoEquipe, recalcNonce]);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
@@ -115,7 +119,7 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
       try {
         const res = await fetch("/api/rede-mt/calcular", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ custoProjeto, custoExecucao }),
+          body: JSON.stringify({ custoProjeto, custoExecucao, custoEquipe: equipe.custoEquipe }),
         });
         if (res.ok) {
           const d = await res.json();
@@ -295,7 +299,8 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
           <div className="mt-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Composição do faturamento (uso interno)</p>
             <div className="mt-2 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4 dark:bg-slate-900/50">
-              <Kpi label="Custo (projeto)" value={brl(preco.custoProjeto)} />
+              <Kpi label="Custo (projeto)" value={brl(preco.custoProjetoSemEquipe)} />
+              <Kpi label="Equipe GTA" value={brl(preco.custoEquipe)} />
               <Kpi label="Custo (execução)" value={brl(preco.custoExecucao)} />
               <Kpi label="Faturamento total" value={brl(preco.faturamentoTotal)} destaque />
               <Kpi label="Impostos/NF" value={brl(preco.impostosProjeto + preco.impostosExecucao)} />
@@ -307,6 +312,19 @@ export function RedeMtConfigurator({ propostaId }: { propostaId?: string }) {
           </div>
         )}
       </section>
+
+      {/* O detalhamento olha só o PROJETO: é ali que as horas da GTA entram, e
+          misturar a execução (obra de terceiro) na mesma margem confundiria as
+          duas contas. */}
+      {preco && (
+        <EquipeResponsavelCard
+          estado={equipe}
+          precoCent={Math.round(preco.faturamentoProjeto * 100)}
+          precoSemEquipeCent={Math.round(preco.faturamentoProjetoSemEquipe * 100)}
+          custoConfiguradorCent={Math.round(preco.custoProjetoSemEquipe * 100)}
+          imposto={preco.faturamentoProjeto > 0 ? preco.impostosProjeto / preco.faturamentoProjeto : 0}
+        />
+      )}
 
       {/* Condições de pagamento */}
       <CondicoesPagamento total={totalCliente} value={cond} onChange={setCond} />

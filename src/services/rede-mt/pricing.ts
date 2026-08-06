@@ -12,6 +12,11 @@
 export interface RedeMtInput {
   custoProjeto: number;
   custoExecucao: number;
+  /**
+   * Horas da equipe da GTA, em R$. Entram no custo do PROJETO, não no da
+   * execução: é tempo de engenharia, e a execução é obra de terceiro.
+   */
+  custoEquipe?: number;
 }
 
 export interface RedeMtParams {
@@ -22,8 +27,14 @@ export interface RedeMtParams {
 }
 
 export interface RedeMtResult {
+  /** Custo do projeto JÁ com a equipe. */
   custoProjeto: number;
+  /** O custo de projeto que já existia, sem as horas da GTA. */
+  custoProjetoSemEquipe: number;
+  custoEquipe: number;
   faturamentoProjeto: number;
+  /** O que o projeto faturaria sem ninguém apontado. */
+  faturamentoProjetoSemEquipe: number;
   impostosProjeto: number;
   lucroProjeto: number;
   margemProjeto: number;
@@ -42,10 +53,15 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 
 export function precoRedeMt(i: RedeMtInput, p: RedeMtParams): RedeMtResult {
   // Projeto — NF "por dentro" (grossed up)
-  const cp = Math.max(0, i.custoProjeto || 0);
+  const cpSemEquipe = Math.max(0, i.custoProjeto || 0);
+  const custoEquipe = Math.max(0, i.custoEquipe || 0);
+  const cp = cpSemEquipe + custoEquipe;
   const kp = clamp(p.fatorKProjeto, 1, 5);
   const nfp = clamp(p.nfProjeto, 0, 0.5);
+  /* O guard olha o custo TOTAL: um projeto sem custo orçado mas com horas da
+     GTA apontadas tem preço, e a versão anterior devolveria zero. */
   const fatP = cp > 0 ? round10((cp * kp) / (1 - nfp)) : 0;
+  const fatPSemEquipe = cpSemEquipe > 0 ? round10((cpSemEquipe * kp) / (1 - nfp)) : 0;
   const impP = fatP * nfp;
   const lucroP = fatP - cp - impP;
   const margemP = fatP > 0 ? lucroP / fatP : 0;
@@ -60,7 +76,8 @@ export function precoRedeMt(i: RedeMtInput, p: RedeMtParams): RedeMtResult {
   const margemE = fatE > 0 ? lucroE / fatE : 0;
 
   return {
-    custoProjeto: cp, faturamentoProjeto: fatP, impostosProjeto: impP, lucroProjeto: lucroP, margemProjeto: margemP, fatorKProjeto: kp,
+    custoProjeto: cp, custoProjetoSemEquipe: cpSemEquipe, custoEquipe,
+    faturamentoProjeto: fatP, faturamentoProjetoSemEquipe: fatPSemEquipe, impostosProjeto: impP, lucroProjeto: lucroP, margemProjeto: margemP, fatorKProjeto: kp,
     custoExecucao: ce, faturamentoExecucao: fatE, impostosExecucao: impE, lucroExecucao: lucroE, margemExecucao: margemE, fatorKExecucao: ke,
     faturamentoTotal: fatP + fatE,
   };

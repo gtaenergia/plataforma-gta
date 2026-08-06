@@ -74,12 +74,15 @@ describe("Rede MT/BT — projeto (NF por dentro) + execução (NF por fora)", ()
     const r = precoRedeMt({ custoProjeto: 20_000, custoExecucao: 50_000 }, REDEMT_PARAMS_DEFAULT);
     expect(digest(r)).toMatchInlineSnapshot(`
       {
+        "custoEquipe": 0,
         "custoExecucao": 50000,
         "custoProjeto": 20000,
+        "custoProjetoSemEquipe": 20000,
         "fatorKExecucao": 1.7,
         "fatorKProjeto": 1.889,
         "faturamentoExecucao": 85000,
         "faturamentoProjeto": 44450,
+        "faturamentoProjetoSemEquipe": 44450,
         "faturamentoTotal": 129450,
         "impostosExecucao": 5100,
         "impostosProjeto": 6667.5,
@@ -96,12 +99,15 @@ describe("Rede MT/BT — projeto (NF por dentro) + execução (NF por fora)", ()
     expect(r.faturamentoExecucao).toBe(0);
     expect(digest(r)).toMatchInlineSnapshot(`
       {
+        "custoEquipe": 0,
         "custoExecucao": 0,
         "custoProjeto": 12000,
+        "custoProjetoSemEquipe": 12000,
         "fatorKExecucao": 1.7,
         "fatorKProjeto": 1.889,
         "faturamentoExecucao": 0,
         "faturamentoProjeto": 26670,
+        "faturamentoProjetoSemEquipe": 26670,
         "faturamentoTotal": 26670,
         "impostosExecucao": 0,
         "impostosProjeto": 4000.5,
@@ -120,9 +126,12 @@ describe("QGBT — custo × Fator K", () => {
     expect(digest(r)).toMatchInlineSnapshot(`
       {
         "custo": 36000,
+        "custoEquipe": 0,
+        "custoSemEquipe": 36000,
         "custoUnitario": 18000,
         "fatorK": 1.55,
         "faturamento": 55800,
+        "faturamentoSemEquipe": 55800,
         "impostos": 8370,
         "lucro": 11430,
         "margem": 0.2048,
@@ -141,11 +150,14 @@ describe("Execução de Subestação — custo × Fator K", () => {
     expect(digest(r)).toMatchInlineSnapshot(`
       {
         "custo": 55000,
+        "custoEquipe": 0,
         "custoMaoObra": 20000,
         "custoMateriais": 30000,
         "custoProjetoOutros": 5000,
+        "custoSemEquipe": 55000,
         "fatorK": 1.7,
         "faturamento": 93500,
+        "faturamentoSemEquipe": 93500,
         "impostos": 5610,
         "lucro": 32890,
         "margem": 0.3518,

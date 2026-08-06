@@ -9,6 +9,11 @@ export const runtime = "nodejs";
 const schema = z.object({
   custoUnitario: z.coerce.number().min(0).default(0),
   qtdQuadros: z.coerce.number().int().min(1).default(1),
+  /* Vem do navegador porque é lá que a pessoa escolhe quem executa. O valor
+     não é sigiloso na direção que importa: quem o envia já viu o R$/h em
+     `/api/custo-equipe`, atrás de `financeiro.ver`. Quem não tem a permissão
+     não recebe o bloco, manda zero, e o preço sai como sempre saiu. */
+  custoEquipe: z.coerce.number().min(0).default(0),
 });
 
 export async function POST(req: Request) {

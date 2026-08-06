@@ -13,6 +13,14 @@ export interface ExecSEInput {
   custoMaoObra: number;
   /** Projeto, ART, deslocamento, EPI, andaime e demais custos do levantamento. */
   custoProjetoOutros: number;
+  /**
+   * Horas da equipe da GTA neste trabalho, em R$.
+   *
+   * Separado de `custoProjetoOutros` de propósito: aquele campo é o que foi
+   * ORÇADO no levantamento (ART, andaime, EPI), e este é o tempo das pessoas.
+   * Somar num só esconderia justamente o que o dono quer ver destrinchado.
+   */
+  custoEquipe?: number;
 }
 
 export interface ExecSEParams {
@@ -26,9 +34,14 @@ export interface ExecSEResult {
   custoMateriais: number;
   custoMaoObra: number;
   custoProjetoOutros: number;
+  /** Materiais + mão de obra + projeto/outros — o custo que já existia. */
+  custoSemEquipe: number;
+  custoEquipe: number;
   custo: number;
   fatorK: number;
   faturamento: number;
+  /** O que sairia sem ninguém apontado — para a tela mostrar a diferença. */
+  faturamentoSemEquipe: number;
   impostos: number;
   lucro: number;
   margem: number;
@@ -38,14 +51,23 @@ export function precoExecSE(i: ExecSEInput, p: ExecSEParams): ExecSEResult {
   const materiais = Math.max(0, i.custoMateriais || 0);
   const maoObra = Math.max(0, i.custoMaoObra || 0);
   const outros = Math.max(0, i.custoProjetoOutros || 0);
-  const custo = materiais + maoObra + outros;
+  const custoSemEquipe = materiais + maoObra + outros;
+  const custoEquipe = Math.max(0, i.custoEquipe || 0);
+  const custo = custoSemEquipe + custoEquipe;
 
   const k = Math.min(4, Math.max(1, p.fatorK));
+  // Os dois passam pelo MESMO arredondamento: arredondar só um faria a
+  // diferença exibida carregar um resto que ninguém saberia explicar.
   const faturamento = Math.round((custo * k) / 10) * 10;
+  const faturamentoSemEquipe = Math.round((custoSemEquipe * k) / 10) * 10;
   const aliq = Math.min(0.5, Math.max(0, p.aliqImpostos));
   const impostos = faturamento * aliq;
   const lucro = faturamento - custo - impostos;
   const margem = faturamento > 0 ? lucro / faturamento : 0;
 
-  return { custoMateriais: materiais, custoMaoObra: maoObra, custoProjetoOutros: outros, custo, fatorK: k, faturamento, impostos, lucro, margem };
+  return {
+    custoMateriais: materiais, custoMaoObra: maoObra, custoProjetoOutros: outros,
+    custoSemEquipe, custoEquipe, custo, fatorK: k, faturamento, faturamentoSemEquipe,
+    impostos, lucro, margem,
+  };
 }

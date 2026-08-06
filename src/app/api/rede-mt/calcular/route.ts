@@ -9,6 +9,9 @@ export const runtime = "nodejs";
 const schema = z.object({
   custoProjeto: z.coerce.number().min(0).default(0),
   custoExecucao: z.coerce.number().min(0).default(0),
+  /* Do navegador: é lá que se escolhe quem executa. Sem `financeiro.ver` o
+     bloco não aparece, o valor vai zero, e o preço sai como sempre saiu. */
+  custoEquipe: z.coerce.number().min(0).default(0),
 });
 
 export async function POST(req: Request) {

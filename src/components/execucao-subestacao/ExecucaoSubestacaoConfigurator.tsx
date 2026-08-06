@@ -8,6 +8,7 @@ import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } f
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -58,10 +59,13 @@ const FORM_INICIAL: Form = {
 
 interface Preco {
   custoMateriais: number; custoMaoObra: number; custoProjetoOutros: number; custo: number;
+  custoSemEquipe: number; custoEquipe: number; faturamentoSemEquipe: number;
   fatorK: number; faturamento: number; impostos: number; lucro: number; margem: number;
 }
 
-export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: string }) {
+export function ExecucaoSubestacaoConfigurator({ propostaId, criadoPor }: { propostaId?: string; criadoPor?: string }) {
+  // Fator K: as horas da GTA entram na base e o preço sobe. Ver `equipeFormaPreco`.
+  const equipe = useEquipeResponsavel({ servicoKey: "execucao-subestacao", criadoPor });
   const router = useRouter();
   const [form, setForm] = useState<Form>(FORM_INICIAL);
   const [preco, setPreco] = useState<Preco | null>(null);
@@ -89,7 +93,8 @@ export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: st
     }
   }, [propostaId]);
 
-  const calcKey = JSON.stringify([form.custoMateriais, form.custoMaoObra, form.custoProjetoOutros, recalcNonce]);
+  // `custoEquipe` na chave: trocar o responsável precisa refazer o preço.
+  const calcKey = JSON.stringify([form.custoMateriais, form.custoMaoObra, form.custoProjetoOutros, equipe.custoEquipe, recalcNonce]);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
@@ -97,7 +102,7 @@ export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: st
       try {
         const res = await fetch("/api/execucao-subestacao/calcular", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ custoMateriais: parseBR(form.custoMateriais), custoMaoObra: parseBR(form.custoMaoObra), custoProjetoOutros: parseBR(form.custoProjetoOutros) }),
+          body: JSON.stringify({ custoMateriais: parseBR(form.custoMateriais), custoMaoObra: parseBR(form.custoMaoObra), custoProjetoOutros: parseBR(form.custoProjetoOutros), custoEquipe: equipe.custoEquipe }),
         });
         if (res.ok) {
           const d = await res.json();
@@ -257,6 +262,8 @@ export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: st
           <div className="mt-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Composição do faturamento (uso interno)</p>
             <div className="mt-2 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4 dark:bg-slate-900/50">
+              <Kpi label="Custo orçado" value={brl(preco.custoSemEquipe)} />
+              <Kpi label="Equipe GTA" value={brl(preco.custoEquipe)} />
               <Kpi label="Custo total" value={brl(preco.custo)} />
               <Kpi label="Fator K (markup)" value={`× ${nf(preco.fatorK, 2)}`} />
               <Kpi label="Faturamento" value={brl(preco.faturamento)} destaque />
@@ -268,6 +275,16 @@ export function ExecucaoSubestacaoConfigurator({ propostaId }: { propostaId?: st
           </div>
         )}
       </section>
+
+      {preco && (
+        <EquipeResponsavelCard
+          estado={equipe}
+          precoCent={Math.round(preco.faturamento * 100)}
+          precoSemEquipeCent={Math.round(preco.faturamentoSemEquipe * 100)}
+          custoConfiguradorCent={Math.round(preco.custoSemEquipe * 100)}
+          imposto={preco.faturamento > 0 ? preco.impostos / preco.faturamento : 0}
+        />
+      )}
 
       <CondicoesPagamento total={totalCliente} value={cond} onChange={setCond} />
 

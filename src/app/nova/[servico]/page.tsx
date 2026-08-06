@@ -68,11 +68,11 @@ export default async function NovaPropostaPage({
         ) : service.key === "spda" ? (
           <SpdaConfigurator propostaId={proposta} />
         ) : service.key === "execucao-subestacao" ? (
-          <ExecucaoSubestacaoConfigurator propostaId={proposta} />
+          <ExecucaoSubestacaoConfigurator propostaId={proposta} criadoPor={user.email} />
         ) : service.key === "rede-mt" ? (
-          <RedeMtConfigurator propostaId={proposta} />
+          <RedeMtConfigurator propostaId={proposta} criadoPor={user.email} />
         ) : service.key === "qgbt" ? (
-          <QgbtConfigurator propostaId={proposta} />
+          <QgbtConfigurator propostaId={proposta} criadoPor={user.email} />
         ) : service.key === "projeto-bt" ? (
           <ProjetoBtConfigurator propostaId={proposta} />
         ) : ["conexao", "analisador", "laudo-inspecao", "limpeza"].includes(service.key) ? (
