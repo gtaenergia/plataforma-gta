@@ -31,11 +31,18 @@ interface Usuario {
 /** O recorte de `Task` que esta tela consome — o resto vai para `CargaEquipe`. */
 type TarefaResumo = Parameters<typeof CargaEquipe>[0]["tarefas"][number];
 
-/** Minutos → texto em horas para o input. `0` é um valor legítimo, não vazio. */
+/**
+ * Minutos → texto em horas para o input. `0` é um valor legítimo, não vazio.
+ *
+ * Sai com VÍRGULA porque o campo é de texto. Enquanto era `type="number"` o
+ * separador tinha de ser ponto, e era só metade do problema — ver o comentário
+ * de `textos`.
+ */
 function paraHoras(min: number | undefined): string {
   if (min === undefined) return "";
   const h = min / 60;
-  return Number.isInteger(h) ? String(h) : h.toFixed(2).replace(/\.?0+$/, "");
+  const txt = Number.isInteger(h) ? String(h) : h.toFixed(2).replace(/0+$/, "");
+  return txt.replace(".", ",");
 }
 
 /** Texto em horas → minutos. Vazio devolve `undefined` = "herda o padrão". */
@@ -124,6 +131,25 @@ export function PlanejamentoAdmin() {
   function alterar(patch: Partial<ConfigCapacidade>) {
     setConfig((c) => (c ? { ...c, ...patch } : c));
     setOk(false);
+  }
+
+  /**
+   * O TEXTO digitado em cada campo de hora, separado do número.
+   *
+   * Os campos eram `type="number"` controlados pelo número, e a combinação
+   * mentia: o navegador descarta a vírgula (o valor continua "1"), o React
+   * reescreve o campo, e o dígito seguinte entra na frente do que já estava.
+   * Medido: quem digitava `1,5` terminava com **51** horas — 34 vezes o
+   * pretendido, sem aviso nenhum, num número que vira prazo de cliente e custo
+   * administrativo.
+   *
+   * Agora é campo de texto com `inputMode="decimal"`, o texto fica no estado e
+   * o número acompanha — o mesmo padrão do configurador de serviços.
+   */
+  const [textos, setTextos] = useState<Record<string, string>>({});
+
+  function digitar(chave: string, valor: string) {
+    setTextos((t) => ({ ...t, [chave]: valor }));
   }
 
   function alterarPessoa(email: string, campo: "minutosPorDia" | "atrasoInicioMin", valor: string) {
@@ -243,25 +269,32 @@ export function PlanejamentoAdmin() {
                       </td>
                       <td>
                         <input
-                          type="number"
-                          min={0}
-                          max={24}
-                          step={0.5}
-                          className="field-input !py-1.5"
+                          inputMode="decimal"
+                          className="field-input !py-1.5 tabular-nums"
                           aria-label={`Horas por dia de ${u.name || u.email}`}
-                          value={paraHoras(p?.minutosPorDia ?? config.padrao.minutosPorDia)}
-                          onChange={(e) => alterarPessoa(u.email, "minutosPorDia", e.target.value)}
+                          value={
+                            textos[`p:${u.email}:dia`] ??
+                            paraHoras(p?.minutosPorDia ?? config.padrao.minutosPorDia)
+                          }
+                          onChange={(e) => {
+                            digitar(`p:${u.email}:dia`, e.target.value);
+                            alterarPessoa(u.email, "minutosPorDia", e.target.value);
+                          }}
                         />
                       </td>
                       <td>
                         <input
-                          type="number"
-                          min={0}
-                          step={0.5}
-                          className="field-input !py-1.5"
+                          inputMode="decimal"
+                          className="field-input !py-1.5 tabular-nums"
                           aria-label={`Horas até iniciar de ${u.name || u.email}`}
-                          value={paraHoras(p?.atrasoInicioMin ?? config.padrao.atrasoInicioMin)}
-                          onChange={(e) => alterarPessoa(u.email, "atrasoInicioMin", e.target.value)}
+                          value={
+                            textos[`p:${u.email}:atraso`] ??
+                            paraHoras(p?.atrasoInicioMin ?? config.padrao.atrasoInicioMin)
+                          }
+                          onChange={(e) => {
+                            digitar(`p:${u.email}:atraso`, e.target.value);
+                            alterarPessoa(u.email, "atrasoInicioMin", e.target.value);
+                          }}
                         />
                       </td>
                       <td>
@@ -354,14 +387,15 @@ export function PlanejamentoAdmin() {
                             </td>
                             <td>
                               <input
-                                type="number"
-                                min={0}
-                                step={0.5}
-                                className="field-input !py-1.5"
+                                inputMode="decimal"
+                                className="field-input !py-1.5 tabular-nums"
                                 placeholder={paraHoras(config.estimativaPadraoMin)}
                                 aria-label={`Duração média de ${t.nome || "novo tipo"}`}
-                                value={paraHoras(t.minutos || undefined)}
-                                onChange={(e) => alterarTipo(t.id, { minutos: paraMinutos(e.target.value) ?? 0 })}
+                                value={textos[`t:${t.id}`] ?? paraHoras(t.minutos || undefined)}
+                                onChange={(e) => {
+                                  digitar(`t:${t.id}`, e.target.value);
+                                  alterarTipo(t.id, { minutos: paraMinutos(e.target.value) ?? 0 });
+                                }}
                               />
                             </td>
                             {/* Sem pílula "Sem duração": o campo vazio mostrando
@@ -427,12 +461,13 @@ export function PlanejamentoAdmin() {
           <label className="field-label" htmlFor="cap-padrao">Duração em horas, para o tipo ainda sem cadastro</label>
           <input
             id="cap-padrao"
-            type="number"
-            min={0}
-            step={0.5}
-            className="field-input"
-            value={paraHoras(config.estimativaPadraoMin)}
-            onChange={(e) => alterar({ estimativaPadraoMin: paraMinutos(e.target.value) ?? 0 })}
+            inputMode="decimal"
+            className="field-input tabular-nums"
+            value={textos["padrao"] ?? paraHoras(config.estimativaPadraoMin)}
+            onChange={(e) => {
+              digitar("padrao", e.target.value);
+              alterar({ estimativaPadraoMin: paraMinutos(e.target.value) ?? 0 });
+            }}
           />
         </div>
       </SectionCard>

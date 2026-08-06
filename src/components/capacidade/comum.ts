@@ -68,11 +68,17 @@ export function horasParaMin(txt: string): number {
   return Math.round(n * 60);
 }
 
-/** Minutos → texto para o input de horas. `0` vira vazio (é "não informado"). */
+/**
+ * Minutos → texto para o input de horas. `0` vira vazio (é "não informado").
+ *
+ * Com VÍRGULA: os campos de hora deixaram de ser `type="number"` — que exigia
+ * ponto e mesmo assim descartava a vírgula digitada — e passaram a ser texto.
+ */
 export function minParaHoras(min: number): string {
   if (!min) return "";
   const h = min / 60;
-  return Number.isInteger(h) ? String(h) : String(Number(h.toFixed(2)));
+  const txt = Number.isInteger(h) ? String(h) : String(Number(h.toFixed(2)));
+  return txt.replace(".", ",");
 }
 
 /** "6 h" / "1,5 h" / "45 min" — para leitura corrida dentro de uma frase. */

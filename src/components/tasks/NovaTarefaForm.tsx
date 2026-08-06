@@ -265,10 +265,10 @@ export function NovaTarefaForm({ podeEditarCatalogo }: { podeEditarCatalogo: boo
             <label className="field-label" htmlFor="nt-estimativa">Estimativa (h)</label>
             <input
               id="nt-estimativa"
-              type="number"
-              min={0}
-              step={0.5}
-              className="field-input"
+              // Texto, não `type="number"`: o campo numérico descarta a
+              // vírgula em silêncio, e "1,5" vira 15 — dez vezes a estimativa.
+              inputMode="decimal"
+              className="field-input tabular-nums"
               value={form.estimativaHoras}
               onChange={(e) => setForm({ ...form, estimativaHoras: e.target.value })}
               placeholder="Ex.: 4"

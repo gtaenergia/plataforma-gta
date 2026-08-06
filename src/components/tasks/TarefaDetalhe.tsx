@@ -336,7 +336,9 @@ export function TarefaDetalhe({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
               <div className="sm:col-span-2">
                 <label className="field-label" htmlFor="ed-estimativa">Estimativa (h)</label>
-                <input id="ed-estimativa" type="number" min={0} step={0.5} className="field-input" value={form.estimativaHoras} onChange={(e) => setForm({ ...form, estimativaHoras: e.target.value })} />
+                {/* Texto, não `type="number"`: o campo numérico descarta a
+                    vírgula em silêncio, e "1,5" vira 15. */}
+                <input id="ed-estimativa" inputMode="decimal" className="field-input tabular-nums" value={form.estimativaHoras} onChange={(e) => setForm({ ...form, estimativaHoras: e.target.value })} />
               </div>
               <div className="sm:col-span-4">
                 <label className="field-label" htmlFor="ed-responsavel">Responsável</label>

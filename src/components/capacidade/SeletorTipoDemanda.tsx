@@ -44,6 +44,8 @@ export function SeletorTipoDemanda({
   const [salvando, setSalvando] = useState(false);
   const [resultado, setResultado] = useState<"catalogo" | "avulso" | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  /** O texto digitado na duração; `undefined` = ainda mostra o valor de fora. */
+  const [texto, setTexto] = useState<string>();
 
   const tipos = tiposDaCategoria(config, categoria);
   const semCategoria = !categoria.trim();
@@ -107,13 +109,17 @@ export function SeletorTipoDemanda({
             </label>
             <input
               id={`${listaId}-dur`}
-              type="number"
-              min={0}
-              step={0.5}
-              className="field-input"
-              value={minParaHoras(estimativaMin)}
+              // Texto, não `type="number"`: o campo numérico descarta a
+              // vírgula, e como o valor vem de volta pelo número o dígito
+              // seguinte entra na frente — "1,5" terminava como 51 horas.
+              inputMode="decimal"
+              className="field-input tabular-nums"
+              value={texto ?? minParaHoras(estimativaMin)}
               placeholder="Ex.: 4"
-              onChange={(e) => onEstimativaChange?.(horasParaMin(e.target.value))}
+              onChange={(e) => {
+                setTexto(e.target.value);
+                onEstimativaChange?.(horasParaMin(e.target.value));
+              }}
             />
           </div>
           <p className="hint mt-1">Também vale como estimativa desta tarefa.</p>
