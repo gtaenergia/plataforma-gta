@@ -33,6 +33,12 @@ import type { LinhaEquipe } from "@/lib/mao-de-obra/types";
  * valor que já veio.
  */
 
+/** O que a proposta guarda para reabrir igual. */
+export interface EquipeSalva {
+  tipoId: string;
+  linhas: { email: string; horas: string }[];
+}
+
 interface LinhaTexto {
   email: string;
   /** Texto, não número: "1,5" precisa sobreviver enquanto está sendo digitado. */
@@ -55,6 +61,18 @@ export interface EstadoEquipe {
   linhasDominio: LinhaEquipe[];
   avisoTipo: string | null;
   servicoKey: string;
+  /** Para guardar na proposta — ver `restaurar`. */
+  serializar: () => EquipeSalva;
+  /**
+   * Repõe o que foi guardado ao reabrir uma proposta.
+   *
+   * Sem isto, reabrir uma proposta de Fator K perderia quem executa, e o preço
+   * SUGERIDO cairia para o valor sem equipe. O valor gravado continuaria na
+   * tela (é campo do formulário), mas qualquer mexida recalcularia por baixo.
+   */
+  restaurar: (v: EquipeSalva | undefined) => void;
+  /** Alíquota padrão da plataforma, para o serviço que não tem a sua. */
+  impostoPadrao: number;
 }
 
 export function useEquipeResponsavel(opcoes: { servicoKey: string; criadoPor?: string }): EstadoEquipe {
@@ -67,21 +85,26 @@ export function useEquipeResponsavel(opcoes: { servicoKey: string; criadoPor?: s
   const [linhas, setLinhas] = useState<LinhaTexto[]>([]);
   const [tipoId, setTipoId] = useState("");
   const [avisoTipo, setAvisoTipo] = useState<string | null>(null);
+  const [impostoPadrao, setImpostoPadrao] = useState(0);
 
   useEffect(() => {
     let vivo = true;
     (async () => {
       try {
-        const [rCusto, rCap, rUsr] = await Promise.all([
+        const [rCusto, rCap, rUsr, rMo] = await Promise.all([
           fetch("/api/custo-equipe"),
           fetch("/api/planejamento"),
           fetch("/api/usuarios"),
+          fetch("/api/mao-de-obra"),
         ]);
         // O 403 aqui é a permissão falando, e é o único sinal que importa:
         // sem ele o bloco não existe.
         if (!rCusto.ok) return;
-        const [dCusto, dCap, dUsr] = await Promise.all([rCusto.json(), rCap.json(), rUsr.json()]);
+        const [dCusto, dCap, dUsr, dMo] = await Promise.all([rCusto.json(), rCap.json(), rUsr.json(), rMo.json()]);
         if (!vivo) return;
+        /* Serviço sem alíquota própria (projeto BT, os simples) usa a da
+           plataforma. Mostrar "Imposto (0%)" seria pior que não mostrar. */
+        if (rMo.ok && dMo.config?.impostoPadrao != null) setImpostoPadrao(dMo.config.impostoPadrao);
 
         const mapa: Record<string, number> = {};
         for (const [email, p] of Object.entries(dCusto.config?.pessoas ?? {})) {
@@ -165,6 +188,16 @@ export function useEquipeResponsavel(opcoes: { servicoKey: string; criadoPor?: s
     linhasDominio,
     avisoTipo,
     servicoKey,
+    impostoPadrao,
+    serializar: () => ({ tipoId, linhas }),
+    restaurar: (v) => {
+      if (!v || !Array.isArray(v.linhas)) return;
+      setTipoId(v.tipoId ?? "");
+      // Sem passar por `aplicar`: o catálogo pode ter mudado de duração desde
+      // que a proposta foi salva, e a proposta vale pelas horas que ELA
+      // guardou, não pelas de hoje.
+      setLinhas(v.linhas.map((l) => ({ email: String(l.email ?? ""), horas: String(l.horas ?? "") })));
+    },
   };
 }
 
@@ -182,9 +215,11 @@ export function EquipeResponsavelCard({
   precoCent: number;
   precoSemEquipeCent: number;
   custoConfiguradorCent: number;
-  imposto: number;
+  /** Ausente = o serviço não tem alíquota própria; cai na da plataforma. */
+  imposto?: number;
 }) {
   if (!estado.visivel) return null;
+  const aliq = imposto ?? estado.impostoPadrao;
   if (estado.carregando) {
     return (
       <div className="section-card">
@@ -199,7 +234,7 @@ export function EquipeResponsavelCard({
     precoCent,
     precoSemEquipeCent,
     custoConfiguradorCent,
-    imposto,
+    imposto: aliq,
   });
 
   const formaPreco = equipeFormaPreco(estado.servicoKey);
@@ -335,7 +370,7 @@ export function EquipeResponsavelCard({
                 </tr>
               )}
               <tr>
-                <td>Imposto ({pct(imposto)})</td>
+                <td>Imposto ({pct(aliq)})</td>
                 <td className="text-right tabular-nums">{moeda(c.impostoCent)}</td>
               </tr>
               <tr>

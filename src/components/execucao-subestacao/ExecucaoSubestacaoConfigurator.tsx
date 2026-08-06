@@ -8,7 +8,7 @@ import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } f
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
 import { Campo } from "@/components/Campo";
-import { EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
+import { EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -84,7 +84,7 @@ export function ExecucaoSubestacaoConfigurator({ propostaId, criadoPor }: { prop
   useEffect(() => {
     if (propostaId) {
       fetch(`/api/propostas/${propostaId}`).then((r) => r.json()).then((d) => {
-        if (d.proposta?.dados) { const dados = d.proposta.dados as Partial<Form> & { cond?: CondPag }; setForm({ ...FORM_INICIAL, ...dados }); precoTocado.current = true; if (dados.cond) setCond(dados.cond as CondPag); }
+        if (d.proposta?.dados) { const dados = d.proposta.dados as Partial<Form> & { cond?: CondPag; equipeGta?: unknown }; setForm({ ...FORM_INICIAL, ...dados }); precoTocado.current = true; if (dados.equipeGta) equipe.restaurar(dados.equipeGta as EquipeSalva);  if (dados.cond) setCond(dados.cond as CondPag); }
       }).catch(() => {});
     } else {
       fetch("/api/propostas/proximo?serviceKey=execucao-subestacao").then((r) => r.json()).then((d) => {
@@ -146,7 +146,7 @@ export function ExecucaoSubestacaoConfigurator({ propostaId, criadoPor }: { prop
     if (!form.clienteNome) { setErro("Informe o nome do cliente para salvar."); return null; }
     setSalvando(true); setErro(null);
     try {
-      const payload = { serviceKey: "execucao-subestacao", cliente: form.clienteNome, status: totalCliente > 0 ? "precificada" : "rascunho", dados: { ...form, cond } };
+      const payload = { serviceKey: "execucao-subestacao", cliente: form.clienteNome, status: totalCliente > 0 ? "precificada" : "rascunho", dados: { ...form, cond, equipeGta: equipe.serializar() } };
       const res = savedId
         ? await fetch(`/api/propostas/${savedId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
         : await fetch("/api/propostas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });

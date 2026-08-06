@@ -9,6 +9,7 @@ import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 
 import { Alert } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
 const brl = (v: number) => "R$ " + nf(v, 2);
@@ -51,7 +52,11 @@ export interface ServicoSimplesConfig {
   precoLabel?: string;
 }
 
-export function ServicoSimplesConfigurator({ serviceKey, propostaId }: { serviceKey: string; propostaId?: string }) {
+export function ServicoSimplesConfigurator({ serviceKey, propostaId, criadoPor }: { serviceKey: string; propostaId?: string; criadoPor?: string }) {
+  /* Os quatro serviços simples (conexão, analisador, laudo, limpeza) são por
+     tabela: o preço não muda com quem executa. Nenhum tem alíquota própria,
+     então o cartão usa a padrão da plataforma. */
+  const equipe = useEquipeResponsavel({ servicoKey: serviceKey, criadoPor });
   const router = useRouter();
   const config = SERVICOS_SIMPLES[serviceKey];
 
@@ -202,6 +207,13 @@ export function ServicoSimplesConfigurator({ serviceKey, propostaId }: { service
           </div>
         </div>
       </section>
+
+      <EquipeResponsavelCard
+        estado={equipe}
+        precoCent={Math.round(valorServico * 100)}
+        precoSemEquipeCent={Math.round(valorServico * 100)}
+        custoConfiguradorCent={0}
+      />
 
       <CondicoesPagamento total={valorServico} value={cond} onChange={setCond} />
 

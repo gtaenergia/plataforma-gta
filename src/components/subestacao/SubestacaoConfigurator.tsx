@@ -8,6 +8,7 @@ import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } f
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -105,7 +106,9 @@ interface Preco {
   precoTotal: number;
 }
 
-export function SubestacaoConfigurator({ propostaId }: { propostaId?: string }) {
+export function SubestacaoConfigurator({ propostaId, criadoPor }: { propostaId?: string; criadoPor?: string }) {
+  // Por métrica: as horas da GTA não somam ao preço, só medem a margem.
+  const equipe = useEquipeResponsavel({ servicoKey: "projeto-subestacao", criadoPor });
   const router = useRouter();
   const [form, setForm] = useState<Form>(FORM_INICIAL);
   const [cond, setCond] = useState<CondPag>(COND_PADRAO);
@@ -463,6 +466,16 @@ export function SubestacaoConfigurator({ propostaId }: { propostaId?: string }) 
       </section>
 
       {/* Condições de pagamento */}
+      {/* `form.impostos` é valor em R$, não alíquota — a razão sobre o total é
+          o que o cartão precisa. Total zero cai no imposto padrão. */}
+      <EquipeResponsavelCard
+        estado={equipe}
+        precoCent={Math.round(total * 100)}
+        precoSemEquipeCent={Math.round(total * 100)}
+        custoConfiguradorCent={0}
+        imposto={total > 0 && parseBR(form.impostos) > 0 ? parseBR(form.impostos) / total : undefined}
+      />
+
       <CondicoesPagamento total={total} value={cond} onChange={setCond} />
 
       {/* Textos */}

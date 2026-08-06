@@ -60,13 +60,13 @@ export default async function NovaPropostaPage({
         )}
 
         {service.key === "solar" ? (
-          <SolarConfigurator propostaId={proposta} />
+          <SolarConfigurator propostaId={proposta} criadoPor={user.email} />
         ) : service.key === "projeto-subestacao" ? (
-          <SubestacaoConfigurator propostaId={proposta} />
+          <SubestacaoConfigurator propostaId={proposta} criadoPor={user.email} />
         ) : service.key === "carregador" ? (
           <CarregadorConfigurator propostaId={proposta} criadoPor={user.email} />
         ) : service.key === "spda" ? (
-          <SpdaConfigurator propostaId={proposta} />
+          <SpdaConfigurator propostaId={proposta} criadoPor={user.email} />
         ) : service.key === "execucao-subestacao" ? (
           <ExecucaoSubestacaoConfigurator propostaId={proposta} criadoPor={user.email} />
         ) : service.key === "rede-mt" ? (
@@ -74,9 +74,9 @@ export default async function NovaPropostaPage({
         ) : service.key === "qgbt" ? (
           <QgbtConfigurator propostaId={proposta} criadoPor={user.email} />
         ) : service.key === "projeto-bt" ? (
-          <ProjetoBtConfigurator propostaId={proposta} />
+          <ProjetoBtConfigurator propostaId={proposta} criadoPor={user.email} />
         ) : ["conexao", "analisador", "laudo-inspecao", "limpeza"].includes(service.key) ? (
-          <ServicoSimplesConfigurator serviceKey={service.key} propostaId={proposta} />
+          <ServicoSimplesConfigurator serviceKey={service.key} propostaId={proposta} criadoPor={user.email} />
         ) : (
           <DynamicForm serviceKey={service.key} serviceLabel={service.label} formSchema={service.formSchema} />
         )}

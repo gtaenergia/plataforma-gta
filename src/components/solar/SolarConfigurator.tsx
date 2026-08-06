@@ -17,6 +17,7 @@ import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { TelhadoSimulador } from "./TelhadoSimulador";
 import { Alert, Kpi } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
 
 /** Formatação pt-BR local (sem depender de libs de servidor). */
 const nf = (v: number, d = 2) =>
@@ -177,7 +178,12 @@ const DISTRIBUIDORES = [
   { value: "outro", label: "Outro distribuidor" },
 ];
 
-export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
+export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: string; criadoPor?: string }) {
+  /* Por dimensionamento: o preço vem do kit e do fator, e as horas da GTA não
+     somam. O catálogo separa usina residencial de comercial/rural, e este
+     configurador não sabe qual é — por isso o tipo vem em branco, para a
+     pessoa escolher. Ver `servico-demanda.ts`. */
+  const equipe = useEquipeResponsavel({ servicoKey: "solar", criadoPor });
   const router = useRouter();
   const [form, setForm] = useState<Form>(FORM_INICIAL);
   const [municipios, setMunicipios] = useState<{ nome: string; uf: string }[]>([]);
@@ -1051,6 +1057,13 @@ export function SolarConfigurator({ propostaId }: { propostaId?: string }) {
       </section>
 
       {/* Condições de pagamento (seção compartilhada) */}
+      <EquipeResponsavelCard
+        estado={equipe}
+        precoCent={Math.round((calc?.pricing?.valorTotal ?? 0) * 100)}
+        precoSemEquipeCent={Math.round((calc?.pricing?.valorTotal ?? 0) * 100)}
+        custoConfiguradorCent={0}
+      />
+
       <CondicoesPagamento total={calc?.pricing?.valorTotal ?? 0} value={cond} onChange={setCond} />
 
       {/* 5 · Economia e retorno */}
