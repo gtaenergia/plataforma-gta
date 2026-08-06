@@ -19,15 +19,19 @@ export const runtime = "nodejs";
  * com que números o orçamento foi fechado. Aceitar o valor do corpo faria
  * qualquer autenticado escrever a margem da empresa.
  *
- * ## O custo tem dois papéis, conforme o serviço
+ * ## O custo MEDE a margem; nunca forma o preço
  *
- * No "serviço por hora" o preço É custo × markup — não existe outra fonte —
- * então acrescentar horas da equipe RECALCULA o preço.
+ * Todo orçamento chega com preço vindo do seu configurador — dimensionamento
+ * solar, Fator K, tabela. O custo interno não altera esse preço em caso nenhum:
+ * ele responde a outra pergunta, a que o dono fez — "o custo que eu tô tendo
+ * com gente interna tem que valer a pena perto do faturamento".
  *
- * Nos demais o preço veio do configurador (dimensionamento, Fator K...). Ali o
- * custo interno não muda o preço: ele responde a outra pergunta, que é a que o
- * dono fez — "o custo que eu tô tendo com gente interna tem que valer a pena
- * perto do faturamento".
+ * O caminho inverso, do custo para o preço, existe só na calculadora de mão de
+ * obra: ela entrega uma planilha e não cria orçamento.
+ *
+ * (Este cabeçalho já descreveu um "serviço por hora" em que o preço seria
+ * recalculado. Esse serviço nunca existiu no catálogo, e o código abaixo nunca
+ * fez isso — o comentário prometia um comportamento que não estava lá.)
  */
 
 const corpoSchema = z.object({
