@@ -331,7 +331,6 @@ export function RedeMtConfigurator({ propostaId, criadoPor }: { propostaId?: str
           orcamento={equipeOrc}
           rotuloBase="Faturamento do projeto"
           baseCent={Math.round(preco.faturamentoProjeto * 100)}
-          precoCent={Math.round(preco.faturamentoProjeto * 100)}
           precoSemEquipeCent={Math.round(preco.faturamentoProjetoSemEquipe * 100)}
           custos={[
             { rotulo: "Custo do projeto", valor: preco.custoProjetoSemEquipe },

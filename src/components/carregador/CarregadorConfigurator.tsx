@@ -516,11 +516,15 @@ export function CarregadorConfigurator({ propostaId, criadoPor }: { propostaId?:
           projeto={equipe}
           orcamento={equipeOrc}
           baseCent={Math.round(preco.preco * 100)}
-          precoCent={Math.round(totalCliente * 100)}
           precoSemEquipeCent={Math.round(preco.precoSemEquipe * 100)}
+          repasses={
+            parseBR(form.valorEquipamento) > 0
+              ? [{ rotulo: "Carregador (equipamento)", valor: parseBR(form.valorEquipamento) }]
+              : []
+          }
           custos={[
             { rotulo: "Materiais", valor: preco.custoMateriais },
-            { rotulo: "Instalação", valor: preco.maoObra },
+            { rotulo: "Instalação (mão de obra)", valor: preco.maoObra },
             { rotulo: "Impostos", valor: preco.impostos },
           ]}
         />

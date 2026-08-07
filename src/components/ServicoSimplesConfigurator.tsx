@@ -218,7 +218,6 @@ export function ServicoSimplesConfigurator({ serviceKey, propostaId, criadoPor }
         projeto={equipe}
         orcamento={equipeOrc}
         baseCent={Math.round(valorServico * 100)}
-        precoCent={Math.round(valorServico * 100)}
         precoSemEquipeCent={Math.round(valorServico * 100)}
         custos={[{ rotulo: "Impostos", valor: valorServico * equipe.impostoPadrao }]}
       />

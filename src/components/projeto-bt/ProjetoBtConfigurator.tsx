@@ -363,7 +363,6 @@ export function ProjetoBtConfigurator({ propostaId, criadoPor }: { propostaId?: 
         projeto={equipe}
         orcamento={equipeOrc}
         baseCent={Math.round(total * 100)}
-        precoCent={Math.round(total * 100)}
         precoSemEquipeCent={Math.round(total * 100)}
         custos={[{ rotulo: "Impostos", valor: total * equipe.impostoPadrao }]}
       />

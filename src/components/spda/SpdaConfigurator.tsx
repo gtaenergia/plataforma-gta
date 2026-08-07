@@ -303,8 +303,12 @@ export function SpdaConfigurator({ propostaId, criadoPor }: { propostaId?: strin
         orcamento={equipeOrc}
         rotuloBase="Faturamento do projeto"
         baseCent={Math.round(valorTotalProjeto * 100)}
-        precoCent={Math.round(totalCliente * 100)}
         precoSemEquipeCent={Math.round(valorTotalProjeto * 100)}
+        repasses={
+          parseBR(form.valorExecucao) > 0
+            ? [{ rotulo: "Execução do SPDA", valor: parseBR(form.valorExecucao) }]
+            : []
+        }
         custos={[
           { rotulo: "Custo logístico", valor: preco?.custoLogistico ?? 0 },
           { rotulo: "Impostos", valor: impostosVal },

@@ -288,8 +288,12 @@ export function ExecucaoSubestacaoConfigurator({ propostaId, criadoPor }: { prop
           projeto={equipe}
           orcamento={equipeOrc}
           baseCent={Math.round(preco.faturamento * 100)}
-          precoCent={Math.round(totalCliente * 100)}
           precoSemEquipeCent={Math.round(preco.faturamentoSemEquipe * 100)}
+          repasses={
+            parseBR(form.valorEquipamento) > 0
+              ? [{ rotulo: "Trafo e cubículo (equipamento)", valor: parseBR(form.valorEquipamento) }]
+              : []
+          }
           custos={[
             { rotulo: "Materiais", valor: preco.custoMateriais },
             { rotulo: "Mão de obra", valor: preco.custoMaoObra },

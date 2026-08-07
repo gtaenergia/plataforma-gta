@@ -159,7 +159,7 @@ interface Calc {
   geracao: { linhas: { mes: string; insolacao: number; energia: number; consumo: number }[]; totalEnergia: number; totalConsumo: number };
   bom: { qtde: string; descricao: string }[];
   pricing: null | {
-    valorTotal: number; servicos: number; margem: number; margemLiquida: number; lucro: number; lucroLiquido: number;
+    kit: number; valorTotal: number; servicos: number; margem: number; margemLiquida: number; lucro: number; lucroLiquido: number;
     /* Espelha `PricingResult["custos"]` do engine. Faltavam `execucaoCivil` e
        `cartorio`: o tipo mais estreito não dava erro, só deixava duas parcelas
        reais fora do detalhamento — e a conta na tela fecharia errado. */
@@ -1054,12 +1054,17 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
         <DetalhamentoPreco
           projeto={equipe}
           orcamento={equipeOrc}
-          rotuloBase="Serviços GTA"
+          rotuloBase="Serviços da GTA"
           baseCent={Math.round(calc.pricing.servicos * 100)}
-          precoCent={Math.round(calc.pricing.valorTotal * 100)}
           precoSemEquipeCent={Math.round(calc.pricing.servicos * 100)}
+          repasses={[
+            { rotulo: "Kit fotovoltaico (distribuidor)", valor: calc.pricing.kit },
+            ...(calc.pricing.custos.execucaoCivil > 0
+              ? [{ rotulo: "Execução civil", valor: calc.pricing.custos.execucaoCivil }]
+              : []),
+          ]}
           custos={[
-            { rotulo: "Instalação", valor: calc.pricing.custos.instalacao },
+            { rotulo: "Instalação (mão de obra)", valor: calc.pricing.custos.instalacao },
             { rotulo: "Material CA", valor: calc.pricing.custos.materialCa },
             { rotulo: "Deslocamento", valor: calc.pricing.custos.deslocamento },
             // Execução civil NÃO entra: é repasse, já excluída de "Serviços"
