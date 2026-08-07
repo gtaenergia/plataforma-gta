@@ -9,6 +9,7 @@ import { ClienteInput } from "@/components/clientes/ClienteInput";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
 import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { lerHoras } from "@/lib/custo-equipe/sugestao";
+import { Combobox } from "@/components/Combobox";
 import { aplicarMarkup, calcularComposicao, markupDe } from "@/lib/mao-de-obra/motor";
 import {
   custoMateriaisCent,
@@ -72,12 +73,18 @@ const OBS_PADRAO = [
 const PRAZO_PADRAO = "A combinar, conforme programação da obra";
 const TITULO_DOC = "PROPOSTA TÉCNICA E COMERCIAL — FORNECIMENTO DE MÃO DE OBRA";
 
-export function MaoDeObraConfigurator({ propostaId, criadoPor }: { propostaId?: string; criadoPor?: string }) {
+export function MaoDeObraConfigurator({ propostaId, criadoPor, podeConfigurar }: { propostaId?: string; criadoPor?: string; podeConfigurar?: boolean }) {
   void criadoPor; // assinatura padrão dos configuradores; a autoria vem da sessão no servidor
   const router = useRouter();
 
   const [funcoes, setFuncoes] = useState<Funcao[]>([]);
   const [podeVerFinanceiro, setPodeVerFinanceiro] = useState(false);
+  /**
+   * Os padrões da EMPRESA, como vieram do servidor. Guardados à parte porque
+   * imposto/margem na tela são ajuste desta proposta: sem isso, salvar o
+   * catálogo de funções daqui gravaria a taxa pontual como novo padrão da conta.
+   */
+  const [padroesEmpresa, setPadroesEmpresa] = useState({ imposto: 0, margem: 0 });
   const [estado, setEstado] = useState<"carregando" | "erro" | "pronto">("carregando");
   const [falha, setFalha] = useState("");
 
@@ -106,6 +113,9 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor }: { propostaId?: 
   const [cond, setCond] = useState<CondPag>(COND_PADRAO);
 
   const [erro, setErro] = useState<string | null>(null);
+  const [erroCatalogo, setErroCatalogo] = useState<string | null>(null);
+  /** Texto digitado no R$/h de cada função — ver o `onChange` do campo. */
+  const [custoDigitado, setCustoDigitado] = useState<Record<string, string>>({});
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [gerando, setGerando] = useState(false);
@@ -140,6 +150,7 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor }: { propostaId?: 
         if (d.podeVerFinanceiro) {
           setImposto(String((d.config.impostoPadrao ?? 0) * 100).replace(".", ","));
           setMargem(String((d.config.margemPadrao ?? 0) * 100).replace(".", ","));
+          setPadroesEmpresa({ imposto: d.config.impostoPadrao ?? 0, margem: d.config.margemPadrao ?? 0 });
         }
         setEstado("pronto");
       } catch (e) {
@@ -186,6 +197,63 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor }: { propostaId?: 
         .catch(() => {});
     }
   }, [propostaId]);
+
+  const nomesFuncoes = useMemo(() => funcoes.map((f) => f.nome).filter(Boolean), [funcoes]);
+
+  /**
+   * Grava o catálogo inteiro (a API exige os três campos juntos).
+   *
+   * `padroesEmpresa`, e não as taxas da tela: imposto e margem aqui são ajuste
+   * DESTA proposta — mandá-los viraria o padrão da empresa em silêncio, só
+   * porque alguém cadastrou uma função.
+   */
+  async function salvarCatalogo(lista: Funcao[]) {
+    if (!podeConfigurar) return;
+    setErroCatalogo(null);
+    try {
+      const r = await fetch("/api/mao-de-obra", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          funcoes: lista.filter((f) => f.nome.trim() !== ""),
+          impostoPadrao: padroesEmpresa.imposto,
+          margemPadrao: padroesEmpresa.margem,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error ?? "Falha ao salvar o catálogo.");
+      setFuncoes(d.config.funcoes ?? []);
+    } catch (e) {
+      setErroCatalogo(e instanceof Error ? e.message : "Erro ao salvar o catálogo de funções.");
+    }
+  }
+
+  /** Escolher na lista OU escrever uma função nova — o combobox devolve o nome. */
+  async function escolherFuncao(i: number, nome: string) {
+    const existente = funcoes.find((f) => f.nome === nome);
+    if (existente) return setLinha(i, { funcaoId: existente.id });
+
+    // Nome que não está no catálogo: cria com custo zero e já grava, para o id
+    // sobreviver ao recarregar. O R$/h ao lado fica esperando o valor.
+    const nova: Funcao = { id: crypto.randomUUID(), nome, custoHora: 0 };
+    const lista = [...funcoes, nova];
+    setFuncoes(lista);
+    setLinha(i, { funcaoId: nova.id });
+    await salvarCatalogo(lista);
+  }
+
+  async function excluirFuncao(nome: string) {
+    const alvo = funcoes.find((f) => f.nome === nome);
+    if (!alvo) return;
+    // Apagar uma função em uso deixaria a linha apontando para o nada, e o
+    // custo dela sumiria do total sem aviso.
+    if (linhas.some((l) => l.funcaoId === alvo.id)) {
+      setErroCatalogo(`A função “${nome}” está em uso nesta proposta — troque-a na linha antes de excluir.`);
+      return;
+    }
+    if (!window.confirm(`Excluir a função “${nome}” do catálogo? Ela some da calculadora e das próximas propostas.`)) return;
+    await salvarCatalogo(funcoes.filter((f) => f.id !== alvo.id));
+  }
 
   const taxas = useMemo(() => ({ imposto: pctParaFracao(imposto), margem: pctParaFracao(margem) }), [imposto, margem]);
 
@@ -385,47 +453,80 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor }: { propostaId?: 
       {/* Equipe terceirizada — a mesma grade da calculadora */}
       <section className="section-card">
         <h2 className="section-title">Equipe</h2>
-        <p className="mt-1 subtitle">As funções e o custo por hora são os da calculadora de mão de obra — cadastrados lá, valem aqui.</p>
+        <p className="mt-1 subtitle">
+          {podeConfigurar
+            ? "Escolha a função na lista ou escreva uma nova — ela entra no catálogo, que vale também na calculadora. O custo por hora é editável na própria linha."
+            : "As funções vêm do catálogo de mão de obra da empresa."}
+        </p>
+
         <div className="mt-4 space-y-3">
-          {linhas.map((l, i) => (
-            <div key={i} className="grid grid-cols-1 gap-3 sm:grid-cols-12">
-              <Campo className="sm:col-span-5" label={i === 0 ? "Função" : ""}>
-                <select className="field-input" value={l.funcaoId} onChange={(e) => setLinha(i, { funcaoId: e.target.value })}>
-                  <option value="">Selecione…</option>
-                  {funcoes.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.nome}
-                      {podeVerFinanceiro ? (f.custoHora > 0 ? ` — ${brl(f.custoHora)}/h` : " (sem custo)") : ""}
-                    </option>
-                  ))}
-                </select>
-              </Campo>
-              <Campo className="sm:col-span-3" label={i === 0 ? "Pessoas" : ""}>
-                <input className="field-input tabular-nums" inputMode="numeric" value={l.pessoas} onChange={(e) => setLinha(i, { pessoas: e.target.value })} />
-              </Campo>
-              <Campo
-                className="sm:col-span-3"
-                label={i === 0 ? "Horas cada" : ""}
-                hint={i === 0 ? <p className="hint mt-1">Horas por pessoa. Para dias × horas por dia, escreva 5 x 8</p> : undefined}
-              >
-                <input className="field-input tabular-nums" value={l.horas} placeholder="0" onChange={(e) => setLinha(i, { horas: e.target.value })} />
-              </Campo>
-              <div className="flex items-end sm:col-span-1">
-                <button
-                  type="button"
-                  className="icon-btn"
-                  onClick={() => editar(setLinhas)(linhas.length > 1 ? linhas.filter((_, j) => j !== i) : [{ ...LINHA_EQUIPE_VAZIA }])}
-                  aria-label={`Remover linha ${i + 1}`}
+          {linhas.map((l, i) => {
+            const f = funcoes.find((x) => x.id === l.funcaoId);
+            return (
+              <div key={i} className="grid grid-cols-1 gap-3 sm:grid-cols-12">
+                <Campo className={podeConfigurar ? "sm:col-span-4" : "sm:col-span-5"} label={i === 0 ? "Função" : ""}>
+                  <Combobox
+                    value={f?.nome ?? ""}
+                    options={nomesFuncoes}
+                    onChange={(nome) => void escolherFuncao(i, nome)}
+                    onExcluir={podeConfigurar ? (nome) => void excluirFuncao(nome) : undefined}
+                    rotuloNovo="Criar “{v}”"
+                    rotuloExcluir="Excluir a função “{v}” do catálogo"
+                    permitirNovo={podeConfigurar}
+                    placeholder="Escolher função…"
+                    aria-label={`Função da linha ${i + 1}`}
+                  />
+                </Campo>
+                {podeConfigurar && (
+                  <Campo className="sm:col-span-2" label={i === 0 ? "R$/h" : ""}>
+                    <input
+                      className="field-input tabular-nums"
+                      inputMode="decimal"
+                      disabled={!f}
+                      aria-label={`Custo por hora de ${f?.nome ?? "função"}`}
+                      value={custoDigitado[l.funcaoId] ?? (f && f.custoHora > 0 ? String(f.custoHora).replace(".", ",") : "")}
+                      placeholder="0,00"
+                      /* O que fica na tela é o que foi digitado; o número
+                         acompanha. Controlar pelo número come a vírgula assim
+                         que ela é digitada. Grava no catálogo ao sair do campo. */
+                      onChange={(e) => {
+                        const digitado = e.target.value;
+                        edicao.marcarEditado();
+                        setCustoDigitado((t) => ({ ...t, [l.funcaoId]: digitado }));
+                        setFuncoes((fs) => fs.map((x) => (x.id === l.funcaoId ? { ...x, custoHora: paraNumero(digitado) } : x)));
+                      }}
+                      onBlur={() => void salvarCatalogo(funcoes)}
+                    />
+                  </Campo>
+                )}
+                <Campo className="sm:col-span-2" label={i === 0 ? "Pessoas" : ""}>
+                  <input className="field-input tabular-nums" inputMode="numeric" value={l.pessoas} onChange={(e) => setLinha(i, { pessoas: e.target.value })} />
+                </Campo>
+                <Campo
+                  className="sm:col-span-3"
+                  label={i === 0 ? "Horas cada" : ""}
+                  hint={i === 0 ? <p className="hint mt-1">Horas por pessoa. Para dias × horas por dia, escreva 5 x 8</p> : undefined}
                 >
-                  <Trash2 className="h-4 w-4" aria-hidden />
-                </button>
+                  <input className="field-input tabular-nums" value={l.horas} placeholder="0" onChange={(e) => setLinha(i, { horas: e.target.value })} />
+                </Campo>
+                <div className="flex items-end sm:col-span-1">
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => editar(setLinhas)(linhas.length > 1 ? linhas.filter((_, j) => j !== i) : [{ ...LINHA_EQUIPE_VAZIA }])}
+                    aria-label={`Remover linha ${i + 1}`}
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <button type="button" className="btn-secondary mt-3" onClick={() => editar(setLinhas)([...linhas, { ...LINHA_EQUIPE_VAZIA }])}>
-          <Plus className="h-4 w-4" aria-hidden /> Acrescentar função
+          <Plus className="h-4 w-4" aria-hidden /> Acrescentar linha
         </button>
+        {erroCatalogo && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{erroCatalogo}</p>}
         {semCusto && <div className="mt-3"><Badge tone="amber">alguma função está sem custo cadastrado — o preço sugerido sai por baixo</Badge></div>}
       </section>
 
@@ -580,4 +681,9 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor }: { propostaId?: 
 function pctParaFracao(txt: string): number {
   const n = Number(String(txt ?? "").trim().replace(",", "."));
   return Number.isFinite(n) && n >= 0 ? n / 100 : 0;
+}
+
+function paraNumero(txt: string): number {
+  const n = Number(String(txt ?? "").trim().replace(",", "."));
+  return Number.isFinite(n) && n >= 0 ? n : 0;
 }

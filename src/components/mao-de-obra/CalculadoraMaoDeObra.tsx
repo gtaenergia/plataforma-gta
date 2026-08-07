@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Download, Plus, Trash2 } from "lucide-react";
+import { Download, Plus, Trash2 } from "lucide-react";
 import { Alert, Badge, Kpi, KpiGrid } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { CatalogoFuncoes } from "@/components/mao-de-obra/CatalogoFuncoes";
 import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { calcularComposicao, markupDe } from "@/lib/mao-de-obra/motor";
 import { lerHoras } from "@/lib/custo-equipe/sugestao";
@@ -66,8 +67,6 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
   const [baixando, setBaixando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [origemHoras, setOrigemHoras] = useState<string | null>(null);
-  const [salvandoConfig, setSalvandoConfig] = useState(false);
-  const [salvouConfig, setSalvouConfig] = useState(false);
   /* A calculadora não gera proposta: o que foi montado aqui só existe na tela
      até virar planilha. Fechar sem baixar perde a conta inteira. */
   const edicao = useEdicaoPendente();
@@ -76,8 +75,6 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
     edicao.marcarEditado();
     setLinhas(fn);
   };
-  /** Texto digitado no R$/h de cada função — ver o comentário no `onChange`. */
-  const [textosCusto, setTextosCusto] = useState<Record<string, string>>({});
 
   useEffect(() => {
     (async () => {
@@ -166,33 +163,6 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
     );
   }
 
-  async function salvarFuncoes() {
-    setSalvandoConfig(true);
-    setErro(null);
-    setSalvouConfig(false);
-    try {
-      const r = await fetch("/api/mao-de-obra", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          // Linha em branco é rascunho de quem clicou em acrescentar e desistiu.
-          funcoes: funcoes.filter((f) => f.nome.trim() !== ""),
-          impostoPadrao: taxas.imposto,
-          margemPadrao: taxas.margem,
-        }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error ?? "Falha ao salvar.");
-      setFuncoes(d.config.funcoes ?? []);
-      setSalvouConfig(true);
-      edicao.marcarSalvo();
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro ao salvar as funções.");
-    } finally {
-      setSalvandoConfig(false);
-    }
-  }
-
   async function baixar() {
     setBaixando(true);
     setErro(null);
@@ -237,7 +207,6 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
     }
   }
 
-  const semCusto = funcoes.filter((f) => f.custoHora <= 0).length;
   const semSolucao = composicao.impedimento === "divisor_invalido";
   const temResultado = composicao.precoCent > 0;
 
@@ -249,105 +218,14 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
           {erro && <Alert tone="red">{erro}</Alert>}
 
           {/* O cadastro mora AQUI, e não numa tela de administração à parte:
-              quem calcula é quem sabe quanto custa a hora de cada função. */}
-          {/* Mesmo desenho de bloco recolhível do Planejamento: `group` com a
-              seta girando em `group-open`. */}
+              quem calcula é quem sabe quanto custa a hora de cada função. O
+              mesmo bloco aparece na proposta de mão de obra — é um componente
+              só, para os dois nunca divergirem.
+
+              A calculadora grava as taxas DA TELA como padrão da empresa: aqui
+              elas são o padrão sendo ajustado, não um desvio pontual. */}
           {podeConfigurar && (
-            <details className="group rounded-lg border border-slate-200 dark:border-slate-700" open={funcoes.length === 0}>
-              <summary className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2.5 transition hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                <span className="flex items-center gap-2">
-                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-400 transition group-open:rotate-90" aria-hidden />
-                  <span className="font-medium text-gta-navy dark:text-slate-100">Funções e custo por hora</span>
-                </span>
-                <span className="hint">
-                  {funcoes.length} {funcoes.length === 1 ? "função" : "funções"}
-                  {semCusto > 0 && ` · ${semCusto} sem custo`}
-                </span>
-              </summary>
-
-              <div className="border-t border-slate-200 p-3 dark:border-slate-700">
-                <div className="overflow-x-auto">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Função</th>
-                        <th className="w-44">Custo por hora</th>
-                        <th className="w-16 text-right">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {funcoes.map((f) => (
-                        <tr key={f.id}>
-                          <td>
-                            <input
-                              className="field-input !py-1.5"
-                              value={f.nome}
-                              placeholder="Ex.: Eletricista"
-                              aria-label="Nome da função"
-                              onChange={(e) =>
-                                setFuncoes((fs) => fs.map((x) => (x.id === f.id ? { ...x, nome: e.target.value } : x)))
-                              }
-                            />
-                          </td>
-                          <td>
-                            <div className="flex items-center gap-2">
-                              <span className="hint shrink-0">R$</span>
-                              <input
-                                className="field-input !py-1.5 tabular-nums"
-                                inputMode="decimal"
-                                aria-label={`Custo por hora de ${f.nome || "função sem nome"}`}
-                                value={textosCusto[f.id] ?? (f.custoHora > 0 ? String(f.custoHora).replace(".", ",") : "")}
-                                placeholder="0,00"
-                                onChange={(e) => {
-                                  // O que fica na tela é o que foi digitado; o
-                                  // número acompanha. Controlar o campo pelo
-                                  // número come a vírgula assim que ela é
-                                  // digitada, e o zero à direita junto.
-                                  const digitado = e.target.value;
-                                  setTextosCusto((t) => ({ ...t, [f.id]: digitado }));
-                                  setFuncoes((fs) =>
-                                    fs.map((x) => (x.id === f.id ? { ...x, custoHora: pctParaNumero(digitado) } : x)),
-                                  );
-                                }}
-                              />
-                              {f.custoHora <= 0 && <Badge tone="amber">sem custo</Badge>}
-                            </div>
-                          </td>
-                          <td className="text-right">
-                            <button
-                              type="button"
-                              className="icon-btn"
-                              aria-label={`Remover ${f.nome || "função sem nome"}`}
-                              onClick={() => setFuncoes((fs) => fs.filter((x) => x.id !== f.id))}
-                            >
-                              <Trash2 className="h-4 w-4" aria-hidden />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() =>
-                    // `randomUUID` para o id NUNCA colidir com o de uma função
-                    // apagada — uma planilha antiga apontaria para o custo errado.
-                    setFuncoes((fs) => [...fs, { id: crypto.randomUUID(), nome: "", custoHora: 0 }])
-                  }
-                >
-                  <Plus className="h-4 w-4" aria-hidden /> Acrescentar função
-                </button>
-                <button type="button" className="btn-primary" onClick={salvarFuncoes} disabled={salvandoConfig}>
-                  {salvandoConfig ? "Salvando…" : "Salvar funções"}
-                </button>
-                  {salvouConfig && <span className="hint">Salvo.</span>}
-                </div>
-              </div>
-            </details>
+            <CatalogoFuncoes funcoes={funcoes} onFuncoes={setFuncoes} padroesEmpresa={taxas} />
           )}
 
           {funcoes.length === 0 && !podeConfigurar && (
@@ -483,11 +361,6 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
       </div>
     </section>
   );
-}
-
-function pctParaNumero(txt: string): number {
-  const n = Number(String(txt ?? "").trim().replace(",", "."));
-  return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
 function pctParaFracao(txt: string): number {

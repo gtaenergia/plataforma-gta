@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, Plus } from "lucide-react";
+import { Check, ChevronDown, Plus, Trash2 } from "lucide-react";
 import { ITEM_NOVO, itensVisiveis, moverAtivo, recortar, valorEscolhido } from "./combobox-lista";
 
 /**
@@ -57,6 +57,17 @@ export interface ComboboxProps {
   rotuloNovo?: string;
   /** Máximo de itens no DOM. A busca continua cobrindo a lista inteira. */
   maxVisiveis?: number;
+  /**
+   * Deixa apagar uma opção pela própria lista. Ausente = ninguém apaga nada,
+   * que continua sendo o caso da maioria das telas — por isso é opcional, e não
+   * um comportamento novo para todo mundo.
+   *
+   * Quem recebe decide se a exclusão pode acontecer (item em uso, permissão) e
+   * atualiza `options`.
+   */
+  onExcluir?: (valor: string) => void;
+  /** Rótulo acessível do botão de excluir. `{v}` é trocado pelo item. */
+  rotuloExcluir?: string;
 }
 
 export function Combobox({
@@ -70,6 +81,8 @@ export function Combobox({
   className = "",
   rotuloNovo = "Usar “{v}”",
   maxVisiveis = 100,
+  onExcluir,
+  rotuloExcluir = "Excluir “{v}”",
   ...resto
 }: ComboboxProps) {
   const gerado = useId();
@@ -248,7 +261,22 @@ export function Combobox({
                         className={`h-4 w-4 shrink-0 ${o === value ? "text-gta-indigo dark:text-indigo-300" : "opacity-0"}`}
                         aria-hidden
                       />
-                      <span className="truncate">{o}</span>
+                      <span className="min-w-0 flex-1 truncate">{o}</span>
+                      {/* `stopPropagation`: sem ele o clique sobe para o <li> e
+                          o item seria escolhido no mesmo gesto que o apaga. */}
+                      {onExcluir && (
+                        <button
+                          type="button"
+                          className="remover-ficha shrink-0"
+                          aria-label={rotuloExcluir.replace("{v}", o)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onExcluir(o);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                        </button>
+                      )}
                     </>
                   )}
                 </li>

@@ -77,7 +77,7 @@ export default async function NovaPropostaPage({
         ) : service.key === "projeto-bt" ? (
           <ProjetoBtConfigurator propostaId={proposta} criadoPor={user.email} />
         ) : service.key === "mao-de-obra" ? (
-          <MaoDeObraConfigurator propostaId={proposta} criadoPor={user.email} />
+          <MaoDeObraConfigurator propostaId={proposta} criadoPor={user.email} podeConfigurar={user.role === "admin"} />
         ) : ["conexao", "analisador", "laudo-inspecao", "limpeza"].includes(service.key) ? (
           <ServicoSimplesConfigurator serviceKey={service.key} propostaId={proposta} criadoPor={user.email} />
         ) : (
