@@ -301,11 +301,14 @@ export function SpdaConfigurator({ propostaId, criadoPor }: { propostaId?: strin
       <DetalhamentoPreco
         projeto={equipe}
         orcamento={equipeOrc}
-        precoCent={Math.round(valorTotalProjeto * 100)}
+        rotuloBase="Faturamento do projeto"
+        baseCent={Math.round(valorTotalProjeto * 100)}
+        precoCent={Math.round(totalCliente * 100)}
         precoSemEquipeCent={Math.round(valorTotalProjeto * 100)}
-        custoConfiguradorCent={Math.round((preco?.custoLogistico ?? 0) * 100)}
-        rotuloCustoConfigurador="Custo logístico"
-        imposto={aliq}
+        custos={[
+          { rotulo: "Custo logístico", valor: preco?.custoLogistico ?? 0 },
+          { rotulo: "Impostos", valor: impostosVal },
+        ]}
       />
 
       <CondicoesPagamento total={totalCliente} value={cond} onChange={setCond} />

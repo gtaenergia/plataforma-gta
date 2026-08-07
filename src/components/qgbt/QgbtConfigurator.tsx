@@ -264,11 +264,13 @@ export function QgbtConfigurator({ propostaId, criadoPor }: { propostaId?: strin
         <DetalhamentoPreco
           projeto={equipe}
           orcamento={equipeOrc}
+          baseCent={Math.round(preco.faturamento * 100)}
           precoCent={Math.round(preco.faturamento * 100)}
           precoSemEquipeCent={Math.round(preco.faturamentoSemEquipe * 100)}
-          custoConfiguradorCent={Math.round(preco.custoSemEquipe * 100)}
-          rotuloCustoConfigurador="Materiais e montagem"
-          imposto={preco.faturamento > 0 ? preco.impostos / preco.faturamento : 0}
+          custos={[
+            { rotulo: "Materiais e montagem", valor: preco.custoSemEquipe },
+            { rotulo: "Impostos / NF", valor: preco.impostos },
+          ]}
         />
       )}
 

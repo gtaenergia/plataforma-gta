@@ -323,15 +323,20 @@ export function RedeMtConfigurator({ propostaId, criadoPor }: { propostaId?: str
       <EquipeResponsavelCard estado={equipe} />
       <EquipeResponsavelCard estado={equipeOrc} />
 
+      {/* Só o PROJETO: é ali que as horas da GTA entram. A execução é obra de
+          terceiro e tem margem própria, no painel acima. */}
       {preco && (
         <DetalhamentoPreco
           projeto={equipe}
           orcamento={equipeOrc}
+          rotuloBase="Faturamento do projeto"
+          baseCent={Math.round(preco.faturamentoProjeto * 100)}
           precoCent={Math.round(preco.faturamentoProjeto * 100)}
           precoSemEquipeCent={Math.round(preco.faturamentoProjetoSemEquipe * 100)}
-          custoConfiguradorCent={Math.round(preco.custoProjetoSemEquipe * 100)}
-          rotuloCustoConfigurador="Custo do projeto"
-          imposto={preco.faturamentoProjeto > 0 ? preco.impostosProjeto / preco.faturamentoProjeto : 0}
+          custos={[
+            { rotulo: "Custo do projeto", valor: preco.custoProjetoSemEquipe },
+            { rotulo: "Impostos / NF", valor: preco.impostosProjeto },
+          ]}
         />
       )}
 

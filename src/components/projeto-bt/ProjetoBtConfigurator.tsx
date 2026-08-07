@@ -358,12 +358,14 @@ export function ProjetoBtConfigurator({ propostaId, criadoPor }: { propostaId?: 
       <EquipeResponsavelCard estado={equipe} />
       <EquipeResponsavelCard estado={equipeOrc} />
 
+      {/* Sem alíquota própria: usa a padrão da plataforma, que o hook traz. */}
       <DetalhamentoPreco
         projeto={equipe}
         orcamento={equipeOrc}
+        baseCent={Math.round(total * 100)}
         precoCent={Math.round(total * 100)}
         precoSemEquipeCent={Math.round(total * 100)}
-        custoConfiguradorCent={0}
+        custos={[{ rotulo: "Impostos", valor: total * equipe.impostoPadrao }]}
       />
 
       <CondicoesPagamento total={total} value={cond} onChange={setCond} />

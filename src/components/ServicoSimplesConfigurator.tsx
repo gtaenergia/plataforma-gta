@@ -213,12 +213,14 @@ export function ServicoSimplesConfigurator({ serviceKey, propostaId, criadoPor }
       <EquipeResponsavelCard estado={equipe} />
       <EquipeResponsavelCard estado={equipeOrc} />
 
+      {/* Sem alíquota própria: usa a padrão da plataforma, que o hook traz. */}
       <DetalhamentoPreco
         projeto={equipe}
         orcamento={equipeOrc}
+        baseCent={Math.round(valorServico * 100)}
         precoCent={Math.round(valorServico * 100)}
         precoSemEquipeCent={Math.round(valorServico * 100)}
-        custoConfiguradorCent={0}
+        custos={[{ rotulo: "Impostos", valor: valorServico * equipe.impostoPadrao }]}
       />
 
       <CondicoesPagamento total={valorServico} value={cond} onChange={setCond} />

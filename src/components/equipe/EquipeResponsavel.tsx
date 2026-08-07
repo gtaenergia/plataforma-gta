@@ -340,53 +340,75 @@ export function EquipeResponsavelCard({ estado }: { estado: EstadoEquipe }) {
   );
 }
 
+
+/** Uma parcela de custo que o configurador já calculou. */
+export interface LinhaCusto {
+  rotulo: string;
+  /** Em REAIS — o configurador trabalha em reais; a conversão é aqui. */
+  valor: number;
+}
+
 /**
  * A conta inteira da proposta, num cartão só.
  *
- * Ficava dentro de "Equipe responsável", e ali ela estava errada de lugar: o
- * detalhamento não é sobre a equipe, é sobre o ORÇAMENTO — materiais,
- * instalação, as duas frentes de hora, imposto, lucro. Escondido dentro de um
- * cartão de apontamento, metade da conta parecia pertencer à outra metade.
+ * ## Por que o cartão não calcula custo nenhum
+ *
+ * A primeira versão recebia um "custo do configurador" e derivava o resto:
+ * imposto = preço × alíquota, lucro = preço − custo − imposto. No Solar isso
+ * produzia um número **grosseiramente errado** e, pior, plausível: ignorava
+ * kit, instalação, material CA, deslocamento, ART e comissão, e media a margem
+ * sobre o valor total quando o Solar mede sobre os SERVIÇOS — o kit é repasse.
+ * O resultado era um lucro inflado logo abaixo do painel que mostrava o lucro
+ * certo, os dois discordando na mesma tela.
+ *
+ * Agora quem calcula custo é quem sabe: cada configurador entrega as parcelas
+ * já prontas, com nome. O cartão soma, acrescenta as horas da GTA e mede a
+ * margem sobre a base que o serviço indicar. Ele não inventa uma parcela sequer.
+ *
+ * `baseCent` x `precoCent`: a margem é medida sobre a BASE (no Solar, os
+ * serviços da GTA), e o cliente paga o PREÇO (que inclui repasses como o kit).
+ * Onde não há repasse, os dois são iguais.
  */
 export function DetalhamentoPreco({
   projeto,
   orcamento,
+  custos,
+  baseCent,
   precoCent,
   precoSemEquipeCent,
-  custoConfiguradorCent,
-  imposto,
-  rotuloCustoConfigurador = "Materiais e instalação",
+  rotuloBase = "Faturamento",
 }: {
   projeto: EstadoEquipe;
   orcamento: EstadoEquipe;
+  /** As parcelas de custo já calculadas pelo serviço, imposto incluído. */
+  custos: LinhaCusto[];
+  /** Faturamento sobre o qual a margem é medida. */
+  baseCent: number;
+  /** O que o cliente paga. Igual à base quando não há repasse. */
   precoCent: number;
+  /** O que a base seria sem ninguém apontado — para mostrar o efeito. */
   precoSemEquipeCent: number;
-  custoConfiguradorCent: number;
-  /** Ausente = o serviço não tem alíquota própria; cai na da plataforma. */
-  imposto?: number;
-  rotuloCustoConfigurador?: string;
+  rotuloBase?: string;
 }) {
   if (!projeto.visivel) return null;
-  const aliq = imposto ?? projeto.impostoPadrao;
 
-  // As duas frentes somam num custo só para o motor: ele não precisa saber de
-  // qual delas veio cada hora — quem precisa é a tabela, logo abaixo.
-  const linhas = [...projeto.linhasDominio, ...orcamento.linhasDominio];
-  const c = comporProposta({
-    linhas,
-    custos: projeto.custos,
-    precoCent,
-    precoSemEquipeCent,
-    custoConfiguradorCent,
-    imposto: aliq,
-  });
-
-  const formaPreco = equipeFormaPreco(projeto.servicoKey);
-  const nomeDe = (email: string) => projeto.usuarios.find((u) => u.email === email)?.name || email;
+  const linhasEquipe = [...projeto.linhasDominio, ...orcamento.linhasDominio];
   const custoDe = (l: LinhaEquipe) => Math.round(l.horas * (projeto.custos[l.email] ?? 0) * 100);
   const somaDe = (e: EstadoEquipe) => e.linhasDominio.reduce((s, l) => s + custoDe(l), 0);
 
-  const linha = (l: LinhaEquipe, chave: string) => (
+  const custoServicoCent = custos.reduce((s, c) => s + Math.round(c.valor * 100), 0);
+  const custoEquipeCent = somaDe(projeto) + somaDe(orcamento);
+  const custoTotalCent = custoServicoCent + custoEquipeCent;
+  const lucroCent = baseCent - custoTotalCent;
+  const margem = baseCent > 0 ? lucroCent / baseCent : 0;
+  const acrescimoCent = baseCent - precoSemEquipeCent;
+  const incompleta = linhasEquipe.some((l) => !(projeto.custos[l.email] > 0));
+  const repasseCent = precoCent - baseCent;
+
+  const formaPreco = equipeFormaPreco(projeto.servicoKey);
+  const nomeDe = (email: string) => projeto.usuarios.find((u) => u.email === email)?.name || email;
+
+  const linhaPessoa = (l: LinhaEquipe, chave: string) => (
     <tr key={chave}>
       <td className="pl-6">
         {nomeDe(l.email)}
@@ -404,10 +426,10 @@ export function DetalhamentoPreco({
     <div className="section-card">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="section-title">Detalhamento do preço</h2>
-        {c.acrescimoCent !== 0 && (
+        {acrescimoCent !== 0 && (
           <Badge tone="indigo">
-            preço {c.acrescimoCent > 0 ? "+" : "−"}
-            {moeda(Math.abs(c.acrescimoCent))} pelas horas da GTA
+            {acrescimoCent > 0 ? "+" : "−"}
+            {moeda(Math.abs(acrescimoCent))} pelas horas da GTA
           </Badge>
         )}
       </div>
@@ -415,16 +437,16 @@ export function DetalhamentoPreco({
         {formaPreco
           ? "As horas da GTA entram no custo antes do Fator K — escolher quem trabalha muda o preço."
           : "O preço vem da tabela do serviço e não muda com as horas da GTA; elas aparecem aqui para medir se ele vale a pena."}{" "}
-        Uso interno: nada nesta tabela vai para o documento do cliente.
+        Uso interno: nada desta tabela vai para o documento do cliente.
       </p>
 
-      {c.prejuizo && (
+      {lucroCent < 0 && (
         <Alert tone="red" className="mt-4" titulo="O preço não cobre o custo">
-          Depois do imposto e das horas da equipe, sobra {moeda(c.lucroCent)}. Dá para gerar a proposta
-          assim; só não dá para dizer que ela vale a pena.
+          Depois de tudo, falta {moeda(Math.abs(lucroCent))}. Dá para gerar a proposta assim; só não dá
+          para dizer que ela vale a pena.
         </Alert>
       )}
-      {c.incompleta && (
+      {incompleta && (
         <Alert tone="amber" className="mt-4">
           Alguém apontado está sem custo por hora cadastrado — o custo abaixo sai por baixo do real.
         </Alert>
@@ -433,52 +455,62 @@ export function DetalhamentoPreco({
       <div className="mt-4 overflow-x-auto">
         <table className="data-table">
           <tbody>
-            {custoConfiguradorCent > 0 && (
-              <tr>
-                <td className="font-medium">{rotuloCustoConfigurador}</td>
-                <td className="text-right font-medium tabular-nums">{moeda(custoConfiguradorCent)}</td>
+            <tr>
+              <td className="font-semibold">{rotuloBase}</td>
+              <td className="text-right font-semibold tabular-nums">{moeda(baseCent)}</td>
+            </tr>
+
+            {custos.map((c) => (
+              <tr key={c.rotulo}>
+                <td className="pl-6">{c.rotulo}</td>
+                <td className="text-right tabular-nums">−{moeda(Math.round(c.valor * 100))}</td>
               </tr>
+            ))}
+
+            <tr>
+              <td className="pl-6">Execução do projeto (horas GTA)</td>
+              <td className="text-right tabular-nums">−{moeda(somaDe(projeto))}</td>
+            </tr>
+            {projeto.linhasDominio.map((l) => linhaPessoa(l, `p-${l.email}`))}
+
+            <tr>
+              <td className="pl-6">Elaboração da proposta (horas GTA)</td>
+              <td className="text-right tabular-nums">−{moeda(somaDe(orcamento))}</td>
+            </tr>
+            {orcamento.linhasDominio.map((l) => linhaPessoa(l, `o-${l.email}`))}
+
+            <tr>
+              <td className="font-medium">Custo total</td>
+              <td className="text-right font-medium tabular-nums">−{moeda(custoTotalCent)}</td>
+            </tr>
+            <tr>
+              <td className="font-semibold">Lucro</td>
+              <td className="text-right font-semibold tabular-nums">{moeda(lucroCent)}</td>
+            </tr>
+
+            {repasseCent !== 0 && (
+              <>
+                <tr>
+                  <td className="hint pt-4">Repasse ao cliente (não entra na margem)</td>
+                  <td className="hint pt-4 text-right tabular-nums">{moeda(repasseCent)}</td>
+                </tr>
+                <tr>
+                  <td className="font-semibold">Total ao cliente</td>
+                  <td className="text-right font-semibold tabular-nums">{moeda(precoCent)}</td>
+                </tr>
+              </>
             )}
-
-            <tr>
-              <td className="font-medium">Execução do projeto</td>
-              <td className="text-right font-medium tabular-nums">{moeda(somaDe(projeto))}</td>
-            </tr>
-            {projeto.linhasDominio.map((l) => linha(l, `p-${l.email}`))}
-
-            <tr>
-              <td className="font-medium">Elaboração da proposta</td>
-              <td className="text-right font-medium tabular-nums">{moeda(somaDe(orcamento))}</td>
-            </tr>
-            {orcamento.linhasDominio.map((l) => linha(l, `o-${l.email}`))}
-
-            <tr>
-              <td className="font-semibold">Custo total</td>
-              <td className="text-right font-semibold tabular-nums">{moeda(c.custoTotalCent)}</td>
-            </tr>
-            <tr>
-              <td>Imposto ({pct(aliq)})</td>
-              <td className="text-right tabular-nums">{moeda(c.impostoCent)}</td>
-            </tr>
-            <tr>
-              <td>Lucro</td>
-              <td className="text-right tabular-nums">{moeda(c.lucroCent)}</td>
-            </tr>
-            <tr>
-              <td className="font-semibold">Preço ao cliente</td>
-              <td className="text-right font-semibold tabular-nums">{moeda(c.precoCent)}</td>
-            </tr>
           </tbody>
         </table>
       </div>
 
       <KpiGrid className="mt-4">
-        <Kpi label="Custo total" value={moeda(c.custoTotalCent)} />
-        <Kpi label="Preço ao cliente" value={moeda(c.precoCent)} destaque />
+        <Kpi label="Custo total" value={moeda(custoTotalCent)} />
+        <Kpi label={repasseCent !== 0 ? "Total ao cliente" : "Preço ao cliente"} value={moeda(precoCent)} destaque />
         <Kpi
           label="Margem líquida"
-          value={pct(c.margem)}
-          tone={c.margem < 0 ? "red" : c.margem < 0.15 ? "amber" : "green"}
+          value={pct(margem)}
+          tone={margem < 0 ? "red" : margem < 0.15 ? "amber" : "green"}
         />
       </KpiGrid>
     </div>

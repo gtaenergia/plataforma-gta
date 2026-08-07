@@ -160,7 +160,10 @@ interface Calc {
   bom: { qtde: string; descricao: string }[];
   pricing: null | {
     valorTotal: number; servicos: number; margem: number; margemLiquida: number; lucro: number; lucroLiquido: number;
-    custos: { instalacao: number; materialCa: number; deslocamento: number; art: number; imposto: number; comissao: number; total: number };
+    /* Espelha `PricingResult["custos"]` do engine. Faltavam `execucaoCivil` e
+       `cartorio`: o tipo mais estreito não dava erro, só deixava duas parcelas
+       reais fora do detalhamento — e a conta na tela fecharia errado. */
+    custos: { instalacao: number; materialCa: number; deslocamento: number; execucaoCivil: number; art: number; cartorio: number; imposto: number; comissao: number; total: number };
   };
   economia: null | {
     economiaAno1: number; economiaMensalMedia: number; gastoSemSolarAno1: number; gastoComSolarAno1: number;
@@ -385,13 +388,10 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
     setForm((f) => ({ ...f, nPaineis: nP, potenciaInversor: inv, qtdInversores: 1, microPotenciaKw: 0, microQtd: 0 }));
   }
 
-  const nivelMargem = useMemo(() => {
-    const m = calc?.pricing?.margemLiquida ?? 0;
-    if (!calc?.pricing) return null;
-    if (m >= 0.3) return { cls: "bg-green-100 text-green-800", label: "saudável" };
-    if (m >= 0.15) return { cls: "bg-amber-100 text-amber-800", label: "atenção" };
-    return { cls: "bg-red-100 text-red-700", label: "baixa" };
-  }, [calc?.pricing]);
+  /* `nivelMargem` vivia aqui, pintando a pílula de margem do painel que foi
+     removido. O semáforo agora é o do `DetalhamentoPreco`, igual ao dos outros
+     onze serviços — e as cores não tinham variante `dark:`, então no tema
+     escuro o texto verde ficava sobre fundo verde-claro. */
 
   /**
    * O dimensionamento mudou DEPOIS que o usuário começou a editar a lista?
@@ -1038,37 +1038,38 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
           </Campo>
         </div>
 
-        {calc?.pricing && (
-          <div className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-4 text-sm sm:grid-cols-4 dark:bg-slate-900/50">
-            <Kpi label="Valor total" value={brl(calc.pricing.valorTotal)} destaque />
-            <Kpi label="Serviços GTA" value={brl(calc.pricing.servicos)} />
-            <Kpi label="Lucro (líq.)" value={brl(calc.pricing.lucroLiquido)} />
-            <div className="rounded-md bg-white p-2 shadow-sm dark:bg-slate-800">
-              <div className="text-xs text-slate-600 dark:text-slate-400">Margem líquida</div>
-              <div className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-sm font-semibold ${nivelMargem?.cls}`}>
-                {pct(calc.pricing.margemLiquida)} · {nivelMargem?.label}
-              </div>
-            </div>
-            <div className="col-span-2 text-xs text-slate-600 sm:col-span-4 dark:text-slate-400">
-              Custos: instalação {brl(calc.pricing.custos.instalacao)} · material CA {brl(calc.pricing.custos.materialCa)} ·
-              deslocamento {brl(calc.pricing.custos.deslocamento)} · ART {brl(calc.pricing.custos.art)} ·
-              imposto {brl(calc.pricing.custos.imposto)} · comissão {brl(calc.pricing.custos.comissao)}
-            </div>
-          </div>
-        )}
+        {/* Os números saíram daqui: viviam neste painel E no detalhamento logo
+            abaixo, discordando um do outro. Agora existe um lugar só — o
+            cartão "Detalhamento do preço". */}
       </section>
 
       {/* Condições de pagamento (seção compartilhada) */}
       <EquipeResponsavelCard estado={equipe} />
       <EquipeResponsavelCard estado={equipeOrc} />
 
-      <DetalhamentoPreco
-        projeto={equipe}
-        orcamento={equipeOrc}
-        precoCent={Math.round((calc?.pricing?.valorTotal ?? 0) * 100)}
-        precoSemEquipeCent={Math.round((calc?.pricing?.valorTotal ?? 0) * 100)}
-        custoConfiguradorCent={0}
-      />
+      {/* A margem do Solar é medida sobre os SERVIÇOS, não sobre o valor
+          total: o kit e a execução civil são repasse. As parcelas abaixo são
+          exatamente as que o engine usa, para o cartão concordar com ele. */}
+      {calc?.pricing && (
+        <DetalhamentoPreco
+          projeto={equipe}
+          orcamento={equipeOrc}
+          rotuloBase="Serviços GTA"
+          baseCent={Math.round(calc.pricing.servicos * 100)}
+          precoCent={Math.round(calc.pricing.valorTotal * 100)}
+          precoSemEquipeCent={Math.round(calc.pricing.servicos * 100)}
+          custos={[
+            { rotulo: "Instalação", valor: calc.pricing.custos.instalacao },
+            { rotulo: "Material CA", valor: calc.pricing.custos.materialCa },
+            { rotulo: "Deslocamento", valor: calc.pricing.custos.deslocamento },
+            { rotulo: "Execução civil", valor: calc.pricing.custos.execucaoCivil },
+            { rotulo: "ART", valor: calc.pricing.custos.art },
+            { rotulo: "Cartório", valor: calc.pricing.custos.cartorio },
+            { rotulo: "Imposto", valor: calc.pricing.custos.imposto },
+            { rotulo: "Comissão", valor: calc.pricing.custos.comissao },
+          ]}
+        />
+      )}
 
       <CondicoesPagamento total={calc?.pricing?.valorTotal ?? 0} value={cond} onChange={setCond} />
 

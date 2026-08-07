@@ -476,10 +476,10 @@ export function SubestacaoConfigurator({ propostaId, criadoPor }: { propostaId?:
       <DetalhamentoPreco
         projeto={equipe}
         orcamento={equipeOrc}
+        baseCent={Math.round(total * 100)}
         precoCent={Math.round(total * 100)}
         precoSemEquipeCent={Math.round(total * 100)}
-        custoConfiguradorCent={0}
-        imposto={total > 0 && parseBR(form.impostos) > 0 ? parseBR(form.impostos) / total : undefined}
+        custos={[{ rotulo: "Impostos", valor: parseBR(form.impostos) }]}
       />
 
       <CondicoesPagamento total={total} value={cond} onChange={setCond} />

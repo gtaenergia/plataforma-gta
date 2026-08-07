@@ -287,11 +287,15 @@ export function ExecucaoSubestacaoConfigurator({ propostaId, criadoPor }: { prop
         <DetalhamentoPreco
           projeto={equipe}
           orcamento={equipeOrc}
-          precoCent={Math.round(preco.faturamento * 100)}
+          baseCent={Math.round(preco.faturamento * 100)}
+          precoCent={Math.round(totalCliente * 100)}
           precoSemEquipeCent={Math.round(preco.faturamentoSemEquipe * 100)}
-          custoConfiguradorCent={Math.round(preco.custoSemEquipe * 100)}
-          rotuloCustoConfigurador="Custo orçado no levantamento"
-          imposto={preco.faturamento > 0 ? preco.impostos / preco.faturamento : 0}
+          custos={[
+            { rotulo: "Materiais", valor: preco.custoMateriais },
+            { rotulo: "Mão de obra", valor: preco.custoMaoObra },
+            { rotulo: "Projeto, ART e outros", valor: preco.custoProjetoOutros },
+            { rotulo: "Impostos / NF", valor: preco.impostos },
+          ]}
         />
       )}
 
