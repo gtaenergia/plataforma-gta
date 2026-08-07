@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { urlDaLista } from "./filtros";
 import { Alert, Loading, SectionCard } from "@/components/ui";
 import { SeletorTipoDemanda } from "@/components/capacidade/SeletorTipoDemanda";
+import { Combobox } from "@/components/Combobox";
 import { SugestaoResponsavel } from "./SugestaoResponsavel";
 import { FORM_VAZIO, comCategoria, comTipoDemanda, paraPayload, type FormState } from "./formulario";
 import { horasParaMin, minParaHoras, useCapacidade } from "@/components/capacidade/comum";
@@ -144,17 +145,6 @@ export function NovaTarefaForm({ podeEditarCatalogo }: { podeEditarCatalogo: boo
         </Alert>
       )}
 
-      <datalist id="nova-clientes">
-        {clientes.map((c) => (
-          <option key={c} value={c} />
-        ))}
-      </datalist>
-      <datalist id="nova-categorias">
-        {categorias.map((c) => (
-          <option key={c} value={c} />
-        ))}
-      </datalist>
-
       <SectionCard title="Identificação" subtitle="O que precisa ser feito e para qual cliente.">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div className="sm:col-span-6">
@@ -181,13 +171,13 @@ export function NovaTarefaForm({ podeEditarCatalogo }: { podeEditarCatalogo: boo
           </div>
           <div className="sm:col-span-3">
             <label className="field-label" htmlFor="nt-cliente">Cliente</label>
-            <input
+            <Combobox
               id="nt-cliente"
-              className="field-input"
-              list="nova-clientes"
               value={form.cliente}
-              onChange={(e) => setForm({ ...form, cliente: e.target.value })}
+              onChange={(v) => setForm({ ...form, cliente: v })}
+              options={clientes}
               placeholder="Ex.: CPDF, Fazenda Rio Doce…"
+              rotuloNovo="Novo cliente: “{v}”"
             />
           </div>
           <div className="sm:col-span-3">
@@ -215,13 +205,13 @@ export function NovaTarefaForm({ podeEditarCatalogo }: { podeEditarCatalogo: boo
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
           <div className="sm:col-span-2">
             <label className="field-label" htmlFor="nt-categoria">Categoria</label>
-            <input
+            <Combobox
               id="nt-categoria"
-              className="field-input"
-              list="nova-categorias"
               value={form.categoria}
-              onChange={(e) => setForm(comCategoria(form, e.target.value))}
+              onChange={(v) => setForm(comCategoria(form, v))}
+              options={categorias}
               placeholder="Ex.: Orçamentos"
+              rotuloNovo="Nova categoria: “{v}”"
             />
           </div>
           <div className="sm:col-span-2">
