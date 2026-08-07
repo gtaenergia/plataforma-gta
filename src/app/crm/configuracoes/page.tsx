@@ -41,7 +41,7 @@ const CATEGORIAS: { titulo: string; subtitulo: string; itens: ItemConfig[] }[] =
     titulo: "Configure seu processo de venda",
     subtitulo: "O desenho do funil e os campos que cada negociação precisa carregar.",
     itens: [
-      { label: "Funis de venda", descricao: "Criar funis e ordenar as etapas de cada um (até 12 etapas)." },
+      { label: "Funis de venda", descricao: "Criar funis e ordenar as etapas de cada um (até 12 etapas).", href: "/crm/configuracoes/funis" },
       { label: "Configurar campos", descricao: "Campos personalizados de negociação, contato, empresa e produto: texto, data, escolha única e múltipla, com obrigatoriedade por etapa." },
     ],
   },
@@ -63,10 +63,10 @@ const CATEGORIAS: { titulo: string; subtitulo: string; itens: ItemConfig[] }[] =
     titulo: "Ajustes da conta",
     subtitulo: "As listas que alimentam os campos de escolha das negociações.",
     itens: [
-      { label: "Fontes e campanhas", descricao: "De onde a negociação veio, para medir o retorno de cada ação." },
-      { label: "Produtos e serviços", descricao: "O catálogo do que se vende, com preço base. Itens fora de linha são ocultados, nunca excluídos." },
+      { label: "Fontes", descricao: "De onde a negociação veio, para medir o retorno de cada ação.", href: "/crm/configuracoes/fontes" },
+      { label: "Produtos e serviços", descricao: "O catálogo do que se vende, com preço base. Itens fora de linha são ocultados, nunca excluídos.", href: "/crm/configuracoes/produtos" },
       { label: "Segmentos", descricao: "Área de atuação das empresas." },
-      { label: "Motivo de perda", descricao: "Por que a negociação não foi ganha. Configurável por funil." },
+      { label: "Motivo de perda", descricao: "Por que a negociação não foi ganha. Toda perda exige um motivo.", href: "/crm/configuracoes/motivos-perda" },
       { label: "Informações pré-definidas", descricao: "Textos e valores que já vêm preenchidos ao criar uma negociação." },
       { label: "Modelos de e-mail", descricao: "Mensagens prontas para enviar a partir da negociação." },
     ],

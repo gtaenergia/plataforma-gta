@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CrmShell } from "@/components/crm/CrmShell";
-import { EmBreve } from "@/components/crm/EmBreve";
+import { CrmInicio } from "@/components/crm/CrmInicio";
 import { SectionCard } from "@/components/ui";
 import { getProduto } from "@/lib/produtos/registry";
 
@@ -14,7 +14,8 @@ export default async function CrmInicioPage() {
       subtitulo="A ferramenta comercial da GTA: do primeiro contato ao fechamento. Empresas, contatos, negociações no funil e as tarefas de cada uma."
     >
       <div className="space-y-4">
-        <SectionCard title="Onde ir" subtitle="As telas do CRM. Empresas já está no ar; as demais chegam nas próximas entregas.">
+        <CrmInicio />
+        <SectionCard title="Onde ir">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {atalhos.map((i) => (
               <Link
@@ -27,17 +28,6 @@ export default async function CrmInicioPage() {
             ))}
           </div>
         </SectionCard>
-
-        <EmBreve
-          titulo="Painel do CRM"
-          descricao="O resumo do momento comercial, na abertura da ferramenta."
-          itens={[
-            "Indicadores do período: negociações abertas, valor em funil, ganhas, perdidas e ticket médio",
-            "As suas tarefas de hoje e as atrasadas, com um clique para concluir ou adiar",
-            "As negociações que mais tempo estão paradas na mesma etapa",
-            "Desempenho contra a meta do mês, por vendedor e por equipe",
-          ]}
-        />
       </div>
     </CrmShell>
   );

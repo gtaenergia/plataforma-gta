@@ -20,6 +20,13 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "crm-funil-negociacoes-2026-08",
+    titulo: "CRM: funil, negociações, contatos e configurações no ar",
+    mensagem:
+      "O CRM deixou de ser esqueleto: crie negociações e acompanhe-as no quadro do funil (arraste entre etapas), registre contatos, vincule produtos e mantenha o histórico de cada negociação — toda perda pede motivo. Em Configurações, monte seus funis, fontes, motivos de perda e o catálogo de produtos.",
+    link: "/crm/funil",
+  },
+  {
     slug: "crm-dois-em-um-2026-08",
     titulo: "A plataforma agora tem duas ferramentas",
     mensagem:
