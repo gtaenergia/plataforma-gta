@@ -17,6 +17,7 @@ import { ConexaoAjuda } from "@/components/ajuda/ConexaoAjuda";
 import { AnalisadorAjuda } from "@/components/ajuda/AnalisadorAjuda";
 import { LaudoAjuda } from "@/components/ajuda/LaudoAjuda";
 import { LimpezaAjuda } from "@/components/ajuda/LimpezaAjuda";
+import { MaoDeObraAjuda } from "@/components/ajuda/MaoDeObraAjuda";
 
 /** Conteúdo da ajuda por serviço. Adicione um case ao criar o componente. */
 function conteudoAjuda(servico: string) {
@@ -45,6 +46,8 @@ function conteudoAjuda(servico: string) {
       return <LaudoAjuda />;
     case "limpeza":
       return <LimpezaAjuda />;
+    case "mao-de-obra":
+      return <MaoDeObraAjuda />;
     default:
       return null;
   }

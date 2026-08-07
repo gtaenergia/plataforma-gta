@@ -16,4 +16,5 @@ export const SERVICOS_COM_AJUDA = new Set<string>([
   "analisador",
   "laudo-inspecao",
   "limpeza",
+  "mao-de-obra",
 ]);
