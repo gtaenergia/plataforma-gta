@@ -20,6 +20,13 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "proposta-mao-de-obra-2026-08",
+    titulo: "Novidade: proposta de Fornecimento de Mão de Obra",
+    mensagem:
+      "A conta da calculadora de mão de obra agora vira proposta: monte a equipe por função e hora, acrescente materiais, ferramentas e equipamentos, e gere o .docx no padrão da plataforma. O preço sai do custo com imposto e margem; a relação de materiais entra na proposta automaticamente. No card “Fornecimento de Mão de Obra”, em Nova proposta.",
+    link: "/nova/mao-de-obra",
+  },
+  {
     slug: "crm-tarefas-2026-08",
     titulo: "CRM: agenda de tarefas por negociação",
     mensagem:

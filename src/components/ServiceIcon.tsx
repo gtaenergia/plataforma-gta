@@ -11,6 +11,7 @@ import {
   PanelsTopLeft,
   PencilRuler,
   Sparkles,
+  Users,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
@@ -33,6 +34,7 @@ const MAP: Record<string, LucideIcon> = {
   carregador: BatteryCharging,
   qgbt: PanelsTopLeft,
   "projeto-bt": PencilRuler,
+  "mao-de-obra": Users,
   limpeza: Sparkles,
 };
 

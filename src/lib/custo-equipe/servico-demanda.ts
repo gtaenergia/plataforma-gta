@@ -75,6 +75,13 @@ const MAPA: Readonly<Record<string, TiposDoServico>> = {
   "laudo-inspecao": { projeto: null, orcamento: null },
   analisador: { projeto: null, orcamento: null },
   limpeza: { projeto: null, orcamento: null },
+
+  /*
+   * Fornecimento de mão de obra: o trabalho vendido é de equipe TERCEIRIZADA
+   * (o catálogo de demandas mede a equipe interna), e o tempo de montar a
+   * proposta varia com a obra — não há tipo honesto em nenhum escopo.
+   */
+  "mao-de-obra": { projeto: null, orcamento: null },
 };
 
 /** O tipo sugerido para um serviço num escopo, ou `undefined` se não há honesto. */

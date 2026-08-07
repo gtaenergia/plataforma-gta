@@ -11,6 +11,7 @@ import { limpezaPlacasService } from "./limpeza";
 import { conexaoConcessionariaService } from "./conexao-concessionaria";
 import { analisadorEnergiaService } from "./analisador-energia";
 import { projetoEletricoBtService } from "./projeto-bt";
+import { maoDeObraService } from "./mao-de-obra";
 
 /**
  * Registro central de serviços da plataforma.
@@ -35,6 +36,7 @@ export const SERVICES: ServiceModule[] = [
   carregadorService,
   qgbtService,
   projetoEletricoBtService,
+  maoDeObraService,
   limpezaPlacasService,
   // Último de propósito: é a saída para o que NÃO se encaixa nos anteriores,
   // e quem procura deve esbarrar nos configuradores específicos primeiro.
