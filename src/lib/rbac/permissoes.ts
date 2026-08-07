@@ -25,6 +25,15 @@ export const PERMISSOES = {
   // A chave fica "tracker.*" por compatibilidade: ela está gravada nos cargos
   // (jsonb no banco) e renomear revogaria em silêncio quem já a tem.
   "tracker.ver_equipe": "Ver os apontamentos de horas de outros usuários",
+  // CRM — a segunda ferramenta da conta. As chaves entram já com o nome
+  // definitivo, ainda que as telas desta primeira entrega sejam esqueleto: uma
+  // vez concedidas num cargo elas ficam gravadas em jsonb, e renomear depois
+  // revogaria em silêncio quem já as tiver.
+  "crm.acessar": "Acessar o CRM",
+  "crm.negociacoes.editar": "Criar e editar negociações",
+  "crm.cadastros.editar": "Criar e editar empresas e contatos",
+  "crm.relatorios.ver": "Ver os relatórios do CRM",
+  "crm.configurar": "Configurar funis, etapas, fontes, motivos de perda e produtos",
 } as const;
 
 export type PermissaoKey = keyof typeof PERMISSOES;
@@ -48,6 +57,10 @@ export const PERMISSOES_POR_MODULO: { modulo: string; chaves: PermissaoKey[] }[]
   {
     modulo: "Apontamentos (registro de horas)",
     chaves: ["tracker.ver_equipe"],
+  },
+  {
+    modulo: "CRM",
+    chaves: ["crm.acessar", "crm.negociacoes.editar", "crm.cadastros.editar", "crm.relatorios.ver", "crm.configurar"],
   },
   {
     modulo: "Administração",

@@ -20,6 +20,13 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "crm-dois-em-um-2026-08",
+    titulo: "A plataforma agora tem duas ferramentas",
+    mensagem:
+      "O que você já usava passa a se chamar Operações — propostas, aprovações, tarefas e apontamentos, sem nenhuma mudança. Ao lado dele nasce o CRM, com funil de vendas, negociações, contatos e empresas. Troque de ferramenta pelo seletor ao lado do logo. O cadastro de Clientes virou Empresas e agora fica no CRM.",
+    link: "/crm",
+  },
+  {
     slug: "proposta-registrada-2026-08",
     titulo: "Novidade: registrar proposta feita fora da plataforma",
     mensagem:

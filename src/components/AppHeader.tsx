@@ -3,18 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Settings, Sun } from "lucide-react";
 import { NotificacoesSino } from "./NotificacoesSino";
+import { SeletorProduto, SeletorProdutoLista } from "./SeletorProduto";
 import { Avatar } from "./ui";
-
-const NAV = [
-  { href: "/", label: "Nova proposta" },
-  { href: "/propostas", label: "Propostas" },
-  { href: "/aprovacoes", label: "Aprovações" },
-  { href: "/clientes", label: "Clientes" },
-  { href: "/tarefas", label: "Tarefas" },
-  { href: "/apontamentos", label: "Apontamentos" },
-];
+import { itemAtivo, produtoDaRota } from "@/lib/produtos/registry";
 
 /**
  * `avatarUrl` chega por prop, e não por fetch. A versão anterior buscava
@@ -26,6 +19,9 @@ const NAV = [
 export function AppHeader({ userName, avatarUrl, isAdmin }: { userName?: string; avatarUrl?: string; isAdmin?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
+  /* A ferramenta ativa sai da rota, não de uma prop: assim as ~22 páginas que
+     montam esta casca seguem intocadas, e um link direto abre no lugar certo. */
+  const produto = produtoDaRota(pathname);
   const [menuAberto, setMenuAberto] = useState(false);
   const [navAberto, setNavAberto] = useState(false);
   const [dark, setDark] = useState(false);
@@ -68,14 +64,13 @@ export function AppHeader({ userName, avatarUrl, isAdmin }: { userName?: string;
     router.refresh();
   }
 
-  function isActive(href: string) {
-    return href === "/" ? pathname === "/" || pathname.startsWith("/nova") : pathname.startsWith(href);
-  }
-
   return (
     <header className="bg-gradient-to-r from-gta-navy to-gta-navy2 text-white">
       <div className="app-container flex items-center justify-between gap-2 py-3">
-        <div className="flex items-center gap-2 md:gap-6">
+        {/* `min-w-0` para que a navegação possa encolher em vez de empurrar o
+            perfil para fora da tela: o CRM tem sete itens, e num tablet eles
+            não cabem inteiros ao lado da marca e do seletor. */}
+        <div className="flex min-w-0 items-center gap-2 md:gap-4 lg:gap-6">
           {/* Hamburguer — só no mobile */}
           {userName && (
             <button
@@ -97,18 +92,26 @@ export function AppHeader({ userName, avatarUrl, isAdmin }: { userName?: string;
           )}
           {/* `toque` só existe dentro da media query de dedo: no celular o link
               da marca tinha 32px de altura, abaixo do alvo mínimo. */}
-          <Link href="/" className="toque flex items-center gap-2.5">
+          <Link href={produto.home} className="toque flex shrink-0 items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/gta-icon.png" alt="GTA" className="h-8 w-8" />
-            <span className="text-base font-bold tracking-tight sm:text-lg">GTA Energia</span>
+            {/* Com o seletor de ferramenta ao lado, o nome por extenso só cabe a
+                partir do desktop; abaixo disso o ícone já identifica a marca. */}
+            <span className="text-base font-bold tracking-tight sm:text-lg md:hidden lg:inline">GTA Energia</span>
           </Link>
-          <nav className="hidden items-center gap-1 text-sm md:flex">
-            {NAV.map((item) => (
+          {/* O seletor só aparece logado: na tela de login não há ferramenta a trocar. */}
+          {userName && (
+            <div className="hidden shrink-0 md:block">
+              <SeletorProduto ativo={produto} />
+            </div>
+          )}
+          <nav className="sem-barra-rolagem hidden min-w-0 items-center gap-1 overflow-x-auto text-sm md:flex">
+            {produto.nav.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded px-3 py-1.5 transition ${
-                  isActive(item.href)
+                className={`shrink-0 whitespace-nowrap rounded px-3 py-1.5 transition ${
+                  itemAtivo(pathname, item)
                     ? "bg-white/15 font-semibold text-white"
                     : "text-slate-300 hover:bg-white/10 hover:text-white"
                 }`}
@@ -120,7 +123,19 @@ export function AppHeader({ userName, avatarUrl, isAdmin }: { userName?: string;
         </div>
 
         {userName && (
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
+            {/* Como no RD Station, as configurações da ferramenta ficam atrás de
+                uma engrenagem, fora do menu principal. */}
+            {produto.config && (
+              <Link
+                href={produto.config.href}
+                className="acao-cabecalho acao-cabecalho-icone"
+                aria-label={`${produto.config.label} do ${produto.label}`}
+                aria-current={itemAtivo(pathname, produto.config) ? "page" : undefined}
+              >
+                <Settings className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+              </Link>
+            )}
             <NotificacoesSino />
             <div className="relative" ref={menuRef}>
             <button
@@ -196,13 +211,14 @@ export function AppHeader({ userName, avatarUrl, isAdmin }: { userName?: string;
       {/* Navegação mobile (gaveta) */}
       {userName && navAberto && (
         <nav id="mobile-nav" className="border-t border-white/10 px-2 pb-2 md:hidden">
-          {NAV.map((item) => (
+          <SeletorProdutoLista ativo={produto} onNavigate={() => setNavAberto(false)} />
+          {produto.nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => setNavAberto(false)}
               className={`block rounded px-3 py-2.5 text-sm transition ${
-                isActive(item.href)
+                itemAtivo(pathname, item)
                   ? "bg-white/15 font-semibold text-white"
                   : "text-slate-200 hover:bg-white/10 hover:text-white"
               }`}
@@ -210,6 +226,19 @@ export function AppHeader({ userName, avatarUrl, isAdmin }: { userName?: string;
               {item.label}
             </Link>
           ))}
+          {produto.config && (
+            <Link
+              href={produto.config.href}
+              onClick={() => setNavAberto(false)}
+              className={`block rounded px-3 py-2.5 text-sm transition ${
+                itemAtivo(pathname, produto.config)
+                  ? "bg-white/15 font-semibold text-white"
+                  : "text-slate-200 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              {produto.config.label}
+            </Link>
+          )}
         </nav>
       )}
       <div className="h-1 w-full bg-gta-orange" />

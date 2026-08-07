@@ -1,0 +1,76 @@
+import { NextResponse } from "next/server";
+import { getFunilStore } from "@/lib/crm/funis-store";
+import { getNegociacaoStore, novaAnotacao } from "@/lib/crm/negociacoes-store";
+import { atualizarNegociacaoSchema } from "@/lib/crm/types";
+import { getCurrentUser } from "@/lib/session";
+
+export const runtime = "nodejs";
+
+type Ctx = { params: Promise<{ id: string }> };
+
+export async function GET(_req: Request, ctx: Ctx) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  const { id } = await ctx.params;
+  const negociacao = await getNegociacaoStore().get(id);
+  if (!negociacao) return NextResponse.json({ error: "Negociação não encontrada." }, { status: 404 });
+  return NextResponse.json({ negociacao });
+}
+
+export async function PATCH(req: Request, ctx: Ctx) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  const { id } = await ctx.params;
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Corpo inválido." }, { status: 400 });
+  }
+  const parsed = atualizarNegociacaoSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Dados inválidos.", issues: parsed.error.flatten() }, { status: 422 });
+  }
+
+  const store = getNegociacaoStore();
+  const atual = await store.get(id);
+  if (!atual) return NextResponse.json({ error: "Negociação não encontrada." }, { status: 404 });
+
+  // Mudança de etapa (o arrasto no quadro) valida o destino e entra no
+  // histórico — é o "changelog" do RD, gerado pelo sistema.
+  let registroDeMovimento: string | null = null;
+  if (parsed.data.etapaId && parsed.data.etapaId !== atual.etapaId) {
+    const funil = await getFunilStore().get(parsed.data.funilId ?? atual.funilId);
+    if (!funil) return NextResponse.json({ error: "Funil não encontrado." }, { status: 422 });
+    const destino = funil.etapas.find((e) => e.id === parsed.data.etapaId);
+    if (!destino) return NextResponse.json({ error: "Etapa não pertence ao funil." }, { status: 422 });
+    const origem = funil.etapas.find((e) => e.id === atual.etapaId);
+    registroDeMovimento = origem
+      ? `Movida de "${origem.nome}" para "${destino.nome}".`
+      : `Movida para "${destino.nome}".`;
+  }
+
+  const negociacao = await store.update(id, parsed.data);
+  if (!negociacao) return NextResponse.json({ error: "Negociação não encontrada." }, { status: 404 });
+
+  const final = registroDeMovimento
+    ? (await store.appendAnotacao(id, novaAnotacao({
+        tipo: "sistema",
+        texto: registroDeMovimento,
+        autor: user.email,
+        autorNome: user.name || user.email,
+      }))) ?? negociacao
+    : negociacao;
+
+  return NextResponse.json({ negociacao: final });
+}
+
+export async function DELETE(_req: Request, ctx: Ctx) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  const { id } = await ctx.params;
+  const ok = await getNegociacaoStore().remove(id);
+  if (!ok) return NextResponse.json({ error: "Negociação não encontrada." }, { status: 404 });
+  return NextResponse.json({ ok: true });
+}
