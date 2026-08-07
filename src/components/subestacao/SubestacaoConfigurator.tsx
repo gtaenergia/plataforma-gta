@@ -331,7 +331,7 @@ export function SubestacaoConfigurator({ propostaId, criadoPor }: { propostaId?:
         <h2 className="section-title">Cliente e local</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
           <Campo className="sm:col-span-3" label="Nome do cliente *">
-            <ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} />
+            <ClienteInput value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} />
           </Campo>
           <Campo className="sm:col-span-3" label="Cidade/UF *">
             <input className="field-input" value={form.cidadeUf} onChange={(e) => set("cidadeUf", e.target.value)} placeholder="Ex.: Goianápolis/GO" />

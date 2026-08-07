@@ -224,14 +224,6 @@ export function TaskList() {
 
   return (
     <div className="space-y-4">
-      {/* Autocomplete: sugestões a partir dos clientes já cadastrados */}
-      <datalist id="tarefa-clientes">
-        {clientes.map((c) => <option key={c} value={c} />)}
-      </datalist>
-      <datalist id="tarefa-categorias">
-        {categorias.map((c) => <option key={c} value={c} />)}
-      </datalist>
-
       {/* toolbar — `.card` em vez de Tailwind solto: a definição estava
           duplicada, e mudar o cartão do sistema deixaria a barra para trás. */}
       <div className="card flex flex-col gap-2 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">

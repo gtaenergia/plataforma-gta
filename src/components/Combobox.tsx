@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Plus } from "lucide-react";
-import { ITEM_NOVO, itensVisiveis, moverAtivo, valorEscolhido } from "./combobox-lista";
+import { ITEM_NOVO, itensVisiveis, moverAtivo, recortar, valorEscolhido } from "./combobox-lista";
 
 /**
  * Escolher de uma lista — com a opção de acrescentar um valor que não está nela.
@@ -55,6 +55,8 @@ export interface ComboboxProps {
   className?: string;
   /** Texto do item de criação. `{v}` é trocado pelo que foi digitado. */
   rotuloNovo?: string;
+  /** Máximo de itens no DOM. A busca continua cobrindo a lista inteira. */
+  maxVisiveis?: number;
 }
 
 export function Combobox({
@@ -67,6 +69,7 @@ export function Combobox({
   disabled,
   className = "",
   rotuloNovo = "Usar “{v}”",
+  maxVisiveis = 100,
   ...resto
 }: ComboboxProps) {
   const gerado = useId();
@@ -81,10 +84,16 @@ export function Combobox({
   /* A lógica de lista mora em `combobox-lista.ts`, testada sem navegador. Aqui
      havia uma cópia dela — e cópia de regra é o que fez o preço do carregador
      divergir entre engine e tela. */
-  const itens = useMemo(
-    () => itensVisiveis(options, busca, permitirNovo),
-    [options, busca, permitirNovo],
-  );
+  const { itens, ocultos } = useMemo(() => {
+    const todos = itensVisiveis(options, busca, permitirNovo);
+    const r = recortar(todos, maxVisiveis);
+    /* O item de criar não pode ser cortado: ele mora no fim, e é justamente com
+       lista grande que ele mais importa. */
+    if (r.ocultos > 0 && todos[todos.length - 1] === ITEM_NOVO) {
+      r.visiveis[r.visiveis.length - 1] = ITEM_NOVO;
+    }
+    return { itens: r.visiveis, ocultos: r.ocultos };
+  }, [options, busca, permitirNovo, maxVisiveis]);
 
   useEffect(() => {
     if (!aberto) return;
@@ -246,6 +255,11 @@ export function Combobox({
               );
             })}
           </ul>
+          {ocultos > 0 && (
+            <div className="border-t border-slate-200 px-3 py-1.5 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+              Mostrando {itens.length} de {options.length} — continue digitando para refinar.
+            </div>
+          )}
         </div>
       )}
     </div>

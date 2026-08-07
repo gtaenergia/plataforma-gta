@@ -168,8 +168,8 @@ export function RegistrarPropostaForm() {
           )}
           <Campo className="sm:col-span-3" label="Cliente *">
             <ClienteInput
-              className="field-input"
-              listId="registrar-clientes"
+             
+             
               value={cliente}
               onNome={setCliente}
               onCidadeUf={setCidadeUf}

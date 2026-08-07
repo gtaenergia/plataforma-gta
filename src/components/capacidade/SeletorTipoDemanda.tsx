@@ -4,13 +4,14 @@ import { useEffect, useId, useState } from "react";
 import { acharTipo, tiposDaCategoria } from "@/lib/capacidade/motor";
 import type { ConfigCapacidade } from "@/lib/capacidade/types";
 import { horasParaMin, minParaHoras } from "./comum";
+import { Combobox } from "@/components/Combobox";
 
 /**
  * Tipo de demanda dentro da categoria.
  *
- * Campo de texto com sugestões (`datalist`), o mesmo padrão de Cliente e
- * Categoria: digitar é o ato natural e o catálogo é atalho, não trava. Demanda
- * específica é rotina numa empresa de projetos.
+ * `Combobox` como Cliente e Categoria: o catálogo é atalho, não trava —
+ * demanda específica é rotina numa empresa de projetos, e o item "Descrever"
+ * aceita o que não está na lista.
  *
  * Ao digitar um tipo que não existe, abre-se um bloco para CONFIGURÁ-LO — a
  * duração — e a decisão fica com quem está preenchendo: usar só nesta tarefa
@@ -64,21 +65,16 @@ export function SeletorTipoDemanda({
 
   return (
     <>
-      <input
+      <Combobox
         id={id}
-        className="field-input"
-        list={listaId}
         value={valor}
         disabled={semCategoria}
         aria-label="Tipo de demanda"
         placeholder={semCategoria ? "Escolha a categoria primeiro" : "Escolha ou descreva"}
-        onChange={(e) => onChange(e.target.value)}
+        options={tipos.map((t) => t.nome)}
+        rotuloNovo="Descrever: “{v}”"
+        onChange={onChange}
       />
-      <datalist id={listaId}>
-        {tipos.map((t) => (
-          <option key={t.id} value={t.nome} />
-        ))}
-      </datalist>
 
       {!semCategoria && !mostrarBloco && (
         <p className="hint mt-1">

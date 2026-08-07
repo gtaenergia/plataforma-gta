@@ -15,6 +15,7 @@ import { CopyButton } from "@/components/CopyButton";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { TelhadoSimulador, type EstudoTelhadoSalvo } from "./TelhadoSimulador";
+import { Combobox } from "@/components/Combobox";
 import { Alert, Kpi } from "@/components/ui";
 import { Campo } from "@/components/Campo";
 import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
@@ -32,9 +33,6 @@ const parseBR = (s: string) => {
   if (!t) return 0;
   return t.includes(",") ? Number(t.replace(/\./g, "").replace(",", ".")) : Number(t);
 };
-/** Busca sem acento/caixa. */
-const normalizar = (s: string) =>
-  s.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
 
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
@@ -446,12 +444,10 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
   // (e costuma trabalhar com) um sobredimensionamento maior que o inversor string.
   const overloadOk = calc ? calc.overload >= 0 && calc.overload <= (ehMicro ? 0.6 : 0.35) : true;
 
-  // datalist filtrado: só busca com 2+ letras (5.508 opções travam o navegador)
-  const sugestoesMunicipio = useMemo(() => {
-    const q = normalizar(form.municipio);
-    if (q.length < 2) return [];
-    return municipios.filter((m) => normalizar(m.nome).includes(q)).slice(0, 50);
-  }, [municipios, form.municipio]);
+  /* A lista inteira vai para o Combobox: ele filtra sem acento e recorta a
+     renderização a 100 itens — o teto que antes era improvisado aqui com o
+     "digite 2+ letras". */
+  const nomesMunicipios = useMemo(() => municipios.map((m) => m.nome), [municipios]);
 
   function preencherMunicipio(nome: string) {
     set("municipio", nome);
@@ -612,21 +608,17 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
         <h2 className="section-title">Cliente e local</h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
           <Campo className="sm:col-span-3" label="Nome do cliente *">
-            <ClienteInput className="field-input" value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} />
+            <ClienteInput value={form.clienteNome} onNome={(v) => set("clienteNome", v)} onCidadeUf={(v) => set("cidadeUf", v)} />
           </Campo>
-          <Campo className="sm:col-span-3" label="Cidade da instalação *" hint={<><datalist id="municipios-list">
-              {sugestoesMunicipio.map((m) => (
-                <option key={m.nome} value={m.nome} />
-              ))}
-            </datalist>
-            <p className="mt-1 hint">Usada para buscar a irradiação solar (HSP) da região.</p></>}>
-
-            <input
-              className="field-input"
-              list="municipios-list"
+          <Campo className="sm:col-span-3" label="Cidade da instalação *" hint={<p className="mt-1 hint">Usada para buscar a irradiação solar (HSP) da região.</p>}>
+            {/* Sem "criar": cidade fora da base não tem irradiação, e um nome
+                digitado à mão produziria HSP nenhuma em silêncio. */}
+            <Combobox
               value={form.municipio}
-              onChange={(e) => preencherMunicipio(e.target.value)}
-              placeholder="Digite 2+ letras e selecione…"
+              onChange={preencherMunicipio}
+              options={nomesMunicipios}
+              permitirNovo={false}
+              placeholder="Busque a cidade…"
             />
           </Campo>
           <Campo className="sm:col-span-3" label="Cidade/UF (como sai no documento)">
@@ -1104,16 +1096,13 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
           automaticamente. Requer o valor do kit preenchido acima.
         </p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <Campo className="sm:col-span-3" label="Distribuidora" hint={<><datalist id="distribuidoras-list">
-              {distribuidoras.map((d) => <option key={d} value={d} />)}
-            </datalist></>}>
-
-            <input
-              className="field-input"
-              list="distribuidoras-list"
+          <Campo className="sm:col-span-3" label="Distribuidora">
+            <Combobox
               value={form.distribuidora}
-              onChange={(e) => set("distribuidora", e.target.value)}
+              onChange={(v) => set("distribuidora", v)}
+              options={distribuidoras}
               placeholder="Ex.: Equatorial GO"
+              rotuloNovo="Usar “{v}”"
             />
           </Campo>
           <Campo className="sm:col-span-1" label="Subgrupo">

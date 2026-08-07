@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { useAvisoNaoSalvo } from "@/components/useAvisoNaoSalvo";
+import { Combobox } from "@/components/Combobox";
 import { useRouter, useSearchParams } from "next/navigation";
 import { urlDaLista } from "./filtros";
 import { Alert, Badge, PageHeader, SectionCard } from "@/components/ui";
@@ -227,17 +228,6 @@ export function TarefaDetalhe({
 
       {erro && <Alert tone="red">{erro}</Alert>}
 
-      <datalist id="det-clientes">
-        {clientes.map((c) => (
-          <option key={c} value={c} />
-        ))}
-      </datalist>
-      <datalist id="det-categorias">
-        {categorias.map((c) => (
-          <option key={c} value={c} />
-        ))}
-      </datalist>
-
       {!editando ? (
         <SectionCard
           title="Dados da tarefa"
@@ -301,7 +291,7 @@ export function TarefaDetalhe({
               </div>
               <div className="sm:col-span-3">
                 <label className="field-label" htmlFor="ed-cliente">Cliente</label>
-                <input id="ed-cliente" className="field-input" list="det-clientes" value={form.cliente} onChange={(e) => setForm({ ...form, cliente: e.target.value })} />
+                <Combobox id="ed-cliente" value={form.cliente} onChange={(v) => setForm({ ...form, cliente: v })} options={clientes} rotuloNovo="Novo cliente: “{v}”" />
               </div>
               <div className="sm:col-span-3">
                 <label className="field-label" htmlFor="ed-demandante">Demandante</label>
@@ -320,7 +310,7 @@ export function TarefaDetalhe({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
               <div className="sm:col-span-2">
                 <label className="field-label" htmlFor="ed-categoria">Categoria</label>
-                <input id="ed-categoria" className="field-input" list="det-categorias" value={form.categoria} onChange={(e) => setForm(comCategoria(form, e.target.value))} />
+                <Combobox id="ed-categoria" value={form.categoria} onChange={(v) => setForm(comCategoria(form, v))} options={categorias} rotuloNovo="Nova categoria: “{v}”" />
               </div>
               <div className="sm:col-span-2">
                 <label className="field-label" htmlFor="ed-tipo">Tipo de demanda</label>
