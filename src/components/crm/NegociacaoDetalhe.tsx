@@ -19,6 +19,7 @@ import {
   type ProdutoCrm,
   type ProdutoNegociado,
 } from "@/lib/crm/types";
+import { TarefasDaNegociacao } from "./TarefasDaNegociacao";
 import { dataCurta, dataHora } from "./util";
 
 const ACAO_LABEL: Record<AcaoNegociacao, string> = {
@@ -122,6 +123,17 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
       setErro(err instanceof Error ? err.message : "Falha na ação.");
     } finally {
       setAgindo(false);
+    }
+  }
+
+  /** Recarrega a negociação — usado quando as tarefas gravam histórico no servidor. */
+  async function recarregar() {
+    try {
+      const res = await fetch(`/api/crm/negociacoes/${id}`);
+      const data = await res.json();
+      if (res.ok && data.negociacao) setN(data.negociacao as Negociacao);
+    } catch {
+      /* melhor manter a ficha atual do que trocar por erro */
     }
   }
 
@@ -254,6 +266,11 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
               setNovoProduto={setNovoProduto}
               aplicar={aplicar}
             />
+          </SectionCard>
+
+          {/* Agenda da negociação */}
+          <SectionCard title="Tarefas" subtitle="Os compromissos desta negociação — cada agendamento e conclusão entra no histórico.">
+            <TarefasDaNegociacao negociacaoId={id} aberta={aberta} onHistoricoMudou={() => void recarregar()} />
           </SectionCard>
 
           {/* Histórico imutável */}

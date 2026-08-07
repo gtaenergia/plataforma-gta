@@ -6,6 +6,23 @@ export function dataCurta(iso: string): string {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
 }
 
+/** Classe de agenda de uma tarefa em relação ao dia de hoje. */
+export type ClasseTarefa = "atrasada" | "hoje" | "proxima" | "concluida";
+
+/** Onde a tarefa cai na agenda. `hojeISO` chega de fora para a função ser pura. */
+export function classificarTarefa(t: { data: string; concluida: boolean }, hojeISO: string): ClasseTarefa {
+  if (t.concluida) return "concluida";
+  if (t.data < hojeISO) return "atrasada";
+  if (t.data === hojeISO) return "hoje";
+  return "proxima";
+}
+
+/** O dia de hoje no fuso local, em YYYY-MM-DD (para comparar com `TarefaCrm.data`). */
+export function hojeISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 /** Carimbo de data e hora ("07/08/2026 14:32") para o histórico. */
 export function dataHora(iso: string): string {
   const d = new Date(iso);

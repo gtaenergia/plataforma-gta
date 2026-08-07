@@ -198,6 +198,66 @@ export const criarContatoSchema = z.object({
 });
 export const atualizarContatoSchema = criarContatoSchema.partial();
 
+// ----------------------------------------------------------------- Tarefa
+
+/** Os sete tipos do RD — fixos, não customizáveis (lá e aqui). */
+export const TIPOS_TAREFA = ["ligacao", "email", "visita", "reuniao", "tarefa", "almoco", "whatsapp"] as const;
+export type TipoTarefa = (typeof TIPOS_TAREFA)[number];
+
+export const TIPO_TAREFA_LABEL: Record<TipoTarefa, string> = {
+  ligacao: "Ligação",
+  email: "E-mail",
+  visita: "Visita",
+  reuniao: "Reunião",
+  tarefa: "Tarefa",
+  almoco: "Almoço",
+  whatsapp: "WhatsApp",
+};
+
+/**
+ * Compromisso comercial, sempre preso a uma negociação (regra do RD — sem
+ * negociação não há tarefa). Também como no RD, tarefa não se exclui: se o
+ * combinado mudou, conclui-se ou adia-se; o agendamento fica contado.
+ */
+export interface TarefaCrm {
+  id: string;
+  negociacaoId: string;
+  negociacaoNome: string;
+  tipo: TipoTarefa;
+  assunto: string;
+  /** Data (YYYY-MM-DD) e hora (HH:mm) do compromisso. */
+  data: string;
+  hora: string;
+  notas: string;
+  responsavel: string;
+  responsavelNome: string;
+  concluida: boolean;
+  concluidaEm: string;
+  criadoPor: string;
+  criadoPorNome?: string;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+export const criarTarefaCrmSchema = z.object({
+  negociacaoId: z.string().trim().min(1, "Escolha a negociação"),
+  tipo: z.enum(TIPOS_TAREFA),
+  assunto: z.string().trim().min(1, "Informe o assunto").max(200),
+  data: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data"),
+  hora: z
+    .string()
+    .trim()
+    .regex(/^\d{2}:\d{2}$/, "Hora no formato HH:mm")
+    .or(z.literal(""))
+    .default(""),
+  notas: z.string().trim().max(2000).default(""),
+  responsavel: z.string().trim().max(200).default(""),
+  responsavelNome: z.string().trim().max(200).default(""),
+});
+
+/** `concluida` fica fora: concluir/reabrir tem rota própria, que grava o histórico. */
+export const atualizarTarefaCrmSchema = criarTarefaCrmSchema.omit({ negociacaoId: true }).partial();
+
 // ------------------------------------------- Catálogos (fonte, motivo de perda)
 
 /** Item de catálogo simples: fontes de negociação e motivos de perda. */

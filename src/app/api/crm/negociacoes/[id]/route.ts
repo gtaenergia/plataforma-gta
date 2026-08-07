@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getFunilStore } from "@/lib/crm/funis-store";
 import { getNegociacaoStore, novaAnotacao } from "@/lib/crm/negociacoes-store";
+import { getTarefaCrmStore } from "@/lib/crm/tarefas-store";
 import { atualizarNegociacaoSchema } from "@/lib/crm/types";
 import { getCurrentUser } from "@/lib/session";
 
@@ -72,5 +73,8 @@ export async function DELETE(_req: Request, ctx: Ctx) {
   const { id } = await ctx.params;
   const ok = await getNegociacaoStore().remove(id);
   if (!ok) return NextResponse.json({ error: "Negociação não encontrada." }, { status: 404 });
+  // Tarefa não se exclui — exceto junto com a negociação dona (regra do RD):
+  // sem isso a agenda cobraria compromissos de um negócio que não existe mais.
+  await getTarefaCrmStore().removeDaNegociacao(id);
   return NextResponse.json({ ok: true });
 }

@@ -20,6 +20,13 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "crm-tarefas-2026-08",
+    titulo: "CRM: agenda de tarefas por negociação",
+    mensagem:
+      "Agende ligação, e-mail, visita, reunião, tarefa, almoço ou WhatsApp em qualquer negociação em andamento — na tela de Tarefas do CRM ou direto na ficha. A agenda separa atrasadas, de hoje e próximas; concluir ou adiar é um clique, e tudo entra no histórico da negociação. Quem recebe uma tarefa de outra pessoa é avisado no sino.",
+    link: "/crm/tarefas",
+  },
+  {
     slug: "crm-funil-negociacoes-2026-08",
     titulo: "CRM: funil, negociações, contatos e configurações no ar",
     mensagem:
