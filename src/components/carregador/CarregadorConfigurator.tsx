@@ -10,6 +10,7 @@ import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } f
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
 import { POTENCIAS_CA, acharPotencia } from "@/services/carregador/potencias";
+import { precoEV } from "@/services/carregador/engine";
 import { Campo } from "@/components/Campo";
 import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
 
@@ -171,35 +172,17 @@ export function CarregadorConfigurator({ propostaId, criadoPor }: { propostaId?:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calcKey]);
 
-  // ---- preço recalculado a partir da lista EDITADA (mesma fórmula do engine) ----
+  /*
+   * Preço recalculado a partir da lista EDITADA de materiais.
+   *
+   * Chama o MESMO `precoEV` da rota. Aqui havia uma cópia da fórmula escrita à
+   * mão, com o comentário "mesma fórmula do engine" — e ela deixou de ser a
+   * mesma no instante em que uma das duas ganhou o custo de equipe: a tela
+   * cobrava as horas, a rota devolvia preço sem elas. O engine é puro (não
+   * importa nada), então roda no cliente sem cerimônia.
+   */
   const custoMateriais = materiais.reduce((s, m) => s + rowTotal(m), 0);
-  const preco = params
-    ? (() => {
-        const maoObra = params.maoObraPorPonto * Math.max(1, form.qtdPontos);
-        /*
-         * `maoObra` é INSTALAÇÃO — R$ 800 por ponto de recarga. As horas de
-         * engenharia da GTA não estavam contadas em lugar nenhum, e entram
-         * aqui, na base, antes do Fator K.
-         *
-         * O par com e sem equipe existe para a tela poder mostrar o quanto a
-         * escolha do responsável mudou o preço. Os dois passam pelo MESMO
-         * arredondamento a múltiplo de R$ 10, senão a diferença carregaria
-         * um resto que ninguém saberia explicar.
-         */
-        const custoSemEquipe = custoMateriais + maoObra;
-        const custoGeral = custoSemEquipe + custoEquipeTotal;
-        const faturamento = Math.round((custoGeral * params.fatorK) / 10) * 10;
-        const faturamentoSemEquipe = Math.round((custoSemEquipe * params.fatorK) / 10) * 10;
-        const impostos = faturamento * params.aliqImpostos;
-        const lucro = faturamento - impostos - custoGeral;
-        const margem = faturamento > 0 ? lucro / faturamento : 0;
-        return {
-          custoMateriais, maoObra, custoSemEquipe, custoEquipe: custoEquipeTotal, custoGeral,
-          fatorK: params.fatorK, preco: faturamento, precoSemEquipe: faturamentoSemEquipe,
-          impostos, lucro, margem,
-        };
-      })()
-    : null;
+  const preco = params ? precoEV(custoMateriais, form.qtdPontos, params, custoEquipeTotal) : null;
 
   // sugere o valor do serviço quando o usuário ainda não editou o preço
   const sugerido = preco?.preco ?? 0;

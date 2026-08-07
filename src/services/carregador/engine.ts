@@ -250,23 +250,54 @@ export interface PrecoEVParams {
 }
 export interface PrecoEVResult {
   custoMateriais: number;
+  /** Instalação: R$ por ponto de recarga. Não é hora de engenheiro. */
   maoObra: number;
+  /** Materiais + instalação — o custo que já existia antes das horas da GTA. */
+  custoSemEquipe: number;
+  custoEquipe: number;
   custoGeral: number;
   fatorK: number;
   preco: number; // faturamento (custo × Fator K, arredondado)
+  /** O que sairia sem ninguém apontado — para a tela mostrar a diferença. */
+  precoSemEquipe: number;
   impostos: number;
   lucro: number; // faturamento − impostos − custo
   margem: number; // margem líquida = lucro / faturamento
 }
 
-export function precoEV(custoMateriais: number, qtd: number, p: PrecoEVParams): PrecoEVResult {
+/**
+ * Faturamento do serviço: (materiais + instalação + horas da GTA) × Fator K.
+ *
+ * `custoEquipe` são as horas da própria GTA neste trabalho. A "mão de obra" que
+ * já estava na base é INSTALAÇÃO — R$ 800 por ponto —, e o tempo de engenharia
+ * não estava contado em lugar nenhum.
+ *
+ * Esta função é a ÚNICA dona da conta. O configurador chamava uma cópia dela,
+ * escrita à mão, porque precisa recalcular a partir da lista de materiais
+ * editada — e as duas versões divergiram assim que uma ganhou o custo de
+ * equipe: a tela cobrava as horas e a rota devolvia um preço sem elas.
+ */
+export function precoEV(
+  custoMateriais: number,
+  qtd: number,
+  p: PrecoEVParams,
+  custoEquipe = 0,
+): PrecoEVResult {
   const maoObra = p.maoObraPorPonto * Math.max(1, qtd);
-  const custoGeral = custoMateriais + maoObra;
+  const custoSemEquipe = custoMateriais + maoObra;
+  const equipe = Math.max(0, custoEquipe || 0);
+  const custoGeral = custoSemEquipe + equipe;
   const k = Math.min(4, Math.max(1, p.fatorK));
+  // Os dois passam pelo MESMO arredondamento: arredondar só um faria a
+  // diferença exibida carregar um resto que ninguém saberia explicar.
   const preco = Math.round((custoGeral * k) / 10) * 10;
+  const precoSemEquipe = Math.round((custoSemEquipe * k) / 10) * 10;
   const aliq = Math.min(0.5, Math.max(0, p.aliqImpostos));
   const impostos = preco * aliq;
   const lucro = preco - impostos - custoGeral;
   const margem = preco > 0 ? lucro / preco : 0;
-  return { custoMateriais, maoObra, custoGeral, fatorK: k, preco, impostos, lucro, margem };
+  return {
+    custoMateriais, maoObra, custoSemEquipe, custoEquipe: equipe, custoGeral,
+    fatorK: k, preco, precoSemEquipe, impostos, lucro, margem,
+  };
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/session";
-import { dimensionarEV, gerarBomEV, precoEV } from "@/services/carregador/engine";
+import { dimensionarEV, gerarBomEV } from "@/services/carregador/engine";
 import { getCarregadorParams } from "@/services/carregador/params";
 import { avaliarEV } from "@/services/carregador/avisos";
 import { getPrecos } from "@/lib/precos/store";
@@ -37,7 +37,17 @@ export async function POST(req: Request) {
   const sizing = dimensionarEV(i);
   const precos = await getPrecos();
   const bom = gerarBomEV(sizing, i.distanciaM, i.qtdPontos, indicePorId(precos.itens));
-  const preco = precoEV(bom.custoMateriais, i.qtdPontos, params);
+  /*
+   * A rota NÃO devolve preço.
+   *
+   * Devolvia, e ninguém consumia: o configurador recalcula a partir da lista de
+   * materiais EDITADA, que é a única que vale. O valor daqui ficava pendurado
+   * na resposta e envelheceu na primeira mudança de fórmula — passou a sair sem
+   * o custo de equipe. Dado morto que pode ficar errado é pior que dado
+   * ausente, porque parece disponível.
+   *
+   * `params` continua indo: é dele que o configurador chama `precoEV`.
+   */
 
   // Travas técnicas: saturação do catálogo, faixa CA, queda e múltiplos pontos.
   const avisos = avaliarEV({ potenciaKw: i.potenciaKw, qtdPontos: i.qtdPontos, sizing });
@@ -60,5 +70,5 @@ export async function POST(req: Request) {
     });
   }
 
-  return NextResponse.json({ sizing, avisos, bom, preco, params });
+  return NextResponse.json({ sizing, avisos, bom, params });
 }
