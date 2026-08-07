@@ -375,15 +375,33 @@ function desenhar(canvas: HTMLCanvasElement, r: TelhadoResultado, arranjo: Arran
 
 // ------------------------------------------------------------------ tela
 
-export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios, onTextoProposta }: {
+/** O que a proposta guarda do estudo — ver `EstudoTelhadoSalvo`. */
+export interface EstudoTelhadoSalvo {
+  medidas: Medidas;
+  orientacaoManual: "auto" | "retrato" | "paisagem";
+  incluirNaProposta: boolean;
+}
+
+export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios, onTextoProposta, inicial, onEstadoChange }: {
   potenciaPainel: number;
   /** Quantos o dimensionamento pediu — para confrontar com o que cabe. */
   nPaineisNecessarios: number;
   /** Parágrafo para a proposta, ou "" quando o usuário não marcou incluir. */
   onTextoProposta?: (texto: string) => void;
+  /**
+   * Estudo salvo, ao reabrir uma proposta.
+   *
+   * As medidas do telhado eram digitadas e se perdiam ao salvar: reabrir devolvia
+   * o simulador em branco, e quem tinha marcado "incluir na proposta" perdia
+   * junto o parágrafo que ia no documento — sem aviso, porque o resto da
+   * proposta voltava inteiro.
+   */
+  inicial?: EstudoTelhadoSalvo;
+  /** Reporta o estado para o pai poder gravar junto da proposta. */
+  onEstadoChange?: (v: EstudoTelhadoSalvo) => void;
 }) {
   const padrao = dimensaoDoPainel(potenciaPainel);
-  const [m, setM] = useState<Medidas>({
+  const [m, setM] = useState<Medidas>(inicial?.medidas ?? {
     larguraM: "",
     comprimentoM: "",
     painelCompMm: String(padrao.comprimentoMm),
@@ -392,8 +410,17 @@ export function TelhadoSimulador({ potenciaPainel, nPaineisNecessarios, onTextoP
     espacoFileirasMm: "20",
     recuoMm: "300",
   });
-  const [orientacaoManual, setOrientacaoManual] = useState<"auto" | "retrato" | "paisagem">("auto");
-  const [incluirNaProposta, setIncluirNaProposta] = useState(false);
+  const [orientacaoManual, setOrientacaoManual] = useState<"auto" | "retrato" | "paisagem">(
+    inicial?.orientacaoManual ?? "auto",
+  );
+  const [incluirNaProposta, setIncluirNaProposta] = useState(inicial?.incluirNaProposta ?? false);
+
+  useEffect(() => {
+    onEstadoChange?.({ medidas: m, orientacaoManual, incluirNaProposta });
+    // `onEstadoChange` fora das dependências de propósito: o pai o recria a cada
+    // render, e incluí-lo faria este efeito rodar em laço.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [m, orientacaoManual, incluirNaProposta]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const set = <K extends keyof Medidas>(k: K, v: string) => setM((x) => ({ ...x, [k]: v }));

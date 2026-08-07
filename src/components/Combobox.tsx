@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Plus } from "lucide-react";
+import { ITEM_NOVO, itensVisiveis, moverAtivo, valorEscolhido } from "./combobox-lista";
 
 /**
  * Escolher de uma lista — com a opção de acrescentar um valor que não está nela.
@@ -77,17 +78,13 @@ export function Combobox({
   const caixa = useRef<HTMLDivElement>(null);
   const campoBusca = useRef<HTMLInputElement>(null);
 
-  const filtradas = useMemo(() => {
-    const q = normalizar(busca);
-    if (!q) return options;
-    return options.filter((o) => normalizar(o).includes(q));
-  }, [options, busca]);
-
-  /* O item de criação só aparece quando o texto ainda não existe na lista —
-     oferecer "criar Projetos" com "Projetos" logo acima convida à duplicata. */
-  const podeCriar =
-    permitirNovo && busca.trim() !== "" && !options.some((o) => normalizar(o) === normalizar(busca));
-  const itens = podeCriar ? [...filtradas, NOVO] : filtradas;
+  /* A lógica de lista mora em `combobox-lista.ts`, testada sem navegador. Aqui
+     havia uma cópia dela — e cópia de regra é o que fez o preço do carregador
+     divergir entre engine e tela. */
+  const itens = useMemo(
+    () => itensVisiveis(options, busca, permitirNovo),
+    [options, busca, permitirNovo],
+  );
 
   useEffect(() => {
     if (!aberto) return;
@@ -123,9 +120,9 @@ export function Combobox({
   }
 
   function escolher(i: number) {
-    const item = itens[i];
-    if (item === undefined) return;
-    onChange(item === NOVO ? busca.trim() : item);
+    const v = valorEscolhido(itens, i, busca);
+    if (v === undefined) return;
+    onChange(v);
     fechar();
   }
 
@@ -140,11 +137,11 @@ export function Combobox({
     switch (e.key) {
       case "ArrowDown":
         e.preventDefault();
-        setAtivo((a) => Math.min(a + 1, itens.length - 1));
+        setAtivo((a) => moverAtivo(a, 1, itens.length));
         break;
       case "ArrowUp":
         e.preventDefault();
-        setAtivo((a) => Math.max(a - 1, 0));
+        setAtivo((a) => moverAtivo(a, -1, itens.length));
         break;
       case "Home":
         e.preventDefault();
@@ -152,7 +149,7 @@ export function Combobox({
         break;
       case "End":
         e.preventDefault();
-        setAtivo(itens.length - 1);
+        setAtivo(moverAtivo(0, itens.length, itens.length));
         break;
       case "Enter":
         e.preventDefault();
@@ -216,7 +213,7 @@ export function Combobox({
               </li>
             )}
             {itens.map((o, i) => {
-              const criar = o === NOVO;
+              const criar = o === ITEM_NOVO;
               return (
                 <li
                   key={criar ? "__novo" : o}
@@ -253,22 +250,4 @@ export function Combobox({
       )}
     </div>
   );
-}
-
-/**
- * Marca do item "criar".
- *
- * Um caractere de controle (U+0000) porque a lista guarda texto digitado por
- * gente: qualquer marcador legível — " novo", "__novo__" — é um valor que
- * alguém pode acabar cadastrando, e aí escolher a categoria faria criar outra.
- */
-const NOVO = " criar";
-
-/** Busca sem acento e sem caixa: "Orçamentos" acha "orcamentos". */
-function normalizar(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .trim();
 }

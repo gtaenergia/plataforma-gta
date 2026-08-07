@@ -300,7 +300,7 @@ export function EquipeResponsavelCard({ estado }: { estado: EstadoEquipe }) {
             <Campo
               className="sm:col-span-4"
               label={i === 0 ? "Horas" : ""}
-              hint={i === 0 ? <p className="hint mt-1">Aceita &quot;44 x 4,8&quot;</p> : undefined}
+              hint={i === 0 ? <p className="hint mt-1">Total de horas. Para dias × horas por dia, escreva 44 x 4,8</p> : undefined}
             >
               <input
                 className="field-input tabular-nums"

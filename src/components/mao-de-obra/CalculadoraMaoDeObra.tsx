@@ -399,7 +399,7 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
                   <Campo
                     className="sm:col-span-3"
                     label={i === 0 ? "Horas cada" : ""}
-                    hint={i === 0 ? <p className="hint mt-1">Aceita &quot;5 x 8&quot;</p> : undefined}
+                    hint={i === 0 ? <p className="hint mt-1">Horas por pessoa. Para dias × horas por dia, escreva 5 x 8</p> : undefined}
                   >
                     <input
                       className="field-input tabular-nums"

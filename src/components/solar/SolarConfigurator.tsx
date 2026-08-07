@@ -14,10 +14,10 @@ import { SolarParamsForm } from "@/components/admin/SolarParamsForm";
 import { CopyButton } from "@/components/CopyButton";
 import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } from "@/components/CondicoesPagamento";
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
-import { TelhadoSimulador } from "./TelhadoSimulador";
+import { TelhadoSimulador, type EstudoTelhadoSalvo } from "./TelhadoSimulador";
 import { Alert, Kpi } from "@/components/ui";
 import { Campo } from "@/components/Campo";
-import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
+import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
 
 /** Formatação pt-BR local (sem depender de libs de servidor). */
 const nf = (v: number, d = 2) =>
@@ -201,6 +201,17 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
   const [savedId, setSavedId] = useState<string | undefined>(propostaId);
   /** Parágrafo da simulação de telhado. "" = o usuário não marcou incluir. */
   const [textoTelhado, setTextoTelhado] = useState("");
+  /**
+   * O estudo do telhado, para gravar junto da proposta.
+   *
+   * Ele vivia só dentro do simulador e se perdia ao salvar: reabrir devolvia os
+   * campos em branco, e quem tinha marcado "incluir na proposta" perdia junto o
+   * parágrafo do documento — sem aviso, porque o resto da proposta voltava.
+   */
+  const [estudoTelhado, setEstudoTelhado] = useState<EstudoTelhadoSalvo | undefined>();
+  /* Separado do de cima: o simulador só lê `inicial` na montagem, e a `key`
+     o remonta quando o estudo salvo chega do servidor. */
+  const [estudoTelhadoCarregado, setEstudoTelhadoCarregado] = useState<EstudoTelhadoSalvo | undefined>();
   const [painelCustom, setPainelCustom] = useState(false);
   const [invCustom, setInvCustom] = useState(false);
   const [microCustom, setMicroCustom] = useState(false);
@@ -250,9 +261,12 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
     if (propostaId) {
       fetch(`/api/propostas/${propostaId}`).then((r) => r.json()).then((d) => {
         if (d.proposta?.dados) {
-          const dados = d.proposta.dados as Partial<Form> & { cond?: CondPag; materiais?: { qtde: string; descricao: string }[] };
+          const dados = d.proposta.dados as Partial<Form> & { cond?: CondPag; materiais?: { qtde: string; descricao: string }[]; estudoTelhado?: EstudoTelhadoSalvo; equipeGta?: EquipeSalva; equipeOrcamento?: EquipeSalva };
           setForm({ ...FORM_INICIAL, ...dados });
           if (dados.cond) setCond(dados.cond as CondPag);
+          if (dados.estudoTelhado) setEstudoTelhadoCarregado(dados.estudoTelhado);
+          if (dados.equipeGta) equipe.restaurar(dados.equipeGta);
+          if (dados.equipeOrcamento) equipeOrc.restaurar(dados.equipeOrcamento);
           // A lista salva é uma escolha do usuário: entra já "tocada", para que
           // nenhum recálculo posterior a substitua pela sugestão.
           if (Array.isArray(dados.materiais) && dados.materiais.length) { setMateriais(dados.materiais); matTocado.current = true; }
@@ -512,7 +526,7 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
     setErro(null);
     try {
       const st = calc?.pricing ? "precificada" : "rascunho";
-      const payload = { serviceKey: "solar", cliente: form.clienteNome, status: st, dados: { ...form, cond, materiais } };
+      const payload = { serviceKey: "solar", cliente: form.clienteNome, status: st, dados: { ...form, cond, materiais, estudoTelhado, equipeGta: equipe.serializar(), equipeOrcamento: equipeOrc.serializar() } };
       const res = savedId
         ? await fetch(`/api/propostas/${savedId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
         : await fetch("/api/propostas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -943,9 +957,12 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
       {/* Cabe no telhado? — a resposta que a observação padrão da proposta
           hoje transfere ao cliente ("telhado com área útil compatível"). */}
       <TelhadoSimulador
+        key={estudoTelhadoCarregado ? "salvo" : "novo"}
         potenciaPainel={form.potenciaPainel}
         nPaineisNecessarios={form.nPaineis > 0 ? form.nPaineis : Math.max(0, calc?.sizing.nPlacasSugerido ?? 0)}
         onTextoProposta={setTextoTelhado}
+        inicial={estudoTelhadoCarregado}
+        onEstadoChange={setEstudoTelhado}
       />
 
       {/* Geração + gráfico */}

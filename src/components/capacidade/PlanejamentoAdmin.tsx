@@ -271,11 +271,6 @@ export function PlanejamentoAdmin() {
   return (
     <div className="space-y-6">
       {erro && <Alert tone="red">{erro}</Alert>}
-      {ok && (
-        <Alert tone="green">
-          Parâmetros salvos. As indicações de responsável já consideram os novos valores.
-        </Alert>
-      )}
 
       <SectionCard
         title="Jornada da equipe"
@@ -573,10 +568,11 @@ export function PlanejamentoAdmin() {
         <button type="button" className="btn-primary" onClick={salvarTudo} disabled={salvando}>
           {salvando ? "Salvando…" : "Salvar parâmetros"}
         </button>
+        {/* A confirmação fica ao LADO do botão, onde o olho já está. No topo da
+            página ela aparecia longe do clique que a produziu, e a frase sobre
+            as indicações de responsável explicava algo que o botão já diz. */}
         {temPendencia && !salvando && <Badge tone="amber" dot>Alterações não salvas</Badge>}
-        {custo.visivel && (
-          <span className="hint">Salva a jornada, o catálogo e o custo por hora de uma vez.</span>
-        )}
+        {ok && !temPendencia && !salvando && <Badge tone="green">Parâmetros salvos</Badge>}
       </div>
     </div>
   );
