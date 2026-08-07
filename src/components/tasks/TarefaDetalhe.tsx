@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
+import { useAvisoNaoSalvo } from "@/components/useAvisoNaoSalvo";
 import { useRouter, useSearchParams } from "next/navigation";
 import { urlDaLista } from "./filtros";
-import { Alert, PageHeader, SectionCard } from "@/components/ui";
+import { Alert, Badge, PageHeader, SectionCard } from "@/components/ui";
 import { SeletorTipoDemanda } from "@/components/capacidade/SeletorTipoDemanda";
 import { SugestaoResponsavel } from "./SugestaoResponsavel";
 import { MarcaPrioridade, MarcaStatus } from "./marcadores";
@@ -81,12 +83,22 @@ export function TarefaDetalhe({
   const { config: capacidade, setConfig } = useCapacidade();
   const [tarefa, setTarefa] = useState<Task>(inicial);
   const [editando, setEditando] = useState(false);
+  /** Liga o botão do rodapé ao `<form>` da edição — ver o comentário no form. */
+  const idFormulario = useId();
   const [form, setForm] = useState<FormState>(() => paraFormulario(inicial));
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [tarefas, setTarefas] = useState<Task[]>([]);
   const [comentario, setComentario] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  /*
+   * Só avisa quando há edição de fato. Usar `editando` sozinho cobraria
+   * confirmação de quem abriu o formulário, não mexeu em nada e saiu — o aviso
+   * que aparece à toa é o aviso que as pessoas aprendem a ignorar.
+   */
+  const alterado = editando && JSON.stringify(form) !== JSON.stringify(paraFormulario(tarefa));
+  useAvisoNaoSalvo(alterado);
 
   useEffect(() => {
     (async () => {
@@ -267,6 +279,10 @@ export function TarefaDetalhe({
         </SectionCard>
       ) : (
         <form
+          /* O id existe para "Salvar alterações" poder ficar FORA do form, na
+             barra de ações do rodapé, junto de Cancelar e Excluir. O atributo
+             `form` do botão faz o submit chegar aqui do mesmo jeito. */
+          id={idFormulario}
           onSubmit={async (e) => {
             e.preventDefault();
             if (await enviar(paraPayload(form) as unknown as Record<string, unknown>)) setEditando(false);
@@ -391,21 +407,6 @@ export function TarefaDetalhe({
             </div>
           </SectionCard>
 
-          <div className="flex flex-wrap gap-3">
-            <button type="submit" className="btn-primary" disabled={salvando}>
-              {salvando ? "Salvando…" : "Salvar alterações"}
-            </button>
-            <button
-              type="button"
-              className="btn-ghost"
-              onClick={() => {
-                setForm(paraFormulario(tarefa));
-                setEditando(false);
-              }}
-            >
-              Cancelar
-            </button>
-          </div>
         </form>
       )}
 
@@ -443,8 +444,33 @@ export function TarefaDetalhe({
         </form>
       </SectionCard>
 
-      <div className="flex justify-end">
+      {/* Uma barra só, depois dos comentários: salvar/cancelar estavam ACIMA do
+          card de comentários, longe de excluir, e a tela terminava com um botão
+          vermelho solto. Agora as três ações da tarefa ficam juntas — as
+          construtivas à esquerda, a destrutiva separada à direita. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-3">
+          {editando && (
+            <>
+              <button type="submit" form={idFormulario} className="btn-primary" disabled={salvando}>
+                {salvando ? "Salvando…" : "Salvar alterações"}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setForm(paraFormulario(tarefa));
+                  setEditando(false);
+                }}
+              >
+                Cancelar
+              </button>
+              {alterado && !salvando && <Badge tone="amber" dot>Alterações não salvas</Badge>}
+            </>
+          )}
+        </div>
         <button type="button" className="btn-danger" onClick={excluir} disabled={salvando}>
+          <Trash2 className="h-4 w-4" aria-hidden />
           Excluir tarefa
         </button>
       </div>

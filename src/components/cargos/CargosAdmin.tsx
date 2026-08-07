@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAvisoNaoSalvo } from "@/components/useAvisoNaoSalvo";
 import { PERMISSOES, PERMISSOES_POR_MODULO, type PermissaoKey } from "@/lib/rbac/permissoes";
 import type { Cargo } from "@/lib/cargos/types";
 import { Alert, EmptyState, Loading } from "@/components/ui";
@@ -66,6 +67,9 @@ function CargoCard({
     nome.trim() !== cargo.nome ||
     sel.size !== cargo.permissoes.length ||
     cargo.permissoes.some((p) => !sel.has(p));
+
+  // Por cartão: só o que foi mexido registra o aviso, e normalmente é um só.
+  useAvisoNaoSalvo(alterado);
 
   function toggle(chave: PermissaoKey, ativo: boolean) {
     setSel((prev) => {

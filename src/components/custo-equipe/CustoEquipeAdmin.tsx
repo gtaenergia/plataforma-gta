@@ -16,9 +16,16 @@ import { precisaRevisao, type ConfigCustoEquipe } from "@/lib/custo-equipe/types
  * responde 403 e o componente não renderiza nada. Nenhum valor chega ao
  * navegador para ser escondido por CSS.
  *
- * Gravação própria, separada da jornada, pelo mesmo motivo: são dois destinos
- * distintos, e um salvamento único faria uma escrita depender do sucesso da
- * outra.
+ * ## Hook + tabela, e por que deixou de ter botão próprio
+ *
+ * A gravação continua separada — são dois destinos, e uma escrita não pode
+ * depender do sucesso da outra. Mas isso é razão de ARQUITETURA, e virou dois
+ * botões de "Salvar" na mesma tela, que é uma pergunta que ninguém deveria
+ * precisar responder: "qual dos dois salva o que eu mexi?".
+ *
+ * Agora a tela tem um botão só. Ele dispara as duas gravações em paralelo e
+ * relata cada uma — a independência continua inteira, e some da cara de quem
+ * usa. Ver `salvarTudo` em PlanejamentoAdmin.
  */
 
 function paraTexto(v: number): string {
@@ -36,25 +43,32 @@ function paraNumero(txt: string): number {
   return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
-export function CustoEquipeAdmin({ usuarios }: { usuarios: { email: string; name: string }[] }) {
-  const [config, setConfig] = useState<ConfigCustoEquipe | null>(null);
-  const [permitido, setPermitido] = useState(false);
-  const [salvando, setSalvando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
+export interface EstadoCustoEquipe {
+  /** Falso quando a rota respondeu 403 — o bloco inteiro deixa de existir. */
+  visivel: boolean;
+  config: ConfigCustoEquipe | null;
   /**
    * O TEXTO digitado em cada campo, separado do número.
    *
    * O campo era controlado direto pelo número, e a vírgula não sobrevivia: ao
    * digitar "30," o valor virava 30, voltava formatado como "30", e a vírgula
-   * sumia no mesmo instante. "30,30" virava "30,3" pelo mesmo motivo — o zero
-   * à direita não existe num número.
-   *
-   * É o padrão que o resto da plataforma já usa (`type Vals = Record<string,
-   * string>` no configurador de serviços): o formulário guarda texto, e a
-   * conversão para número acontece no uso.
+   * sumia no mesmo instante. É o padrão que o resto da plataforma já usa.
    */
+  textos: Record<string, string>;
+  alterar: (email: string, valor: string) => void;
+  /** Há edição pendente de gravação. */
+  sujo: boolean;
+  /** Grava. Devolve erro em texto, ou null quando deu certo. */
+  salvar: () => Promise<string | null>;
+  erroCarga: string | null;
+}
+
+export function useCustoEquipe(): EstadoCustoEquipe {
+  const [config, setConfig] = useState<ConfigCustoEquipe | null>(null);
+  const [visivel, setVisivel] = useState(false);
   const [textos, setTextos] = useState<Record<string, string>>({});
+  const [sujo, setSujo] = useState(false);
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -65,43 +79,26 @@ export function CustoEquipeAdmin({ usuarios }: { usuarios: { email: string; name
         if (!r.ok) throw new Error(d.error ?? "Falha ao carregar.");
         setConfig(d.config);
         setTextos(semearTextos(d.config));
-        setPermitido(true);
+        setVisivel(true);
       } catch (e) {
-        setErro(e instanceof Error ? e.message : "Erro ao carregar o custo da equipe.");
+        setErroCarga(e instanceof Error ? e.message : "Erro ao carregar o custo da equipe.");
       }
     })();
   }, []);
 
-  if (!permitido || !config) return null;
-
-  const agora = Date.now();
-  const semCusto = usuarios.filter((u) => !(config.pessoas[u.email]?.custoHora > 0)).length;
-  const antigos = usuarios.filter((u) => {
-    const p = config.pessoas[u.email];
-    return p && precisaRevisao(p, agora);
-  }).length;
-
   function alterar(email: string, valor: string) {
-    setOk(false);
+    setSujo(true);
     // O que fica na tela é exatamente o que foi digitado; o número acompanha.
     setTextos((t) => ({ ...t, [email]: valor }));
     setConfig((c) =>
       c
-        ? {
-            pessoas: {
-              ...c.pessoas,
-              [email]: { ...c.pessoas[email], custoHora: paraNumero(valor) },
-            },
-          }
+        ? { pessoas: { ...c.pessoas, [email]: { ...c.pessoas[email], custoHora: paraNumero(valor) } } }
         : c,
     );
   }
 
-  async function salvar() {
-    if (!config) return;
-    setSalvando(true);
-    setErro(null);
-    setOk(false);
+  async function salvar(): Promise<string | null> {
+    if (!visivel || !config) return null; // nada a gravar: o bloco não existe
     try {
       const r = await fetch("/api/custo-equipe", {
         method: "PUT",
@@ -111,21 +108,39 @@ export function CustoEquipeAdmin({ usuarios }: { usuarios: { email: string; name
       const d = await r.json();
       if (!r.ok) throw new Error(d.error ?? "Falha ao salvar.");
       setConfig(d.config);
-      setOk(true);
+      setSujo(false);
+      return null;
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro ao salvar.");
-    } finally {
-      setSalvando(false);
+      return e instanceof Error ? e.message : "Erro ao salvar os custos.";
     }
   }
+
+  return { visivel, config, textos, alterar, sujo, salvar, erroCarga };
+}
+
+export function CustoEquipeTabela({
+  estado,
+  usuarios,
+}: {
+  estado: EstadoCustoEquipe;
+  usuarios: { email: string; name: string }[];
+}) {
+  if (!estado.visivel || !estado.config) return null;
+  const config = estado.config;
+
+  const agora = Date.now();
+  const semCusto = usuarios.filter((u) => !(config.pessoas[u.email]?.custoHora > 0)).length;
+  const antigos = usuarios.filter((u) => {
+    const p = config.pessoas[u.email];
+    return p && precisaRevisao(p, agora);
+  }).length;
 
   return (
     <SectionCard
       title="Custo por hora da equipe"
       subtitle="Quanto custa para a GTA cada hora trabalhada. Alimenta o custo administrativo dos orçamentos e não aparece para quem não tem permissão financeira."
     >
-      {erro && <Alert tone="red" className="mb-4">{erro}</Alert>}
-      {ok && <Alert tone="green" className="mb-4">Custos salvos.</Alert>}
+      {estado.erroCarga && <Alert tone="red" className="mb-4">{estado.erroCarga}</Alert>}
 
       {semCusto > 0 && (
         <Alert tone="amber" className="mb-4">
@@ -168,9 +183,9 @@ export function CustoEquipeAdmin({ usuarios }: { usuarios: { email: string; name
                           className="field-input !py-1.5 tabular-nums"
                           inputMode="decimal"
                           aria-label={`Custo por hora de ${u.name || u.email}`}
-                          value={textos[u.email] ?? paraTexto(p?.custoHora ?? 0)}
+                          value={estado.textos[u.email] ?? paraTexto(p?.custoHora ?? 0)}
                           placeholder="0,00"
-                          onChange={(e) => alterar(u.email, e.target.value)}
+                          onChange={(e) => estado.alterar(u.email, e.target.value)}
                         />
                       </div>
                     </td>
@@ -192,14 +207,6 @@ export function CustoEquipeAdmin({ usuarios }: { usuarios: { email: string; name
           </table>
         </div>
       )}
-
-      {/* Botão próprio de propósito: estes valores vão para outra chave e outra
-          rota, e um salvamento único faria uma escrita depender da outra. */}
-      <div className="mt-4">
-        <button type="button" className="btn-primary" onClick={salvar} disabled={salvando}>
-          {salvando ? "Salvando…" : "Salvar custos"}
-        </button>
-      </div>
     </SectionCard>
   );
 }

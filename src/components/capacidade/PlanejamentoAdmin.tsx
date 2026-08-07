@@ -8,7 +8,8 @@ import { CONFIG_CAPACIDADE_PADRAO, type ConfigCapacidade, type TipoDemanda } fro
 import { chaveCategoria } from "@/lib/capacidade/motor";
 import { CargaEquipe } from "./CargaEquipe";
 import { SeletorDias } from "./SeletorDias";
-import { CustoEquipeAdmin } from "@/components/custo-equipe/CustoEquipeAdmin";
+import { CustoEquipeTabela, useCustoEquipe } from "@/components/custo-equipe/CustoEquipeAdmin";
+import { useAvisoNaoSalvo } from "@/components/useAvisoNaoSalvo";
 
 /**
  * Parâmetros de planejamento: jornada da equipe, catálogo de tipos de demanda
@@ -87,6 +88,14 @@ export function PlanejamentoAdmin() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
+  /**
+   * Edição pendente nesta tela — inclui o bloco de custo-hora, que é outro
+   * destino mas a mesma página para quem usa.
+   */
+  const [sujo, setSujo] = useState(false);
+  const custo = useCustoEquipe();
+  const temPendencia = sujo || custo.sujo;
+  useAvisoNaoSalvo(temPendencia);
   const [novoFeriado, setNovoFeriado] = useState("");
   const [novaCategoria, setNovaCategoria] = useState("");
 
@@ -131,6 +140,7 @@ export function PlanejamentoAdmin() {
   function alterar(patch: Partial<ConfigCapacidade>) {
     setConfig((c) => (c ? { ...c, ...patch } : c));
     setOk(false);
+    setSujo(true);
   }
 
   /**
@@ -203,14 +213,11 @@ export function PlanejamentoAdmin() {
     setNovaCategoria("");
   }
 
-  async function salvar() {
-    if (!config) return;
+  async function salvarPlanejamento(): Promise<string | null> {
+    if (!config) return null;
     // Linha em branco é rascunho abandonado, não dado: o schema rejeitaria o
     // objeto inteiro por causa dela e o administrador não saberia por quê.
     const limpa = { ...config, tipos: config.tipos.filter((t) => t.nome.trim() !== "") };
-    setSalvando(true);
-    setErro(null);
-    setOk(false);
     try {
       const res = await fetch("/api/planejamento", {
         method: "PUT",
@@ -220,9 +227,39 @@ export function PlanejamentoAdmin() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Falha ao salvar.");
       setConfig(data.config);
-      setOk(true);
+      setSujo(false);
+      return null;
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro ao salvar.");
+      return e instanceof Error ? e.message : "Erro ao salvar o planejamento.";
+    }
+  }
+
+  /**
+   * Um botão, duas gravações.
+   *
+   * A tela tinha dois "Salvar" — um para a jornada e o catálogo, outro para o
+   * custo-hora — porque são chaves e rotas diferentes. A razão é boa e continua
+   * valendo; o que não fazia sentido era terceirizar essa distinção para quem
+   * usa, que precisava adivinhar qual botão gravava o que mexeu.
+   *
+   * `allSettled` e não `all`: se uma falhar, a outra ainda grava, e a mensagem
+   * diz QUAL falhou. Com `all`, uma rejeição abortaria a leitura do resultado
+   * da outra e a tela mentiria sobre o que foi gravado.
+   */
+  async function salvarTudo() {
+    setSalvando(true);
+    setErro(null);
+    setOk(false);
+    try {
+      const [rPlan, rCusto] = await Promise.allSettled([salvarPlanejamento(), custo.salvar()]);
+      const falhas: string[] = [];
+      if (rPlan.status === "rejected") falhas.push("Planejamento: falha inesperada.");
+      else if (rPlan.value) falhas.push(rPlan.value);
+      if (rCusto.status === "rejected") falhas.push("Custo da equipe: falha inesperada.");
+      else if (rCusto.value) falhas.push(`Custo da equipe: ${rCusto.value}`);
+
+      if (falhas.length) setErro(falhas.join(" · "));
+      else setOk(true);
     } finally {
       setSalvando(false);
     }
@@ -315,7 +352,7 @@ export function PlanejamentoAdmin() {
 
       {/* Mesma lista de gente, dado de outra natureza: o bloco carrega de
           `/api/custo-equipe` e some sozinho para quem não tem `financeiro.ver`. */}
-      <CustoEquipeAdmin usuarios={usuarios} />
+      <CustoEquipeTabela estado={custo} usuarios={usuarios} />
 
       <SectionCard
         title="Catálogo de demandas"
@@ -530,10 +567,16 @@ export function PlanejamentoAdmin() {
           determinam, não no caminho de quem só quer registrar uma tarefa. */}
       <CargaEquipe tarefas={tarefas} />
 
-      <div className="flex items-center gap-3">
-        <button type="button" className="btn-primary" onClick={salvar} disabled={salvando}>
+      {/* O selo é o aviso que importa: o `beforeunload` e a confirmação no
+          clique são rede, e a rede só é acionada por quem já estava caindo. */}
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" className="btn-primary" onClick={salvarTudo} disabled={salvando}>
           {salvando ? "Salvando…" : "Salvar parâmetros"}
         </button>
+        {temPendencia && !salvando && <Badge tone="amber" dot>Alterações não salvas</Badge>}
+        {custo.visivel && (
+          <span className="hint">Salva a jornada, o catálogo e o custo por hora de uma vez.</span>
+        )}
       </div>
     </div>
   );

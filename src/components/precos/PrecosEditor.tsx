@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAvisoNaoSalvo } from "@/components/useAvisoNaoSalvo";
 import { Alert, Loading, SectionCard } from "@/components/ui";
 import { DIAS_PARA_REVISAO, type MaterialPreco } from "@/lib/precos/catalogo";
 
@@ -34,6 +35,9 @@ export function PrecosEditor({ podeEditar }: { podeEditar: boolean }) {
   const [aviso, setAviso] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [busca, setBusca] = useState("");
+  /** Preço digitado e ainda não gravado — o rascunho vive só na memória. */
+  const temRascunho = Object.values(rascunho).some((v) => v.trim() !== "");
+  useAvisoNaoSalvo(temRascunho);
   const arquivoRef = useRef<HTMLInputElement>(null);
 
   function aplicar(t: Tabela) {
