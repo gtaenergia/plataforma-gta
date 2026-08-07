@@ -5,6 +5,7 @@ import { Alert, Badge, EmptyState, Loading, SectionCard } from "@/components/ui"
 import { usePaginacao, Paginacao } from "@/components/Paginacao";
 import { SEGMENTOS, UFS, cidadeUf, type Cliente } from "@/lib/clientes/types";
 import { Campo } from "@/components/Campo";
+import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 
 type FormState = {
   nome: string;
@@ -49,7 +50,13 @@ export function ClientesList() {
   const [form, setForm] = useState<FormState>(FORM_VAZIO);
   const [salvando, setSalvando] = useState(false);
 
-  const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
+  /** Cadastro em andamento — ver `useEdicaoPendente`. */
+  const edicao = useEdicaoPendente();
+
+  const set = <K extends keyof FormState>(k: K, v: FormState[K]) => {
+    edicao.marcarEditado();
+    setForm((f) => ({ ...f, [k]: v }));
+  };
 
   useEffect(() => {
     fetch("/api/clientes")
@@ -89,6 +96,8 @@ export function ClientesList() {
     setEditando(c.id);
   }
   function fecharForm() {
+    // Fechar o formulário encerra a edição — por salvamento ou por desistência.
+    edicao.marcarSalvo();
     setEditando(null);
     setForm(FORM_VAZIO);
   }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play, X } from "lucide-react";
 import { ClienteInput } from "@/components/clientes/ClienteInput";
 import { Combobox } from "@/components/Combobox";
+import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { Alert, Badge, EmptyState, Kpi, KpiGrid, Loading, SectionCard } from "@/components/ui";
 import { CATEGORIAS_PADRAO_TAREFA, type Task } from "@/lib/tasks/types";
 import { duracaoMin, formatarDuracao, type TimeEntry } from "@/lib/tracker/types";
@@ -40,7 +41,9 @@ export function AbaTracker({
   const [agora, setAgora] = useState(new Date());
   const [processando, setProcessando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [editandoId, setEditandoId] = useState<string | null>(null);
+ const [editandoId, setEditandoId] = useState<string | null>(null);
+  /* O lançamento em preparo (descrição, cliente, categoria) some ao sair. */
+  const edicao = useEdicaoPendente();
 
   const souEuMesmo = usuarioSelecionado === meEmail;
 
@@ -114,6 +117,7 @@ export function AbaTracker({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Falha ao iniciar.");
       setRodando(data.entrada);
+      edicao.marcarSalvo();
       setForm(FORM_VAZIO);
       if (souEuMesmo) recarregar();
     } catch (e) {
@@ -155,6 +159,7 @@ export function AbaTracker({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Falha ao lançar.");
+      edicao.marcarSalvo();
       setForm(FORM_VAZIO);
       setManual({ data: ymdLocal(new Date()), inicio: "", fim: "" });
       setModoManual(false);
@@ -266,7 +271,7 @@ export function AbaTracker({
                   className="field-input"
                   placeholder="Em que você está trabalhando?"
                   value={form.descricao}
-                  onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))}
+                  onChange={(e) => { edicao.marcarEditado(); setForm((f) => ({ ...f, descricao: e.target.value })); }}
                 />
               </div>
               <div className="sm:col-span-3">
@@ -297,7 +302,7 @@ export function AbaTracker({
                     title="Vem da tarefa selecionada"
                   />
                 ) : (
-                  <ClienteInput id="tracker-cliente" placeholder="Ex.: CPDF" value={form.cliente} onNome={(v) => setForm((f) => ({ ...f, cliente: v }))} />
+                  <ClienteInput id="tracker-cliente" placeholder="Ex.: CPDF" value={form.cliente} onNome={(v) => { edicao.marcarEditado(); setForm((f) => ({ ...f, cliente: v })); }} />
                 )}
               </div>
               <div className="sm:col-span-2">
@@ -313,7 +318,7 @@ export function AbaTracker({
                   />
                 ) : (
                   <>
-                    <Combobox id="tracker-categoria" placeholder="Ex.: Projetos" value={form.categoria} onChange={(v) => setForm((f) => ({ ...f, categoria: v }))} options={CATEGORIAS_PADRAO_TAREFA} rotuloNovo="Nova categoria: “{v}”" />
+                    <Combobox id="tracker-categoria" placeholder="Ex.: Projetos" value={form.categoria} onChange={(v) => { edicao.marcarEditado(); setForm((f) => ({ ...f, categoria: v })); }} options={CATEGORIAS_PADRAO_TAREFA} rotuloNovo="Nova categoria: “{v}”" />
                   </>
                 )}
               </div>

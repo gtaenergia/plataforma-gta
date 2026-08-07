@@ -9,6 +9,7 @@ import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 
 import { Alert } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -78,7 +79,14 @@ export function ServicoSimplesConfigurator({ serviceKey, propostaId, criadoPor }
   const [cond, setCond] = useState<CondPag>(COND_PADRAO);
   const precoTocado = useRef(false);
 
-  const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  /** Aviso de saída com edição pendente. Ver `useEdicaoPendente`. */
+  const edicao = useEdicaoPendente();
+
+  const set = (k: string, v: string) => {
+    // `set` é edição de gente; o preenchimento automático usa `setForm` direto.
+    edicao.marcarEditado();
+    setForm((f) => ({ ...f, [k]: v }));
+  };
   const driver = (): Vals => Object.fromEntries(config.campos.map((c) => [c.name, String(form[c.name] ?? "")]));
 
   useEffect(() => {
@@ -127,6 +135,7 @@ export function ServicoSimplesConfigurator({ serviceKey, propostaId, criadoPor }
       if (!res.ok) throw new Error(data.error ?? "Falha ao salvar.");
       const id = data.proposta?.id ?? savedId;
       setSavedId(id);
+      edicao.marcarSalvo();
       if (!silencioso) setStatusMsg("Proposta salva.");
       return id;
     } catch (e) {

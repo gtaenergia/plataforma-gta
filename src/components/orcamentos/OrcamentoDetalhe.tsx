@@ -12,6 +12,7 @@ import {
 import type { PermissaoKey } from "@/lib/rbac/permissoes";
 import { Alert, BackLink, Badge, Marca, type Tone } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { CustoInterno } from "@/components/orcamentos/CustoInterno";
 
 const ESTACAO_TONE: Record<string, Tone> = {
@@ -113,7 +114,14 @@ export function OrcamentoDetalhe({
     validadeDias: inicial.meta?.validadeDias != null ? String(inicial.meta.validadeDias) : "",
     formaPagamento: inicial.meta?.formaPagamento ?? "",
   });
-  const [salvandoAjuste, setSalvandoAjuste] = useState(false);
+ const [salvandoAjuste, setSalvandoAjuste] = useState(false);
+  /* Ajuste do orçamento: sair sem gravar perde a correção de cliente, prazo ou
+     forma de pagamento, e a tela volta mostrando os valores antigos. */
+  const edicao = useEdicaoPendente();
+  const alterarAjuste = (patch: Partial<typeof ajuste>) => {
+    edicao.marcarEditado();
+    setAjuste((a) => ({ ...a, ...patch }));
+  };
 
   const souDono = isAdmin || orc.criadoPor === currentEmail;
   const naoFinalizado = orc.estacao !== "aprovado" && orc.estacao !== "cancelado";
@@ -233,6 +241,7 @@ export function OrcamentoDetalhe({
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro.");
     } finally {
+      edicao.marcarSalvo();
       setSalvandoAjuste(false);
     }
   }
@@ -458,19 +467,19 @@ export function OrcamentoDetalhe({
           <h2 className="section-title mb-4">Ajustes</h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
             <Campo className="sm:col-span-3" label="Cliente *">
-              <input className="field-input" value={ajuste.cliente} onChange={(e) => setAjuste({ ...ajuste, cliente: e.target.value })} required />
+              <input className="field-input" value={ajuste.cliente} onChange={(e) => alterarAjuste({ cliente: e.target.value })} required />
             </Campo>
             <Campo className="sm:col-span-3" label="Forma de pagamento">
-              <input className="field-input" value={ajuste.formaPagamento} onChange={(e) => setAjuste({ ...ajuste, formaPagamento: e.target.value })} />
+              <input className="field-input" value={ajuste.formaPagamento} onChange={(e) => alterarAjuste({ formaPagamento: e.target.value })} />
             </Campo>
             <Campo className="sm:col-span-3" label="Data de emissão">
-              <input type="date" className="field-input" value={ajuste.dataEmissao} onChange={(e) => setAjuste({ ...ajuste, dataEmissao: e.target.value })} />
+              <input type="date" className="field-input" value={ajuste.dataEmissao} onChange={(e) => alterarAjuste({ dataEmissao: e.target.value })} />
             </Campo>
             <Campo className="sm:col-span-3" label="Prazo/validade (dias)">
-              <input type="number" min={0} className="field-input" value={ajuste.validadeDias} onChange={(e) => setAjuste({ ...ajuste, validadeDias: e.target.value })} />
+              <input type="number" min={0} className="field-input" value={ajuste.validadeDias} onChange={(e) => alterarAjuste({ validadeDias: e.target.value })} />
             </Campo>
             <Campo className="sm:col-span-6" label="Descrição">
-              <input className="field-input" value={ajuste.descricao} onChange={(e) => setAjuste({ ...ajuste, descricao: e.target.value })} />
+              <input className="field-input" value={ajuste.descricao} onChange={(e) => alterarAjuste({ descricao: e.target.value })} />
             </Campo>
           </div>
           <div className="mt-3">

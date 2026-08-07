@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * Avisa antes de perder o que foi editado e não salvo.
@@ -63,4 +63,29 @@ export function useAvisoNaoSalvo(sujo: boolean) {
       document.removeEventListener("click", aoClicar, true);
     };
   }, [sujo]);
+}
+
+/**
+ * Edição pendente de gravação, para telas em que "sujo" não se deduz do estado.
+ *
+ * Comparar o formulário com o valor inicial não serve nos configuradores: eles
+ * se auto-preenchem sozinhos — a referência da proposta chega da API, o preço
+ * sugerido vem do cálculo — e a tela ficaria "suja" sem ninguém ter tocado em
+ * nada. Aviso que aparece à toa é aviso que se aprende a ignorar.
+ *
+ * A fronteira usada é a que o código já tinha: `set(...)` é edição de gente,
+ * `setForm(f => ...)` direto é a máquina preenchendo. Só a primeira marca.
+ */
+export function useEdicaoPendente(): {
+  pendente: boolean;
+  marcarEditado: () => void;
+  marcarSalvo: () => void;
+} {
+  const [pendente, setPendente] = useState(false);
+  useAvisoNaoSalvo(pendente);
+  return {
+    pendente,
+    marcarEditado: () => setPendente(true),
+    marcarSalvo: () => setPendente(false),
+  };
 }

@@ -9,6 +9,7 @@ import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } f
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
 
 const nf = (v: number, d = 2) =>
@@ -92,7 +93,15 @@ export function RedeMtConfigurator({ propostaId, criadoPor }: { propostaId?: str
   const [savedId, setSavedId] = useState<string | undefined>(propostaId);
   const precoTocado = useRef(false);
 
-  const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
+  /** Aviso de saída com edição pendente. Ver `useEdicaoPendente`. */
+  const edicao = useEdicaoPendente();
+
+  const set = <K extends keyof Form>(k: K, v: Form[K]) => {
+    // `set` é edição de gente; o preenchimento automático usa `setForm` direto
+    // e não marca — senão a tela nasceria "suja" só de carregar.
+    edicao.marcarEditado();
+    setForm((f) => ({ ...f, [k]: v }));
+  };
   const aplicarParams = () => { precoTocado.current = false; setRecalcNonce((n) => n + 1); };
   // Composição de custo editável: as somas por etapa viram o custo → Fator K.
   const setRow = (i: number, patch: Partial<CustoRow>) => { precoTocado.current = false; setCustoRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r))); };
@@ -177,6 +186,7 @@ export function RedeMtConfigurator({ propostaId, criadoPor }: { propostaId?: str
       if (!res.ok) throw new Error(data.error ?? "Falha ao salvar.");
       const id = data.proposta?.id ?? savedId;
       setSavedId(id);
+      edicao.marcarSalvo();
       if (!silencioso) setStatus("Proposta salva.");
       return id;
     } catch (e) {

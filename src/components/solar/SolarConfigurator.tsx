@@ -18,6 +18,7 @@ import { TelhadoSimulador, type EstudoTelhadoSalvo } from "./TelhadoSimulador";
 import { Combobox } from "@/components/Combobox";
 import { Alert, Kpi } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
 
 /** Formatação pt-BR local (sem depender de libs de servidor). */
@@ -232,7 +233,15 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
   // campos que o usuário já editou de propósito (a sugestão não sobrescreve)
   const touched = useRef({ nPaineis: false, inversor: false });
 
-  const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
+  /** Aviso de saída com edição pendente. Ver `useEdicaoPendente`. */
+  const edicao = useEdicaoPendente();
+
+  const set = <K extends keyof Form>(k: K, v: Form[K]) => {
+    // `set` é edição de gente; o preenchimento automático usa `setForm` direto
+    // e não marca — senão a tela nasceria "suja" só de carregar.
+    edicao.marcarEditado();
+    setForm((f) => ({ ...f, [k]: v }));
+  };
   const serializarBom = (itens: { qtde: string; descricao: string }[]) =>
     itens.map((b) => `${b.qtde}|${b.descricao}`).join("\n");
 
@@ -534,6 +543,7 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
       if (!res.ok) throw new Error(data.error ?? "Falha ao salvar.");
       const id = data.proposta?.id ?? savedId;
       setSavedId(id);
+      edicao.marcarSalvo();
       if (!silencioso) setStatus("Proposta salva.");
       return id;
     } catch (e) {

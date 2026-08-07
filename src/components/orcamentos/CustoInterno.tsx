@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Alert, Badge, Loading } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { lerHoras, sugerirCustoInterno } from "@/lib/custo-equipe/sugestao";
 import type { ConfigCapacidade } from "@/lib/capacidade/types";
 import type { Orcamento } from "@/lib/orcamentos/types";
@@ -43,7 +44,10 @@ export function CustoInterno({
   const [tipoId, setTipoId] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+ const [aviso, setAviso] = useState<string | null>(null);
+  /* As horas apontadas aqui não vivem em outro lugar até o Salvar: sair sem
+     gravar devolve o orçamento com custo administrativo zero. */
+  const edicao = useEdicaoPendente();
 
   useEffect(() => {
     (async () => {
@@ -74,6 +78,7 @@ export function CustoInterno({
   );
 
   function aplicarSugestao(id: string) {
+    edicao.marcarEditado();
     setTipoId(id);
     setAviso(null);
     if (!capacidade || !id) return;
@@ -105,6 +110,7 @@ export function CustoInterno({
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error ?? "Falha ao salvar.");
+      edicao.marcarSalvo();
       onAtualizado(d.orcamento);
       setAviso(d.incompleta ? "Alguma pessoa usada está sem custo por hora cadastrado." : null);
     } catch (e) {

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Download, Plus, Trash2 } from "lucide-react";
 import { Alert, Badge, Kpi, KpiGrid } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { calcularComposicao, markupDe } from "@/lib/mao-de-obra/motor";
 import { lerHoras } from "@/lib/custo-equipe/sugestao";
 import type { Funcao } from "@/lib/mao-de-obra/types";
@@ -67,6 +68,14 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
   const [origemHoras, setOrigemHoras] = useState<string | null>(null);
   const [salvandoConfig, setSalvandoConfig] = useState(false);
   const [salvouConfig, setSalvouConfig] = useState(false);
+  /* A calculadora não gera proposta: o que foi montado aqui só existe na tela
+     até virar planilha. Fechar sem baixar perde a conta inteira. */
+  const edicao = useEdicaoPendente();
+  /** Marca a edição e delega — evita repetir a marca em cada campo da linha. */
+  const editarLinhas = (fn: (ls: Linha[]) => Linha[]) => {
+    edicao.marcarEditado();
+    setLinhas(fn);
+  };
   /** Texto digitado no R$/h de cada função — ver o comentário no `onChange`. */
   const [textosCusto, setTextosCusto] = useState<Record<string, string>>({});
 
@@ -145,7 +154,7 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
     const t = tipos.find((x) => x.id === id);
     if (!t) return setOrigemHoras(null);
     const horas = t.minutos / 60;
-    setLinhas((ls) => {
+    editarLinhas((ls) => {
       const [primeira, ...resto] = ls.length ? ls : [{ ...LINHA_VAZIA }];
       return [{ ...primeira, horas: String(horas).replace(".", ",") }, ...resto];
     });
@@ -176,6 +185,7 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
       if (!r.ok) throw new Error(d.error ?? "Falha ao salvar.");
       setFuncoes(d.config.funcoes ?? []);
       setSalvouConfig(true);
+      edicao.marcarSalvo();
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao salvar as funções.");
     } finally {
@@ -349,7 +359,7 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Campo label="Cliente ou obra" hint={<p className="hint mt-1">Só para identificar a planilha</p>}>
-              <input className="field-input" value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Ex.: Bertanzin Madeiras" />
+              <input className="field-input" value={cliente} onChange={(e) => { edicao.marcarEditado(); setCliente(e.target.value); }} placeholder="Ex.: Bertanzin Madeiras" />
             </Campo>
             <Campo
               label="Partir de um tipo de demanda"
@@ -377,7 +387,7 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
                     <select
                       className="field-input"
                       value={l.funcaoId}
-                      onChange={(e) => setLinhas((ls) => ls.map((x, j) => (j === i ? { ...x, funcaoId: e.target.value } : x)))}
+                      onChange={(e) => editarLinhas((ls) => ls.map((x, j) => (j === i ? { ...x, funcaoId: e.target.value } : x)))}
                     >
                       <option value="">Selecione…</option>
                       {funcoes.map((f) => (
@@ -393,7 +403,7 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
                       className="field-input tabular-nums"
                       inputMode="numeric"
                       value={l.pessoas}
-                      onChange={(e) => setLinhas((ls) => ls.map((x, j) => (j === i ? { ...x, pessoas: e.target.value } : x)))}
+                      onChange={(e) => editarLinhas((ls) => ls.map((x, j) => (j === i ? { ...x, pessoas: e.target.value } : x)))}
                     />
                   </Campo>
                   <Campo
@@ -405,14 +415,14 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
                       className="field-input tabular-nums"
                       value={l.horas}
                       placeholder="0"
-                      onChange={(e) => setLinhas((ls) => ls.map((x, j) => (j === i ? { ...x, horas: e.target.value } : x)))}
+                      onChange={(e) => editarLinhas((ls) => ls.map((x, j) => (j === i ? { ...x, horas: e.target.value } : x)))}
                     />
                   </Campo>
                   <div className="flex items-end sm:col-span-1">
                     <button
                       type="button"
                       className="icon-btn"
-                      onClick={() => setLinhas((ls) => (ls.length > 1 ? ls.filter((_, j) => j !== i) : [{ ...LINHA_VAZIA }]))}
+                      onClick={() => editarLinhas((ls) => (ls.length > 1 ? ls.filter((_, j) => j !== i) : [{ ...LINHA_VAZIA }]))}
                       aria-label={`Remover linha ${i + 1}`}
                     >
                       <Trash2 className="h-4 w-4" aria-hidden />
@@ -421,7 +431,7 @@ export function CalculadoraMaoDeObra({ podeConfigurar }: { podeConfigurar: boole
                 </div>
               ))}
             </div>
-            <button type="button" className="btn-secondary mt-3" onClick={() => setLinhas((ls) => [...ls, { ...LINHA_VAZIA }])}>
+            <button type="button" className="btn-secondary mt-3" onClick={() => editarLinhas((ls) => [...ls, { ...LINHA_VAZIA }])}>
               <Plus className="h-4 w-4" aria-hidden /> Acrescentar função
             </button>
           </div>

@@ -12,6 +12,7 @@ import { Alert, Kpi } from "@/components/ui";
 import { POTENCIAS_CA, acharPotencia } from "@/services/carregador/potencias";
 import { precoEV } from "@/services/carregador/engine";
 import { Campo } from "@/components/Campo";
+import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
 
 const nf = (v: number, d = 2) =>
@@ -116,7 +117,15 @@ export function CarregadorConfigurator({ propostaId, criadoPor }: { propostaId?:
    *  dimensionamento mudou depois disso. */
   const bomNaEdicao = useRef("");
 
-  const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
+  /** Aviso de saída com edição pendente. Ver `useEdicaoPendente`. */
+  const edicao = useEdicaoPendente();
+
+  const set = <K extends keyof Form>(k: K, v: Form[K]) => {
+    // `set` é edição de gente; o preenchimento automático usa `setForm` direto
+    // e não marca — senão a tela nasceria "suja" só de carregar.
+    edicao.marcarEditado();
+    setForm((f) => ({ ...f, [k]: v }));
+  };
 
   // Casa a potência atual com o catálogo. Mudar a alimentação à mão pode tirar
   // a combinação da lista — aí o seletor cai em "Outra potência…" sozinho.
@@ -235,6 +244,7 @@ export function CarregadorConfigurator({ propostaId, criadoPor }: { propostaId?:
       if (!res.ok) throw new Error(data.error ?? "Falha ao salvar.");
       const id = data.proposta?.id ?? savedId;
       setSavedId(id);
+      edicao.marcarSalvo();
       if (!silencioso) setStatus("Proposta salva.");
       return id;
     } catch (e) {

@@ -9,6 +9,7 @@ import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 
 import { Alert } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -144,7 +145,14 @@ export function ProjetoBtConfigurator({ propostaId, criadoPor }: { propostaId?: 
   // Condições de pagamento (tabela de parcelas ou "A combinar").
   const [cond, setCond] = useState<CondPag>(COND_PADRAO_BT);
 
-  const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  /** Aviso de saída com edição pendente. Ver `useEdicaoPendente`. */
+  const edicao = useEdicaoPendente();
+
+  const set = (k: string, v: string) => {
+    // `set` é edição de gente; o preenchimento automático usa `setForm` direto.
+    edicao.marcarEditado();
+    setForm((f) => ({ ...f, [k]: v }));
+  };
   const toggle = (id: string) => setForm((f) => ({ ...f, [`on_${id}`]: f[`on_${id}`] ? "" : "1" }));
 
   useEffect(() => {
@@ -224,6 +232,7 @@ export function ProjetoBtConfigurator({ propostaId, criadoPor }: { propostaId?: 
       if (!res.ok) throw new Error(data.error ?? "Falha ao salvar.");
       const id = data.proposta?.id ?? savedId;
       setSavedId(id);
+      edicao.marcarSalvo();
       if (!silencioso) setStatusMsg("Proposta salva.");
       return id;
     } catch (e) {

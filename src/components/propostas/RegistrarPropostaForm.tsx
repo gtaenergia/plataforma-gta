@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, SectionCard } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { ClienteInput } from "@/components/clientes/ClienteInput";
 import { SERVICO_OUTRO, SERVICO_OUTRO_LABEL } from "@/lib/propostas/types";
 import { ANEXO_MAX_BYTES } from "@/lib/orcamentos/types";
@@ -30,6 +31,9 @@ const MB = 1024 * 1024;
 export function RegistrarPropostaForm() {
   const router = useRouter();
   const [servicos, setServicos] = useState<ServiceMeta[]>([]);
+  /* Uma proposta pronta digitada à mão é o registro mais caro de perder desta
+     tela: não há rascunho, e nada dela vive em outro lugar. */
+  const edicao = useEdicaoPendente();
   const [serviceKey, setServiceKey] = useState(SERVICO_OUTRO);
   const [servicoOutro, setServicoOutro] = useState("");
   const [cliente, setCliente] = useState("");
@@ -105,6 +109,7 @@ export function RegistrarPropostaForm() {
       // Sem PDF: o registro já cumpriu o papel de histórico.
       if (!arquivo) {
         router.refresh();
+      edicao.marcarSalvo();
         router.push("/propostas");
         return;
       }
@@ -141,7 +146,7 @@ export function RegistrarPropostaForm() {
       <SectionCard title="Proposta" subtitle="O que foi proposto e para qual cliente.">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
           <Campo className="sm:col-span-3" label="Serviço *">
-            <select className="field-input" value={serviceKey} onChange={(e) => setServiceKey(e.target.value)}>
+            <select className="field-input" value={serviceKey} onChange={(e) => { edicao.marcarEditado(); setServiceKey(e.target.value); }}>
               {servicos.map((s) => (
                 <option key={s.key} value={s.key}>{s.label}</option>
               ))}
@@ -160,7 +165,7 @@ export function RegistrarPropostaForm() {
               <input
                 className="field-input"
                 value={servicoOutro}
-                onChange={(e) => setServicoOutro(e.target.value)}
+                onChange={(e) => { edicao.marcarEditado(); setServicoOutro(e.target.value); }}
                 maxLength={60}
                 placeholder="Ex.: Consultoria tarifária"
               />
@@ -176,18 +181,18 @@ export function RegistrarPropostaForm() {
             />
           </Campo>
           <Campo className="sm:col-span-3" label="Valor (R$)">
-            <input className="field-input" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="Ex.: 32.700,00" />
+            <input className="field-input" inputMode="decimal" value={valor} onChange={(e) => { edicao.marcarEditado(); setValor(e.target.value); }} placeholder="Ex.: 32.700,00" />
           </Campo>
           {/* `col-span-3`: em `1` o campo ficava com 102px e o seletor de data
                 nativo pede 147 — a data aparecia cortada. */}
           <Campo className="sm:col-span-3" label="Emissão">
-            <input type="date" className="field-input" value={dataEmissao} onChange={(e) => setDataEmissao(e.target.value)} />
+            <input type="date" className="field-input" value={dataEmissao} onChange={(e) => { edicao.marcarEditado(); setDataEmissao(e.target.value); }} />
           </Campo>
           <Campo className="sm:col-span-6" label="Observações">
             <textarea
               className="field-input min-h-[70px]"
               value={observacoes}
-              onChange={(e) => setObservacoes(e.target.value)}
+              onChange={(e) => { edicao.marcarEditado(); setObservacoes(e.target.value); }}
               placeholder="Ex.: escopo fora do padrão, condição especial combinada…"
             />
           </Campo>

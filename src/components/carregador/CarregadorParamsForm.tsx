@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { Alert, Loading } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 type ParamKey = "maoObraPorPonto" | "fatorK" | "aliqImpostos";
 type Params = Record<ParamKey, number>;
 interface CampoDef { key: ParamKey; label: string; help: string; kind: "dec" | "pct" }
@@ -31,6 +32,9 @@ export function CarregadorParamsForm({ onSaved }: { onSaved?: (p: Params) => voi
   const [texto, setTexto] = useState<Record<ParamKey, string> | null>(null);
   const [defaults, setDefaults] = useState<Params | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  /* Parâmetro de PREÇO: sair sem salvar deixa a proposta seguinte saindo
+     com o valor antigo, sem nada na tela dizendo isso. */
+  const edicao = useEdicaoPendente();
   const [status, setStatus] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -58,6 +62,7 @@ export function CarregadorParamsForm({ onSaved }: { onSaved?: (p: Params) => voi
       setTexto(paraTexto(d.params));
       setStatus("Parâmetros salvos. Novos cálculos já usam estes valores.");
       onSaved?.(d.params as Params);
+      edicao.marcarSalvo();
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao salvar.");
     } finally {
@@ -72,7 +77,7 @@ export function CarregadorParamsForm({ onSaved }: { onSaved?: (p: Params) => voi
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {CAMPOS.map((c) => (
           <Campo key={c.key} label={<>{c.label}</>} hint={<><p className="mt-1 hint">{c.help}</p></>}>
-            <input className="field-input" inputMode="decimal" value={texto[c.key]} onChange={(e) => setTexto({ ...texto, [c.key]: e.target.value })} />
+            <input className="field-input" inputMode="decimal" value={texto[c.key]} onChange={(e) => { edicao.marcarEditado(); setTexto({ ...texto, [c.key]: e.target.value }); }} />
           </Campo>
         ))}
       </div>

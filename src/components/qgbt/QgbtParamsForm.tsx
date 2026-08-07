@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { Alert, Loading } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 type ParamKey = "fatorK" | "aliqImpostos";
 type Params = Record<ParamKey, number>;
 interface CampoDef { key: ParamKey; label: string; help: string; kind: "dec" | "pct" }
@@ -29,6 +30,9 @@ export function QgbtParamsForm({ onSaved }: { onSaved?: (p: Params) => void }) {
   const [texto, setTexto] = useState<Record<ParamKey, string> | null>(null);
   const [defaults, setDefaults] = useState<Params | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  /* Parâmetro de PREÇO: sair sem salvar deixa a proposta seguinte saindo
+     com o valor antigo, sem nada na tela dizendo isso. */
+  const edicao = useEdicaoPendente();
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -42,6 +46,7 @@ export function QgbtParamsForm({ onSaved }: { onSaved?: (p: Params) => void }) {
   async function salvar() {
     if (!texto) return;
     setErro(null); setStatusMsg(null);
+      edicao.marcarSalvo();
     const valores = {} as Params;
     for (const c of CAMPOS) {
       const n = parseDec(texto[c.key]);
@@ -70,7 +75,7 @@ export function QgbtParamsForm({ onSaved }: { onSaved?: (p: Params) => void }) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {CAMPOS.map((c) => (
           <Campo key={c.key} label={<>{c.label}</>} hint={<><p className="mt-1 hint">{c.help}</p></>}>
-            <input className="field-input" inputMode="decimal" value={texto[c.key]} onChange={(e) => setTexto({ ...texto, [c.key]: e.target.value })} />
+            <input className="field-input" inputMode="decimal" value={texto[c.key]} onChange={(e) => { edicao.marcarEditado(); setTexto({ ...texto, [c.key]: e.target.value }); }} />
           </Campo>
         ))}
       </div>

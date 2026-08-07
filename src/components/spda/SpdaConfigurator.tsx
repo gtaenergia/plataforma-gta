@@ -9,6 +9,7 @@ import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } f
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
 
 const nf = (v: number, d = 2) =>
@@ -82,7 +83,15 @@ export function SpdaConfigurator({ propostaId, criadoPor }: { propostaId?: strin
   const [cond, setCond] = useState<CondPag>(COND_PADRAO);
   const precoTocado = useRef(false);
 
-  const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v }));
+  /** Aviso de saída com edição pendente. Ver `useEdicaoPendente`. */
+  const edicao = useEdicaoPendente();
+
+  const set = <K extends keyof Form>(k: K, v: Form[K]) => {
+    // `set` é edição de gente; o preenchimento automático usa `setForm` direto
+    // e não marca — senão a tela nasceria "suja" só de carregar.
+    edicao.marcarEditado();
+    setForm((f) => ({ ...f, [k]: v }));
+  };
   const aplicarParams = () => { precoTocado.current = false; setRecalcNonce((n) => n + 1); };
 
   useEffect(() => {
@@ -174,6 +183,7 @@ export function SpdaConfigurator({ propostaId, criadoPor }: { propostaId?: strin
       if (!res.ok) throw new Error(data.error ?? "Falha ao salvar.");
       const id = data.proposta?.id ?? savedId;
       setSavedId(id);
+      edicao.marcarSalvo();
       if (!silencioso) setStatus("Proposta salva.");
       return id;
     } catch (e) {
