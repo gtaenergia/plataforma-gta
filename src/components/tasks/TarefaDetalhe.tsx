@@ -11,7 +11,7 @@ import { SeletorTipoDemanda } from "@/components/capacidade/SeletorTipoDemanda";
 import { SugestaoResponsavel } from "./SugestaoResponsavel";
 import { MarcaPrioridade, MarcaStatus } from "./marcadores";
 import { comCategoria, comTipoDemanda, paraPayload, type FormState } from "./formulario";
-import { horasParaMin, minParaHoras, useCapacidade } from "@/components/capacidade/comum";
+import { catalogoDeTipos, horasParaMin, minParaHoras, useCapacidade } from "@/components/capacidade/comum";
 import {
   CATEGORIAS_PADRAO_TAREFA,
   DEMANDANTES,
@@ -187,18 +187,8 @@ export function TarefaDetalhe({
     }
   }
 
-  async function adicionarAoCatalogo(categoria: string, nome: string, minutos: number) {
-    const id = `tipo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const atualizada = { ...capacidade, tipos: [...capacidade.tipos, { id, categoria, nome, minutos }] };
-    const res = await fetch("/api/planejamento", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(atualizada),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Falha ao adicionar ao catálogo.");
-    setConfig(data.config);
-  }
+  /** Cadastrar e remover tipo de demanda sem sair da tela. Ver `catalogoDeTipos`. */
+  const catalogo = catalogoDeTipos(capacidade, setConfig);
 
   return (
     <div className="space-y-6">
@@ -321,7 +311,8 @@ export function TarefaDetalhe({
                   config={capacidade}
                   estimativaMin={horasParaMin(form.estimativaHoras)}
                   onEstimativaChange={(min) => setForm({ ...form, estimativaHoras: minParaHoras(min) })}
-                  onAdicionarAoCatalogo={podeEditarCatalogo ? adicionarAoCatalogo : undefined}
+                  onAdicionarAoCatalogo={podeEditarCatalogo ? catalogo.adicionar : undefined}
+                  onRemoverDoCatalogo={podeEditarCatalogo ? catalogo.remover : undefined}
                   onChange={(v) => setForm(comTipoDemanda(form, v, capacidade))}
                 />
               </div>

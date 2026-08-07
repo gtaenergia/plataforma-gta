@@ -8,7 +8,7 @@ import { SeletorTipoDemanda } from "@/components/capacidade/SeletorTipoDemanda";
 import { Combobox } from "@/components/Combobox";
 import { SugestaoResponsavel } from "./SugestaoResponsavel";
 import { FORM_VAZIO, comCategoria, comTipoDemanda, paraPayload, type FormState } from "./formulario";
-import { horasParaMin, minParaHoras, useCapacidade } from "@/components/capacidade/comum";
+import { catalogoDeTipos, horasParaMin, minParaHoras, useCapacidade } from "@/components/capacidade/comum";
 import {
   CATEGORIAS_PADRAO_TAREFA,
   DEMANDANTES,
@@ -79,22 +79,11 @@ export function NovaTarefaForm({ podeEditarCatalogo }: { podeEditarCatalogo: boo
   }, [tarefas, capacidade.tipos]);
 
   /**
-   * Cadastra o tipo digitado sem sair da tela. O catálogo passa a crescer pelo
-   * uso real, em vez de exigir uma ida à tela de planejamento a cada demanda
+   * Cadastra (e remove) o tipo sem sair da tela. O catálogo cresce pelo uso
+   * real, em vez de exigir uma ida à tela de planejamento a cada demanda
    * específica — que era o atrito relatado.
    */
-  async function adicionarAoCatalogo(categoria: string, nome: string, minutos: number) {
-    const id = `tipo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const atualizada = { ...capacidade, tipos: [...capacidade.tipos, { id, categoria, nome, minutos }] };
-    const res = await fetch("/api/planejamento", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(atualizada),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Falha ao adicionar ao catálogo.");
-    setConfig(data.config);
-  }
+  const catalogo = catalogoDeTipos(capacidade, setConfig);
 
   async function criar(continuar: boolean) {
     setSalvando(true);
@@ -223,7 +212,8 @@ export function NovaTarefaForm({ podeEditarCatalogo }: { podeEditarCatalogo: boo
               config={capacidade}
               estimativaMin={horasParaMin(form.estimativaHoras)}
               onEstimativaChange={(min) => setForm({ ...form, estimativaHoras: minParaHoras(min) })}
-              onAdicionarAoCatalogo={podeEditarCatalogo ? adicionarAoCatalogo : undefined}
+              onAdicionarAoCatalogo={podeEditarCatalogo ? catalogo.adicionar : undefined}
+              onRemoverDoCatalogo={podeEditarCatalogo ? catalogo.remover : undefined}
               onChange={(v) => setForm(comTipoDemanda(form, v, capacidade))}
             />
           </div>

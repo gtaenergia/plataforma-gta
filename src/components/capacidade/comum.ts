@@ -47,6 +47,50 @@ export function useCapacidade() {
 }
 
 /**
+ * Escrita no catálogo de tipos de demanda, a partir das telas de tarefa.
+ *
+ * As duas telas (nova tarefa e detalhe) tinham a mesma função de acrescentar,
+ * copiada palavra por palavra. Acrescentar a remoção faria quatro cópias da
+ * mesma regra — e cópia de regra é o que este repositório já viu divergir.
+ *
+ * A gravação manda a configuração INTEIRA (é o contrato do PUT), trocando só
+ * a lista de tipos.
+ */
+export function catalogoDeTipos(
+  config: ConfigCapacidade,
+  setConfig: (c: ConfigCapacidade) => void,
+) {
+  async function gravar(tipos: ConfigCapacidade["tipos"], erroPadrao: string) {
+    const res = await fetch("/api/planejamento", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...config, tipos }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? erroPadrao);
+    setConfig(data.config);
+  }
+
+  return {
+    adicionar(categoria: string, nome: string, minutos: number) {
+      const id = `tipo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      return gravar([...config.tipos, { id, categoria, nome, minutos }], "Falha ao adicionar ao catálogo.");
+    },
+    /**
+     * Some do catálogo — as tarefas antigas não quebram: elas guardam o tipo
+     * como TEXTO, não por referência. O que se perde é a duração padrão nas
+     * próximas estimativas daquela demanda.
+     */
+    remover(categoria: string, nome: string) {
+      return gravar(
+        config.tipos.filter((t) => !(t.categoria === categoria && t.nome === nome)),
+        "Falha ao remover do catálogo.",
+      );
+    },
+  };
+}
+
+/**
  * "Hoje" no fuso local. Fica aqui, e não no motor, justamente para o motor
  * continuar sem relógio — é o que torna o cálculo testável com data fixa.
  */

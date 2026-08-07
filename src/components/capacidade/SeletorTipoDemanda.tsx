@@ -28,6 +28,7 @@ export function SeletorTipoDemanda({
   estimativaMin = 0,
   onEstimativaChange,
   onAdicionarAoCatalogo,
+  onRemoverDoCatalogo,
 }: {
   categoria: string;
   valor: string;
@@ -39,6 +40,8 @@ export function SeletorTipoDemanda({
   onEstimativaChange?: (minutos: number) => void;
   /** Ausente para quem não pode editar os parâmetros de planejamento. */
   onAdicionarAoCatalogo?: (categoria: string, nome: string, minutos: number) => Promise<void>;
+  /** Idem: sem permissão, a lista não oferece exclusão. */
+  onRemoverDoCatalogo?: (categoria: string, nome: string) => Promise<void>;
 }) {
   const listaId = useId();
   const [decidido, setDecidido] = useState(false);
@@ -74,7 +77,27 @@ export function SeletorTipoDemanda({
         options={tipos.map((t) => t.nome)}
         rotuloNovo="Descrever: “{v}”"
         onChange={onChange}
+        rotuloExcluir="Remover “{v}” do catálogo"
+        onExcluir={
+          onRemoverDoCatalogo
+            ? (alvo) => {
+                // A tarefa guarda o tipo como texto: remover do catálogo não
+                // desfaz nenhuma tarefa, só tira a duração das PRÓXIMAS.
+                if (
+                  !window.confirm(
+                    `Remover “${alvo}” do catálogo de ${categoria.trim()}?\n\nAs tarefas que já usam esse tipo continuam como estão. O que se perde é a duração sugerida nas próximas.`,
+                  )
+                ) {
+                  return;
+                }
+                void onRemoverDoCatalogo(categoria.trim(), alvo).catch((e) =>
+                  setErro(e instanceof Error ? e.message : "Falha ao remover do catálogo."),
+                );
+              }
+            : undefined
+        }
       />
+      {erro && !mostrarBloco && <p className="field-error">{erro}</p>}
 
       {!semCategoria && !mostrarBloco && (
         <p className="hint mt-1">
