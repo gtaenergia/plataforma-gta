@@ -9,7 +9,7 @@ import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } f
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
 import { Campo } from "@/components/Campo";
-import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
+import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -88,7 +88,7 @@ export function SpdaConfigurator({ propostaId, criadoPor }: { propostaId?: strin
   useEffect(() => {
     if (propostaId) {
       fetch(`/api/propostas/${propostaId}`).then((r) => r.json()).then((d) => {
-        if (d.proposta?.dados) { const dados = d.proposta.dados as Partial<Form> & { cond?: CondPag }; setForm({ ...FORM_INICIAL, ...dados }); precoTocado.current = true; if (dados.cond) setCond(dados.cond as CondPag); }
+        if (d.proposta?.dados) { const dados = d.proposta.dados as Partial<Form> & { cond?: CondPag; equipeGta?: EquipeSalva; equipeOrcamento?: EquipeSalva }; setForm({ ...FORM_INICIAL, ...dados }); precoTocado.current = true; if (dados.cond) setCond(dados.cond as CondPag); if (dados.equipeGta) equipe.restaurar(dados.equipeGta); if (dados.equipeOrcamento) equipeOrc.restaurar(dados.equipeOrcamento); }
       }).catch(() => {});
     } else {
       fetch("/api/propostas/proximo?serviceKey=spda").then((r) => r.json()).then((d) => {
@@ -166,7 +166,7 @@ export function SpdaConfigurator({ propostaId, criadoPor }: { propostaId?: strin
     if (!form.clienteNome) { setErro("Informe o nome do cliente para salvar."); return null; }
     setSalvando(true); setErro(null);
     try {
-      const payload = { serviceKey: "spda", cliente: form.clienteNome, status: totalCliente > 0 ? "precificada" : "rascunho", dados: { ...form, cond } };
+      const payload = { serviceKey: "spda", cliente: form.clienteNome, status: totalCliente > 0 ? "precificada" : "rascunho", dados: { ...form, cond, equipeGta: equipe.serializar(), equipeOrcamento: equipeOrc.serializar() } };
       const res = savedId
         ? await fetch(`/api/propostas/${savedId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
         : await fetch("/api/propostas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });

@@ -199,6 +199,8 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
   const [savedId, setSavedId] = useState<string | undefined>(propostaId);
   /** Parágrafo da simulação de telhado. "" = o usuário não marcou incluir. */
   const [textoTelhado, setTextoTelhado] = useState("");
+  /** O texto digitado no Fator; `undefined` = mostra o número vigente. */
+  const [textoFator, setTextoFator] = useState<string>();
   /**
    * O estudo do telhado, para gravar junto da proposta.
    *
@@ -297,6 +299,8 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
 
   // aplica os parâmetros salvos no card de configuração à proposta atual
   function aplicarParams(p: { eficiencia: number; overloadDesejado: number; fator: number; viagens: number }) {
+    // O texto acompanha: sem isto o campo continuaria exibindo o fator antigo.
+    setTextoFator(String(p.fator).replace(".", ","));
     setForm((f) => ({ ...f, eficiencia: p.eficiencia, overloadDesejado: p.overloadDesejado, fator: p.fator, viagens: p.viagens }));
   }
 
@@ -1037,7 +1041,20 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
             <input className="field-input" value={form.kit} onChange={(e) => set("kit", e.target.value)} placeholder="Ex.: 18.400,27" />
           </Campo>
           <Campo label="Fator">
-            <input type="number" step="0.05" className="field-input" value={form.fator} onChange={(e) => set("fator", Number(e.target.value))} />
+            <input
+              // Texto, não `type="number"`: medido num navegador pt-BR, o campo
+              // numérico DESCARTA a vírgula e o dígito seguinte entra na frente
+              // do que já estava. Aqui isso é pior que nas horas — "1,575"
+              // viraria 5751, e o Fator multiplica o preço do kit.
+              inputMode="decimal"
+              className="field-input tabular-nums"
+              value={textoFator ?? String(form.fator).replace(".", ",")}
+              onChange={(e) => {
+                setTextoFator(e.target.value);
+                const n = Number(e.target.value.trim().replace(",", "."));
+                if (Number.isFinite(n) && n > 0) set("fator", n);
+              }}
+            />
           </Campo>
           <Campo label="Viagens">
             <input type="number" min="0" className="field-input" value={form.viagens} onChange={(e) => set("viagens", Number(e.target.value))} />

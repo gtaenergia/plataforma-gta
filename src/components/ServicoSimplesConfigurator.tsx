@@ -9,7 +9,7 @@ import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 
 import { Alert } from "@/components/ui";
 import { Campo } from "@/components/Campo";
-import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
+import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
 const brl = (v: number) => "R$ " + nf(v, 2);
@@ -88,6 +88,8 @@ export function ServicoSimplesConfigurator({ serviceKey, propostaId, criadoPor }
           const dados = d.proposta.dados as Record<string, unknown>;
           setForm((f) => ({ ...f, ...(dados as Vals) }));
           if (dados.cond && typeof dados.cond === "object") setCond(dados.cond as CondPag);
+          if (dados.equipeGta) equipe.restaurar(dados.equipeGta as EquipeSalva);
+          if (dados.equipeOrcamento) equipeOrc.restaurar(dados.equipeOrcamento as EquipeSalva);
           precoTocado.current = true;
         }
       }).catch(() => {});
@@ -117,7 +119,7 @@ export function ServicoSimplesConfigurator({ serviceKey, propostaId, criadoPor }
     if (!form.clienteNome) { setErro("Informe o nome do cliente para salvar."); return null; }
     setSalvando(true); setErro(null);
     try {
-      const payload = { serviceKey: config.serviceKey, cliente: form.clienteNome, status: valorServico > 0 ? "precificada" : "rascunho", dados: { ...form, cond } };
+      const payload = { serviceKey: config.serviceKey, cliente: form.clienteNome, status: valorServico > 0 ? "precificada" : "rascunho", dados: { ...form, cond, equipeGta: equipe.serializar(), equipeOrcamento: equipeOrc.serializar() } };
       const res = savedId
         ? await fetch(`/api/propostas/${savedId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
         : await fetch("/api/propostas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
