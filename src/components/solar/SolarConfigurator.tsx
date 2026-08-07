@@ -1062,7 +1062,8 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
             { rotulo: "Instalação", valor: calc.pricing.custos.instalacao },
             { rotulo: "Material CA", valor: calc.pricing.custos.materialCa },
             { rotulo: "Deslocamento", valor: calc.pricing.custos.deslocamento },
-            { rotulo: "Execução civil", valor: calc.pricing.custos.execucaoCivil },
+            // Execução civil NÃO entra: é repasse, já excluída de "Serviços"
+            // junto com o kit — listá-la aqui repetiria o defeito da planilha.
             { rotulo: "ART", valor: calc.pricing.custos.art },
             { rotulo: "Cartório", valor: calc.pricing.custos.cartorio },
             { rotulo: "Imposto", valor: calc.pricing.custos.imposto },

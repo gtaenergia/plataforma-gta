@@ -152,9 +152,11 @@ export function planilhaSolar(d: {
     const impRef = a.formula("Imposto (R$)", `${servRef}*${impPctRef}`, impNum, { fmt: BRL });
     a.espaco();
 
-    // custo base (SEM comissão) → lucro/margem, como no pricing.ts
-    const parcelas = ec > 0 ? [instRef, caRef, deslRef, artRef, impRef, ecRef] : [instRef, caRef, deslRef, artRef, impRef];
-    const custoBaseNum = instNum + caNum + deslNum + num(p.art) + impNum + (ec > 0 ? ec : 0);
+    // Custo base (SEM comissão) → lucro/margem, como no pricing.ts.
+    // A execução civil fica FORA: "Serviços GTA" já a descontou junto com o
+    // kit, e subtraí-la de novo era o defeito herdado da planilha-fonte.
+    const parcelas = [instRef, caRef, deslRef, artRef, impRef];
+    const custoBaseNum = instNum + caNum + deslNum + num(p.art) + impNum;
     const custoBaseRef = a.formula("Custo base (sem comissão)", parcelas.join("+"), custoBaseNum, { fmt: BRL, bold: true });
     const lucroNum = servicosNum - custoBaseNum;
     const lucroRef = a.formula("Lucro", `${servRef}-${custoBaseRef}`, lucroNum, { fmt: BRL });

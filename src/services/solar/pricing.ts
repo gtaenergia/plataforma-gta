@@ -50,10 +50,11 @@ export interface PricingResult {
     deslocamento: number;
     instalacao: number;
     materialCa: number;
+    /** Informativo. É REPASSE (sai em `servicos` junto com o kit) — não entra em `total`. */
     execucaoCivil: number;
     imposto: number;
     comissao: number;
-    total: number; // soma sem comissão (base do lucro, como na planilha)
+    total: number; // soma sem comissão (base do lucro)
   };
   lucro: number; // faturamento − custos (sem comissão)
   margem: number; // lucro / faturamento
@@ -71,7 +72,19 @@ export function precificar(i: PricingInput): PricingResult {
   const imposto = servicos * i.impostoPct;
   const comissao = servicos * i.comissaoPct;
 
-  const custoBase = i.art + i.cartorio + deslocamento + instalacao + materialCa + i.execucaoCivil + imposto;
+  /*
+   * DIVERGÊNCIA DELIBERADA da planilha-fonte (como a célula E31 do Payback).
+   *
+   * Na planilha, B11 (Lucro) subtrai a execução civil DE NOVO — mas B10
+   * (Faturamento GTA = Total − Kit − Civil) já a tinha descontado. Sob
+   * qualquer leitura do fluxo de dinheiro isso cobra a civil duas vezes e
+   * derruba o lucro exibido pelo valor cheio dela.
+   *
+   * O defeito nunca disparou de verdade: nos três deals do share que usam
+   * este modelo (Igor, Pedro Igor, Luciano) a civil é 0. O preço ao cliente
+   * nunca passou por essa célula — só o lucro/margem que o vendedor vê.
+   */
+  const custoBase = i.art + i.cartorio + deslocamento + instalacao + materialCa + imposto;
   const lucro = servicos - custoBase;
   const lucroLiquido = lucro - comissao;
 

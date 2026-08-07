@@ -386,6 +386,30 @@ describe("Solar — cadeia completa: sizing → geração → preço → economi
     `);
   });
 
+  it("execução civil é repasse: não é descontada duas vezes do lucro", () => {
+    /*
+     * A planilha-fonte subtraía a civil DE NOVO no lucro (B11), depois de
+     * "Serviços" (B10) já a ter descontado. O caso nunca disparou — civil = 0
+     * em todos os deals do share — e o engine diverge da planilha de
+     * propósito, como no payback. Este teste segura a divergência.
+     */
+    const sem = precificar({ ...PRICING_DEFAULTS, kit: 20_000, nPaineis: 12, kwpTotal: 6.84 });
+    const com = precificar({ ...PRICING_DEFAULTS, execucaoCivil: 10_000, kit: 20_000, nPaineis: 12, kwpTotal: 6.84 });
+
+    // A civil entra no total ao cliente multiplicada pelo fator…
+    expect(r4(com.valorTotal - sem.valorTotal)).toBe(r4(10_000 * 1.575));
+    // …e o que ela acrescenta aos serviços é o markup dela.
+    const acrescimoServicos = com.servicos - sem.servicos; // 10.000 × 0,575
+    expect(r4(acrescimoServicos)).toBe(5750);
+
+    // O custo NÃO ganha os 10.000 de volta — só o imposto sobre o acréscimo.
+    expect(r4(com.custos.total - sem.custos.total)).toBe(r4(acrescimoServicos * PRICING_DEFAULTS.impostoPct));
+    // Com o defeito da planilha, o lucro CAIRIA com a civil. Corrigido, sobe.
+    expect(com.lucro).toBeGreaterThan(sem.lucro);
+    // O campo informativo continua reportando a civil, para a tela mostrar.
+    expect(com.custos.execucaoCivil).toBe(10_000);
+  });
+
   it("economia e payback (25 anos, rampa do Fio B a partir de 2026)", () => {
     expect({
       economiaAno1: r4(eco.economiaAno1),
