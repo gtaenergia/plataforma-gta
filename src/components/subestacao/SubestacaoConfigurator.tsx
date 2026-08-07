@@ -8,7 +8,7 @@ import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } f
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
 import { Campo } from "@/components/Campo";
-import { EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
+import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -109,6 +109,8 @@ interface Preco {
 export function SubestacaoConfigurator({ propostaId, criadoPor }: { propostaId?: string; criadoPor?: string }) {
   // Por métrica: as horas da GTA não somam ao preço, só medem a margem.
   const equipe = useEquipeResponsavel({ servicoKey: "projeto-subestacao", criadoPor });
+  /** O tempo de montar ESTA proposta — existe mesmo se o cliente não fechar. */
+  const equipeOrc = useEquipeResponsavel({ servicoKey: "projeto-subestacao", criadoPor, escopo: "orcamento" });
   const router = useRouter();
   const [form, setForm] = useState<Form>(FORM_INICIAL);
   const [cond, setCond] = useState<CondPag>(COND_PADRAO);
@@ -468,8 +470,12 @@ export function SubestacaoConfigurator({ propostaId, criadoPor }: { propostaId?:
       {/* Condições de pagamento */}
       {/* `form.impostos` é valor em R$, não alíquota — a razão sobre o total é
           o que o cartão precisa. Total zero cai no imposto padrão. */}
-      <EquipeResponsavelCard
-        estado={equipe}
+      <EquipeResponsavelCard estado={equipe} />
+      <EquipeResponsavelCard estado={equipeOrc} />
+
+      <DetalhamentoPreco
+        projeto={equipe}
+        orcamento={equipeOrc}
         precoCent={Math.round(total * 100)}
         precoSemEquipeCent={Math.round(total * 100)}
         custoConfiguradorCent={0}

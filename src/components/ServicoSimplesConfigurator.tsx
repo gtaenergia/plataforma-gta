@@ -9,7 +9,7 @@ import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 
 import { Alert } from "@/components/ui";
 import { Campo } from "@/components/Campo";
-import { EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
+import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
 const brl = (v: number) => "R$ " + nf(v, 2);
@@ -57,6 +57,8 @@ export function ServicoSimplesConfigurator({ serviceKey, propostaId, criadoPor }
      tabela: o preço não muda com quem executa. Nenhum tem alíquota própria,
      então o cartão usa a padrão da plataforma. */
   const equipe = useEquipeResponsavel({ servicoKey: serviceKey, criadoPor });
+  /** O tempo de montar ESTA proposta — existe mesmo se o cliente não fechar. */
+  const equipeOrc = useEquipeResponsavel({ servicoKey: "serviceKey", criadoPor, escopo: "orcamento" });
   const router = useRouter();
   const config = SERVICOS_SIMPLES[serviceKey];
 
@@ -208,8 +210,12 @@ export function ServicoSimplesConfigurator({ serviceKey, propostaId, criadoPor }
         </div>
       </section>
 
-      <EquipeResponsavelCard
-        estado={equipe}
+      <EquipeResponsavelCard estado={equipe} />
+      <EquipeResponsavelCard estado={equipeOrc} />
+
+      <DetalhamentoPreco
+        projeto={equipe}
+        orcamento={equipeOrc}
         precoCent={Math.round(valorServico * 100)}
         precoSemEquipeCent={Math.round(valorServico * 100)}
         custoConfiguradorCent={0}

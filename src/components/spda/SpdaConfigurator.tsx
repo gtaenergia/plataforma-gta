@@ -9,7 +9,7 @@ import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } f
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
 import { Campo } from "@/components/Campo";
-import { EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
+import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -66,6 +66,8 @@ export function SpdaConfigurator({ propostaId, criadoPor }: { propostaId?: strin
      remunera o projeto. As horas da GTA não somam ao preço — aparecem no
      detalhamento e na margem. Ver `equipeFormaPreco`. */
   const equipe = useEquipeResponsavel({ servicoKey: "spda", criadoPor });
+  /** O tempo de montar ESTA proposta — existe mesmo se o cliente não fechar. */
+  const equipeOrc = useEquipeResponsavel({ servicoKey: "spda", criadoPor, escopo: "orcamento" });
   const router = useRouter();
   const [form, setForm] = useState<Form>(FORM_INICIAL);
   const [preco, setPreco] = useState<Preco | null>(null);
@@ -293,11 +295,16 @@ export function SpdaConfigurator({ propostaId, criadoPor }: { propostaId?: strin
       {/* Condições de pagamento */}
       {/* Olha o PROJETO, não o total: a execução é orçada à parte e não é
           onde as horas de engenharia da GTA aparecem. */}
-      <EquipeResponsavelCard
-        estado={equipe}
+      <EquipeResponsavelCard estado={equipe} />
+      <EquipeResponsavelCard estado={equipeOrc} />
+
+      <DetalhamentoPreco
+        projeto={equipe}
+        orcamento={equipeOrc}
         precoCent={Math.round(valorTotalProjeto * 100)}
         precoSemEquipeCent={Math.round(valorTotalProjeto * 100)}
         custoConfiguradorCent={Math.round((preco?.custoLogistico ?? 0) * 100)}
+        rotuloCustoConfigurador="Custo logístico"
         imposto={aliq}
       />
 

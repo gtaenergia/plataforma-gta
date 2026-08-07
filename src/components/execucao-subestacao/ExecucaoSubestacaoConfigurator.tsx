@@ -8,7 +8,7 @@ import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } f
 import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
 import { Campo } from "@/components/Campo";
-import { EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
+import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -66,6 +66,10 @@ interface Preco {
 export function ExecucaoSubestacaoConfigurator({ propostaId, criadoPor }: { propostaId?: string; criadoPor?: string }) {
   // Fator K: as horas da GTA entram na base e o preço sobe. Ver `equipeFormaPreco`.
   const equipe = useEquipeResponsavel({ servicoKey: "execucao-subestacao", criadoPor });
+  /** O tempo de montar ESTA proposta — existe mesmo se não fechar. */
+  const equipeOrc = useEquipeResponsavel({ servicoKey: "execucao-subestacao", criadoPor, escopo: "orcamento" });
+  // O engine recebe as duas frentes somadas: para o Fator K é um custo só.
+  const custoEquipeTotal = equipe.custoEquipe + equipeOrc.custoEquipe;
   const router = useRouter();
   const [form, setForm] = useState<Form>(FORM_INICIAL);
   const [preco, setPreco] = useState<Preco | null>(null);
@@ -84,7 +88,7 @@ export function ExecucaoSubestacaoConfigurator({ propostaId, criadoPor }: { prop
   useEffect(() => {
     if (propostaId) {
       fetch(`/api/propostas/${propostaId}`).then((r) => r.json()).then((d) => {
-        if (d.proposta?.dados) { const dados = d.proposta.dados as Partial<Form> & { cond?: CondPag; equipeGta?: unknown }; setForm({ ...FORM_INICIAL, ...dados }); precoTocado.current = true; if (dados.equipeGta) equipe.restaurar(dados.equipeGta as EquipeSalva);  if (dados.cond) setCond(dados.cond as CondPag); }
+        if (d.proposta?.dados) { const dados = d.proposta.dados as Partial<Form> & { cond?: CondPag; equipeGta?: unknown; equipeOrcamento?: unknown }; setForm({ ...FORM_INICIAL, ...dados }); precoTocado.current = true; if (dados.equipeGta) equipe.restaurar(dados.equipeGta as EquipeSalva); if (dados.equipeOrcamento) equipeOrc.restaurar(dados.equipeOrcamento as EquipeSalva);  if (dados.cond) setCond(dados.cond as CondPag); }
       }).catch(() => {});
     } else {
       fetch("/api/propostas/proximo?serviceKey=execucao-subestacao").then((r) => r.json()).then((d) => {
@@ -94,7 +98,7 @@ export function ExecucaoSubestacaoConfigurator({ propostaId, criadoPor }: { prop
   }, [propostaId]);
 
   // `custoEquipe` na chave: trocar o responsável precisa refazer o preço.
-  const calcKey = JSON.stringify([form.custoMateriais, form.custoMaoObra, form.custoProjetoOutros, equipe.custoEquipe, recalcNonce]);
+  const calcKey = JSON.stringify([form.custoMateriais, form.custoMaoObra, form.custoProjetoOutros, custoEquipeTotal, recalcNonce]);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
@@ -102,7 +106,7 @@ export function ExecucaoSubestacaoConfigurator({ propostaId, criadoPor }: { prop
       try {
         const res = await fetch("/api/execucao-subestacao/calcular", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ custoMateriais: parseBR(form.custoMateriais), custoMaoObra: parseBR(form.custoMaoObra), custoProjetoOutros: parseBR(form.custoProjetoOutros), custoEquipe: equipe.custoEquipe }),
+          body: JSON.stringify({ custoMateriais: parseBR(form.custoMateriais), custoMaoObra: parseBR(form.custoMaoObra), custoProjetoOutros: parseBR(form.custoProjetoOutros), custoEquipe: custoEquipeTotal }),
         });
         if (res.ok) {
           const d = await res.json();
@@ -146,7 +150,7 @@ export function ExecucaoSubestacaoConfigurator({ propostaId, criadoPor }: { prop
     if (!form.clienteNome) { setErro("Informe o nome do cliente para salvar."); return null; }
     setSalvando(true); setErro(null);
     try {
-      const payload = { serviceKey: "execucao-subestacao", cliente: form.clienteNome, status: totalCliente > 0 ? "precificada" : "rascunho", dados: { ...form, cond, equipeGta: equipe.serializar() } };
+      const payload = { serviceKey: "execucao-subestacao", cliente: form.clienteNome, status: totalCliente > 0 ? "precificada" : "rascunho", dados: { ...form, cond, equipeGta: equipe.serializar(), equipeOrcamento: equipeOrc.serializar() } };
       const res = savedId
         ? await fetch(`/api/propostas/${savedId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
         : await fetch("/api/propostas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -276,12 +280,17 @@ export function ExecucaoSubestacaoConfigurator({ propostaId, criadoPor }: { prop
         )}
       </section>
 
+      <EquipeResponsavelCard estado={equipe} />
+      <EquipeResponsavelCard estado={equipeOrc} />
+
       {preco && (
-        <EquipeResponsavelCard
-          estado={equipe}
+        <DetalhamentoPreco
+          projeto={equipe}
+          orcamento={equipeOrc}
           precoCent={Math.round(preco.faturamento * 100)}
           precoSemEquipeCent={Math.round(preco.faturamentoSemEquipe * 100)}
           custoConfiguradorCent={Math.round(preco.custoSemEquipe * 100)}
+          rotuloCustoConfigurador="Custo orçado no levantamento"
           imposto={preco.faturamento > 0 ? preco.impostos / preco.faturamento : 0}
         />
       )}

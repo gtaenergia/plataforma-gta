@@ -11,7 +11,7 @@ import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { Alert, Kpi } from "@/components/ui";
 import { POTENCIAS_CA, acharPotencia } from "@/services/carregador/potencias";
 import { Campo } from "@/components/Campo";
-import { EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
+import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
 
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -85,6 +85,10 @@ export function CarregadorConfigurator({ propostaId, criadoPor }: { propostaId?:
    * abaixo soma o custo antes do markup. Ver `equipeFormaPreco`.
    */
   const equipe = useEquipeResponsavel({ servicoKey: "carregador", criadoPor });
+  /** O tempo de montar ESTA proposta — custo que existe mesmo se não fechar. */
+  const equipeOrc = useEquipeResponsavel({ servicoKey: "carregador", criadoPor, escopo: "orcamento" });
+  // O engine recebe as duas frentes somadas: para o Fator K é um custo só.
+  const custoEquipeTotal = equipe.custoEquipe + equipeOrc.custoEquipe;
   const [form, setForm] = useState<Form>(FORM_INICIAL);
   const [sizing, setSizing] = useState<Sizing | null>(null);
   const [bom, setBom] = useState<Bom | null>(null);
@@ -122,7 +126,7 @@ export function CarregadorConfigurator({ propostaId, criadoPor }: { propostaId?:
   useEffect(() => {
     if (propostaId) {
       fetch(`/api/propostas/${propostaId}`).then((r) => r.json()).then((d) => {
-        const dados = d.proposta?.dados as (Partial<Form> & { materiais?: MatRow[]; cond?: CondPag; equipeGta?: EquipeSalva }) | undefined;
+        const dados = d.proposta?.dados as (Partial<Form> & { materiais?: MatRow[]; cond?: CondPag; equipeGta?: EquipeSalva; equipeOrcamento?: EquipeSalva }) | undefined;
         if (dados) {
           setForm({ ...FORM_INICIAL, ...dados });
           precoTocado.current = true;
@@ -130,6 +134,7 @@ export function CarregadorConfigurator({ propostaId, criadoPor }: { propostaId?:
           // Sem repor a equipe, reabrir zeraria o custo e o preço SUGERIDO
           // cairia para o valor sem ninguém apontado.
           if (dados.equipeGta) equipe.restaurar(dados.equipeGta);
+          if (dados.equipeOrcamento) equipeOrc.restaurar(dados.equipeOrcamento);
           // Lista salva é escolha do usuário: entra já "tocada".
           if (Array.isArray(dados.materiais) && dados.materiais.length) { setMateriais(dados.materiais); matTocado.current = true; }
         }
@@ -182,14 +187,14 @@ export function CarregadorConfigurator({ propostaId, criadoPor }: { propostaId?:
          * um resto que ninguém saberia explicar.
          */
         const custoSemEquipe = custoMateriais + maoObra;
-        const custoGeral = custoSemEquipe + equipe.custoEquipe;
+        const custoGeral = custoSemEquipe + custoEquipeTotal;
         const faturamento = Math.round((custoGeral * params.fatorK) / 10) * 10;
         const faturamentoSemEquipe = Math.round((custoSemEquipe * params.fatorK) / 10) * 10;
         const impostos = faturamento * params.aliqImpostos;
         const lucro = faturamento - impostos - custoGeral;
         const margem = faturamento > 0 ? lucro / faturamento : 0;
         return {
-          custoMateriais, maoObra, custoSemEquipe, custoEquipe: equipe.custoEquipe, custoGeral,
+          custoMateriais, maoObra, custoSemEquipe, custoEquipe: custoEquipeTotal, custoGeral,
           fatorK: params.fatorK, preco: faturamento, precoSemEquipe: faturamentoSemEquipe,
           impostos, lucro, margem,
         };
@@ -239,7 +244,7 @@ export function CarregadorConfigurator({ propostaId, criadoPor }: { propostaId?:
     if (!form.clienteNome) { setErro("Informe o nome do cliente para salvar."); return null; }
     setSalvando(true); setErro(null);
     try {
-      const payload = { serviceKey: "carregador", cliente: form.clienteNome, status: totalCliente > 0 ? "precificada" : "rascunho", dados: { ...form, materiais, cond, equipeGta: equipe.serializar() } };
+      const payload = { serviceKey: "carregador", cliente: form.clienteNome, status: totalCliente > 0 ? "precificada" : "rascunho", dados: { ...form, materiais, cond, equipeGta: equipe.serializar(), equipeOrcamento: equipeOrc.serializar() } };
       const res = savedId
         ? await fetch(`/api/propostas/${savedId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
         : await fetch("/api/propostas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
@@ -503,9 +508,13 @@ export function CarregadorConfigurator({ propostaId, criadoPor }: { propostaId?:
         )}
       </section>
 
+      <EquipeResponsavelCard estado={equipe} />
+      <EquipeResponsavelCard estado={equipeOrc} />
+
       {preco && (
-        <EquipeResponsavelCard
-          estado={equipe}
+        <DetalhamentoPreco
+          projeto={equipe}
+          orcamento={equipeOrc}
           precoCent={Math.round(preco.preco * 100)}
           precoSemEquipeCent={Math.round(preco.precoSemEquipe * 100)}
           custoConfiguradorCent={Math.round(preco.custoSemEquipe * 100)}

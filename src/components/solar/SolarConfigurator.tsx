@@ -17,7 +17,7 @@ import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { TelhadoSimulador } from "./TelhadoSimulador";
 import { Alert, Kpi } from "@/components/ui";
 import { Campo } from "@/components/Campo";
-import { EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
+import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
 
 /** Formatação pt-BR local (sem depender de libs de servidor). */
 const nf = (v: number, d = 2) =>
@@ -184,6 +184,8 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
      configurador não sabe qual é — por isso o tipo vem em branco, para a
      pessoa escolher. Ver `servico-demanda.ts`. */
   const equipe = useEquipeResponsavel({ servicoKey: "solar", criadoPor });
+  /** O tempo de montar ESTA proposta — existe mesmo se o cliente não fechar. */
+  const equipeOrc = useEquipeResponsavel({ servicoKey: "solar", criadoPor, escopo: "orcamento" });
   const router = useRouter();
   const [form, setForm] = useState<Form>(FORM_INICIAL);
   const [municipios, setMunicipios] = useState<{ nome: string; uf: string }[]>([]);
@@ -1057,8 +1059,12 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
       </section>
 
       {/* Condições de pagamento (seção compartilhada) */}
-      <EquipeResponsavelCard
-        estado={equipe}
+      <EquipeResponsavelCard estado={equipe} />
+      <EquipeResponsavelCard estado={equipeOrc} />
+
+      <DetalhamentoPreco
+        projeto={equipe}
+        orcamento={equipeOrc}
         precoCent={Math.round((calc?.pricing?.valorTotal ?? 0) * 100)}
         precoSemEquipeCent={Math.round((calc?.pricing?.valorTotal ?? 0) * 100)}
         custoConfiguradorCent={0}

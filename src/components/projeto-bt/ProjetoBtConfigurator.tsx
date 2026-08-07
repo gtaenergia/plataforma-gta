@@ -9,7 +9,7 @@ import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 
 import { Alert } from "@/components/ui";
 import { Campo } from "@/components/Campo";
-import { EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
+import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel } from "@/components/equipe/EquipeResponsavel";
 const nf = (v: number, d = 2) =>
   (Number.isFinite(v) ? v : 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
 const brl = (v: number) => "R$ " + nf(v, 2);
@@ -112,6 +112,8 @@ const COND_PADRAO_BT: CondPag = {
 export function ProjetoBtConfigurator({ propostaId, criadoPor }: { propostaId?: string; criadoPor?: string }) {
   // Por métrica (valor por disciplina): as horas não somam ao preço.
   const equipe = useEquipeResponsavel({ servicoKey: "projeto-bt", criadoPor });
+  /** O tempo de montar ESTA proposta — existe mesmo se o cliente não fechar. */
+  const equipeOrc = useEquipeResponsavel({ servicoKey: "projeto-bt", criadoPor, escopo: "orcamento" });
   const router = useRouter();
 
   const inicial = (): Vals => ({
@@ -353,8 +355,12 @@ export function ProjetoBtConfigurator({ propostaId, criadoPor }: { propostaId?: 
         </p>
       </section>
 
-      <EquipeResponsavelCard
-        estado={equipe}
+      <EquipeResponsavelCard estado={equipe} />
+      <EquipeResponsavelCard estado={equipeOrc} />
+
+      <DetalhamentoPreco
+        projeto={equipe}
+        orcamento={equipeOrc}
         precoCent={Math.round(total * 100)}
         precoSemEquipeCent={Math.round(total * 100)}
         custoConfiguradorCent={0}
