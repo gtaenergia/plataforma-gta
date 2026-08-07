@@ -161,6 +161,25 @@ export const NOVIDADES: Novidade[] = [
     mensagem: "O microinversor agora é escolhido em kW (3 a 25) e a sugestão já mostra quantas unidades. Estruturas de fixação atualizadas (shingle, telha, colonial, laje, solo e mais).",
     link: "/nova/solar",
   },
+  /*
+   * Este é o único anúncio da lista que muda o que o CLIENTE paga. Vai
+   * primeiro e sozinho no assunto, porque descobrir uma mudança de preço por
+   * um orçamento mais caro é a pior forma de descobrir.
+   */
+  {
+    slug: "equipe-responsavel-preco-2026-08",
+    titulo: "Atenção: as horas da GTA passam a entrar em quatro orçamentos",
+    mensagem:
+      "Ao gerar uma proposta de carregador, QGBT, rede de média tensão ou execução de subestação, apontar quem executa e quem elaborou faz o preço SUBIR — as horas entram no custo antes do Fator K. Nos outros oito serviços o preço não muda: as horas só aparecem no detalhamento e na margem. O acréscimo é zero enquanto o custo por hora de cada pessoa não estiver cadastrado em Planejamento e capacidade.",
+    link: "/",
+  },
+  {
+    slug: "detalhamento-preco-proposta-2026-08",
+    titulo: "Novidade: o preço da proposta, destrinchado",
+    mensagem:
+      "Ao montar uma proposta você vê a conta inteira aberta: faturamento da GTA separado do que é repasse (o kit solar, o equipamento), cada parcela de custo com nome, imposto, lucro e margem. Serve para decidir se o trabalho vale a pena antes de mandar — nada disso vai para o documento do cliente. Visível para quem tem permissão financeira.",
+    link: "/",
+  },
 ];
 
 interface NovidadeStore {
