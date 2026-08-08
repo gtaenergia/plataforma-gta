@@ -10,6 +10,7 @@ import { Alert, Badge, PageHeader, SectionCard } from "@/components/ui";
 import { SeletorTipoDemanda } from "@/components/capacidade/SeletorTipoDemanda";
 import { SugestaoResponsavel } from "./SugestaoResponsavel";
 import { MarcaPrioridade, MarcaStatus } from "./marcadores";
+import { PedidoDoComercial } from "./PedidoDoComercial";
 import { comCategoria, comTipoDemanda, paraPayload, type FormState } from "./formulario";
 import { catalogoDeTipos, horasParaMin, minParaHoras, useCapacidade } from "@/components/capacidade/comum";
 import {
@@ -217,6 +218,14 @@ export function TarefaDetalhe({
       />
 
       {erro && <Alert tone="red">{erro}</Alert>}
+
+      {tarefa.negociacaoId && (
+        <PedidoDoComercial
+          tarefaId={tarefa.id}
+          negociacaoId={tarefa.negociacaoId}
+          temServico={!!tarefa.serviceKey}
+        />
+      )}
 
       {!editando ? (
         <SectionCard

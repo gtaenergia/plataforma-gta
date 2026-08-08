@@ -6,6 +6,8 @@ import { transicaoSchema, type AcaoTransicao, type OrcamentoOneDrive } from "@/l
 import { permissaoDaAcao, podeTransicionar } from "@/lib/orcamentos/machine";
 import { oneDriveConfigurado, enviarOrcamentoParaOneDrive } from "@/lib/onedrive/orcamento";
 import { notificar } from "@/lib/notificacoes/store";
+import { getPropostaStore } from "@/lib/propostas/store";
+import { devolverAoComercial, negociacaoDaProposta } from "@/lib/crm/retorno";
 import { addDays } from "@/lib/format";
 
 export const runtime = "nodejs";
@@ -119,6 +121,24 @@ export async function PATCH(req: Request, ctx: Ctx) {
       mensagem: parecer?.trim() || aviso.padrao,
       link: `/aprovacoes/${id}`,
     });
+  }
+
+  // Aprovado é a notícia que o comercial espera: a proposta passou pela revisão
+  // interna e pode ir ao cliente. O caminho de volta sai da proposta vinculada
+  // — só existe quando o orçamento nasceu de um pedido do CRM.
+  if (acao === "aprovar" && atualizado && orc.propostaId) {
+    const proposta = await getPropostaStore().get(orc.propostaId);
+    const negociacaoId = negociacaoDaProposta(proposta?.dados);
+    if (negociacaoId) {
+      await devolverAoComercial({
+        negociacaoId,
+        referencia: orc.referencia,
+        valor: Number(atualizado.valor ?? orc.valor ?? 0),
+        momento: "aprovada",
+        autor: me.email,
+        autorNome: autor,
+      });
+    }
   }
 
   return NextResponse.json({ orcamento: redigirOrcamento(final, await temPermissao(guard.me, "financeiro.ver")) });

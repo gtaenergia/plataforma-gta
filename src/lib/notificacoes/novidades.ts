@@ -20,6 +20,13 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "crm-ponte-operacoes-2026-08",
+    titulo: "CRM e Operações conversando: pedido de proposta com retorno automático",
+    mensagem:
+      "Quem abre a negociação quase nunca é quem monta a proposta. Agora, na ficha da negociação, “Pedir proposta” cria a tarefa em Operações já preenchida — com o serviço, a duração, o responsável indicado pelo motor de capacidade e tudo o que a engenharia precisa saber. Quando a proposta é gerada, e de novo quando é aprovada, o valor volta sozinho para a negociação e quem pediu é avisado. Para funcionar, vincule cada produto a um serviço em Configurações → Produtos e serviços.",
+    link: "/crm/negociacoes",
+  },
+  {
     slug: "proposta-mao-de-obra-2026-08",
     titulo: "Novidade: proposta de Fornecimento de Mão de Obra",
     mensagem:

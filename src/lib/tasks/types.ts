@@ -81,6 +81,21 @@ export interface Task {
    * tratar a tarefa como instantânea. Ver lib/capacidade/motor.ts.
    */
   estimativaMin: number;
+  /**
+   * Negociação do CRM que pediu esta tarefa ("" quando nasceu em Operações).
+   *
+   * É o fio que leva o resultado de volta: quando a proposta feita a partir
+   * daqui for gerada e aprovada, o valor volta para esta negociação e o
+   * comercial é avisado. Sem ele, o pedido some no meio do caminho — que é
+   * exatamente o que acontecia quando o pedido era um recado no WhatsApp.
+   */
+  negociacaoId: string;
+  /**
+   * Serviço da plataforma a usar ("solar", "spda"…), quando o pedido veio do
+   * CRM. Guardado aqui, e não deduzido do tipo de demanda, para a tarefa ser
+   * auto-suficiente: quem recebe pode não ter acesso ao CRM.
+   */
+  serviceKey: string;
   comentarios: Comentario[];
   criadoPor: string;
   criadoEm: string;
@@ -131,6 +146,8 @@ export const createTaskSchema = z.object({
   // Teto de 400 h: acima disso é um projeto, não uma tarefa — e um dígito a
   // mais digitado por engano tomaria a agenda da pessoa por meses.
   estimativaMin: z.coerce.number().int().min(0).max(400 * 60).default(0),
+  negociacaoId: z.string().trim().max(64).default(""),
+  serviceKey: z.string().trim().max(60).default(""),
 });
 
 /** Payload de atualização parcial. */

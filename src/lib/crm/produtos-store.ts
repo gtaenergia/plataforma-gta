@@ -13,7 +13,7 @@ import { getDbUrl } from "../tasks/postgres-store";
  */
 
 type CreateInput = Omit<ProdutoCrm, "id" | "criadoEm" | "atualizadoEm">;
-type UpdatePatch = Partial<Pick<ProdutoCrm, "nome" | "descricao" | "precoBase" | "oculto">>;
+type UpdatePatch = Partial<Pick<ProdutoCrm, "nome" | "descricao" | "precoBase" | "oculto" | "serviceKey">>;
 
 export interface ProdutoCrmStore {
   list(): Promise<ProdutoCrm[]>;
@@ -83,6 +83,7 @@ interface Row {
   descricao: string;
   preco_base: string | number;
   oculto: boolean;
+  service_key: string | null;
   criado_em: string;
   atualizado_em: string;
 }
@@ -92,6 +93,7 @@ const rowTo = (r: Row): ProdutoCrm => ({
   descricao: r.descricao ?? "",
   precoBase: Number(r.preco_base ?? 0),
   oculto: !!r.oculto,
+  serviceKey: r.service_key ?? "",
   criadoEm: new Date(r.criado_em).toISOString(),
   atualizadoEm: new Date(r.atualizado_em).toISOString(),
 });
@@ -115,6 +117,9 @@ class PostgresProdutoCrmStore implements ProdutoCrmStore {
           atualizado_em timestamptz NOT NULL
         )
       `
+        // Coluna acrescentada depois: catálogos já em produção continuam
+        // válidos, com o elo vazio até alguém preenchê-lo.
+        .then(() => this.pool.sql`ALTER TABLE crm_produtos ADD COLUMN IF NOT EXISTS service_key text NOT NULL DEFAULT ''`)
         .then(() => undefined)
         .catch((e) => {
           this.ready = null;
@@ -138,8 +143,8 @@ class PostgresProdutoCrmStore implements ProdutoCrmStore {
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     await this.pool.sql`
-      INSERT INTO crm_produtos (id, nome, descricao, preco_base, oculto, criado_em, atualizado_em)
-      VALUES (${id}, ${data.nome}, ${data.descricao}, ${data.precoBase}, ${data.oculto}, ${now}, ${now})
+      INSERT INTO crm_produtos (id, nome, descricao, preco_base, oculto, service_key, criado_em, atualizado_em)
+      VALUES (${id}, ${data.nome}, ${data.descricao}, ${data.precoBase}, ${data.oculto}, ${data.serviceKey}, ${now}, ${now})
     `;
     return { ...data, id, criadoEm: now, atualizadoEm: now };
   }
@@ -152,6 +157,7 @@ class PostgresProdutoCrmStore implements ProdutoCrmStore {
         descricao = COALESCE(${patch.descricao ?? null}::text, descricao),
         preco_base = COALESCE(${patch.precoBase ?? null}::numeric, preco_base),
         oculto = COALESCE(${patch.oculto ?? null}::boolean, oculto),
+        service_key = COALESCE(${patch.serviceKey ?? null}::text, service_key),
         atualizado_em = ${atualizadoEm}
       WHERE id = ${id}
       RETURNING *

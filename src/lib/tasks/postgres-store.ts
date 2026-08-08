@@ -56,6 +56,9 @@ export interface Row {
   hora_operacional: string;
   /** integer, não numeric: `numeric` volta como STRING pelo driver. */
   estimativa_min: number;
+  /** Opcionais: a réplica que ainda não rodou o ALTER devolve a linha sem elas. */
+  negociacao_id?: string | null;
+  service_key?: string | null;
   comentarios: Comentario[];
   criado_por: string;
   criado_em: string;
@@ -82,6 +85,8 @@ export function rowToTask(r: Row): Task {
     // Linha anterior à coluna existir devolve null; `Number(null)` é 0, mas o
     // explícito documenta a intenção e cobre um eventual valor textual.
     estimativaMin: Number(r.estimativa_min ?? 0) || 0,
+    negociacaoId: r.negociacao_id ?? "",
+    serviceKey: r.service_key ?? "",
     comentarios: r.comentarios ?? [],
     criadoPor: r.criado_por,
     criadoEm: new Date(r.criado_em).toISOString(),
@@ -132,6 +137,10 @@ export class PostgresTaskStore implements TaskStore {
         .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS hora_operacional text NOT NULL DEFAULT ''`)
         .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS estimativa_min integer NOT NULL DEFAULT 0`)
         .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS tipo_demanda text NOT NULL DEFAULT ''`)
+        // O fio de volta para a negociação do CRM. Tarefa nascida em Operações
+        // guarda "" — a coluna existe para as que o comercial pediu.
+        .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS negociacao_id text NOT NULL DEFAULT ''`)
+        .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS service_key text NOT NULL DEFAULT ''`)
         .then(() => undefined);
     }
     return this.ready;
@@ -157,10 +166,10 @@ export class PostgresTaskStore implements TaskStore {
     const now = new Date().toISOString();
     await this.pool.sql`
       INSERT INTO tasks
-        (id, titulo, descricao, cliente, categoria, tipo_demanda, demandante, responsavel, status, prioridade, prazo, prazo_comercial, prazo_operacional, hora_comercial, hora_operacional, estimativa_min, comentarios, criado_por, criado_em, atualizado_em)
+        (id, titulo, descricao, cliente, categoria, tipo_demanda, demandante, responsavel, status, prioridade, prazo, prazo_comercial, prazo_operacional, hora_comercial, hora_operacional, estimativa_min, negociacao_id, service_key, comentarios, criado_por, criado_em, atualizado_em)
       VALUES
         (${id}, ${data.titulo}, ${data.descricao}, ${data.cliente}, ${data.categoria}, ${data.tipoDemanda ?? ""}, ${data.demandante}, ${data.responsavel}, ${data.status},
-         ${data.prioridade}, ${data.prazo}, ${data.prazoComercial}, ${data.prazoOperacional}, ${data.horaComercial}, ${data.horaOperacional}, ${data.estimativaMin ?? 0}, '[]'::jsonb, ${data.criadoPor}, ${now}, ${now})
+         ${data.prioridade}, ${data.prazo}, ${data.prazoComercial}, ${data.prazoOperacional}, ${data.horaComercial}, ${data.horaOperacional}, ${data.estimativaMin ?? 0}, ${data.negociacaoId ?? ""}, ${data.serviceKey ?? ""}, '[]'::jsonb, ${data.criadoPor}, ${now}, ${now})
     `;
     return { ...data, id, comentarios: [], criadoEm: now, atualizadoEm: now };
   }
@@ -194,6 +203,8 @@ export class PostgresTaskStore implements TaskStore {
         hora_comercial = COALESCE(${patch.horaComercial ?? null}::text, hora_comercial),
         hora_operacional = COALESCE(${patch.horaOperacional ?? null}::text, hora_operacional),
         estimativa_min = COALESCE(${patch.estimativaMin ?? null}::int, estimativa_min),
+        negociacao_id = COALESCE(${patch.negociacaoId ?? null}::text, negociacao_id),
+        service_key = COALESCE(${patch.serviceKey ?? null}::text, service_key),
         atualizado_em = ${atualizadoEm}
       WHERE id = ${id}
       RETURNING *

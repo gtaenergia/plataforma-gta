@@ -59,6 +59,18 @@ describe("estimativa vinda do banco", () => {
   });
 });
 
+describe("elo com a negociação do CRM", () => {
+  it("o id atravessa intacto", () => {
+    expect(rowToTask(linha({ negociacao_id: "neg-42" })).negociacaoId).toBe("neg-42");
+  });
+
+  it("tarefa nascida em Operações (e linha sem a coluna) vira string vazia", () => {
+    // `String(null)` daria "neg-null" na URL de volta para o CRM.
+    expect(rowToTask(linha()).negociacaoId).toBe("");
+    expect(rowToTask(linha({ negociacao_id: null })).negociacaoId).toBe("");
+  });
+});
+
 describe("tipo de demanda vindo do banco", () => {
   it("o texto atravessa intacto", () => {
     expect(rowToTask(linha()).tipoDemanda).toBe("Usina solar residencial");

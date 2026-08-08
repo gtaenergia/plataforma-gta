@@ -291,6 +291,15 @@ export interface ProdutoCrm {
   descricao: string;
   precoBase: number;
   oculto: boolean;
+  /**
+   * Serviço da plataforma que produz este item ("solar", "spda"…), quando há um.
+   *
+   * É o elo que faz o pedido de proposta nascer sabendo qual configurador abrir
+   * e qual tipo de demanda consumir. Vazio é resposta legítima: nem tudo que se
+   * negocia tem configurador, e chutar aqui mandaria o técnico para a tela
+   * errada.
+   */
+  serviceKey: string;
   criadoEm: string;
   atualizadoEm: string;
 }
@@ -299,6 +308,7 @@ export const criarProdutoCrmSchema = z.object({
   nome: z.string().trim().min(2, "Mínimo de 2 caracteres").max(255),
   descricao: texto(500),
   precoBase: z.number().min(0).default(0),
+  serviceKey: texto(60),
 });
 export const atualizarProdutoCrmSchema = criarProdutoCrmSchema.partial().extend({
   oculto: z.boolean().optional(),

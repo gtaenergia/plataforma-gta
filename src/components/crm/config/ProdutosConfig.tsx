@@ -7,6 +7,11 @@ import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { formatBRL, parseNumber } from "@/lib/format";
 import type { ProdutoCrm } from "@/lib/crm/types";
 
+interface ServicoOpcao {
+  key: string;
+  label: string;
+}
+
 /**
  * Catálogo de produtos e serviços do CRM. Sem exclusão, por desenho: o item
  * fora de linha é OCULTADO — some das negociações novas e continua valendo
@@ -14,6 +19,7 @@ import type { ProdutoCrm } from "@/lib/crm/types";
  */
 export function ProdutosConfig() {
   const [produtos, setProdutos] = useState<ProdutoCrm[]>([]);
+  const [servicos, setServicos] = useState<ServicoOpcao[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [nome, setNome] = useState("");
@@ -22,9 +28,15 @@ export function ProdutosConfig() {
   const edicao = useEdicaoPendente();
 
   useEffect(() => {
-    fetch("/api/crm/produtos")
-      .then((r) => r.json())
-      .then((d) => setProdutos(d.produtos ?? []))
+    Promise.all([
+      fetch("/api/crm/produtos").then((r) => r.json()),
+      // O catálogo de serviços da plataforma — é o que o produto passa a apontar.
+      fetch("/api/services").then((r) => r.json()).catch(() => ({ services: [] })),
+    ])
+      .then(([p, s]) => {
+        setProdutos(p.produtos ?? []);
+        setServicos((s.services ?? []).map((x: { key: string; label: string }) => ({ key: x.key, label: x.label })));
+      })
       .catch(() => setErro("Falha ao carregar."))
       .finally(() => setLoading(false));
   }, []);
@@ -38,7 +50,7 @@ export function ProdutosConfig() {
       const res = await fetch("/api/crm/produtos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome, precoBase: parseNumber(preco) }),
+        body: JSON.stringify({ nome, precoBase: parseNumber(preco), serviceKey: "" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Falha ao salvar.");
@@ -53,7 +65,7 @@ export function ProdutosConfig() {
     }
   }
 
-  async function atualizar(p: ProdutoCrm, patch: Partial<Pick<ProdutoCrm, "nome" | "precoBase" | "oculto">>) {
+  async function atualizar(p: ProdutoCrm, patch: Partial<Pick<ProdutoCrm, "nome" | "precoBase" | "oculto" | "serviceKey">>) {
     setErro(null);
     const res = await fetch(`/api/crm/produtos/${p.id}`, {
       method: "PATCH",
@@ -126,6 +138,17 @@ export function ProdutosConfig() {
                 }}
                 aria-label="Preço base"
               />
+              {/* O elo com Operações: com ele, o pedido de proposta já nasce
+                  sabendo qual configurador abrir e quanto tempo leva. */}
+              <select
+                className="field-input w-48 !py-1"
+                value={p.serviceKey}
+                aria-label={`Serviço da plataforma de ${p.nome}`}
+                onChange={(e) => void atualizar(p, { serviceKey: e.target.value })}
+              >
+                <option value="">Sem serviço vinculado</option>
+                {servicos.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+              </select>
               {p.oculto && <Badge tone="slate">Oculto</Badge>}
               <button className="btn-link shrink-0 text-xs" onClick={() => void atualizar(p, { oculto: !p.oculto })}>
                 {p.oculto ? "Reexibir" : "Ocultar"}
@@ -135,6 +158,10 @@ export function ProdutosConfig() {
         </ul>
       )}
       <p className="hint">Produto não se exclui: oculte o que saiu de linha — as negociações antigas e os relatórios continuam valendo.</p>
+      <p className="hint">
+        O <strong>serviço vinculado</strong> liga o produto ao configurador de Operações: com ele preenchido, o pedido
+        de proposta feito na negociação já nasce com o serviço certo e com a duração que indica quem pega e para quando.
+      </p>
     </div>
   );
 }

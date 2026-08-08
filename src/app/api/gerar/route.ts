@@ -5,6 +5,7 @@ import { getService } from "@/services/registry";
 import { renderDocx } from "@/lib/docx/generate";
 import { getCurrentUser } from "@/lib/session";
 import { getPropostaStore } from "@/lib/propostas/store";
+import { devolverAoComercial, negociacaoDaProposta } from "@/lib/crm/retorno";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
-  let body: { serviceKey?: string; formData?: unknown; propostaId?: string };
+  let body: { serviceKey?: string; formData?: unknown; propostaId?: string; negociacaoId?: string; valor?: number };
   try {
     body = await req.json();
   } catch {
@@ -73,6 +74,23 @@ export async function POST(req: Request) {
           dados: parsed.data as Record<string, unknown>,
           formGerado,
           criadoPor: user.email,
+        });
+      }
+
+      // Nasceu de um pedido do CRM: o comercial recebe o valor e o aviso. O
+      // vínculo vem do corpo (o configurador o carrega desde a abertura) ou
+      // dos dados da proposta salva, quando ela está sendo regenerada.
+      const negociacaoId =
+        body.negociacaoId ||
+        negociacaoDaProposta(body.propostaId ? (await store.get(body.propostaId))?.dados : undefined);
+      if (negociacaoId) {
+        await devolverAoComercial({
+          negociacaoId,
+          referencia: ref ?? service.key,
+          valor: Number(body.valor ?? 0),
+          momento: "gerada",
+          autor: user.email,
+          autorNome: user.name || user.email,
         });
       }
     } catch (e) {

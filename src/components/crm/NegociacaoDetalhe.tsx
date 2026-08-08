@@ -19,6 +19,7 @@ import {
   type ProdutoCrm,
   type ProdutoNegociado,
 } from "@/lib/crm/types";
+import { PedirProposta } from "./PedirProposta";
 import { TarefasDaNegociacao } from "./TarefasDaNegociacao";
 import { dataCurta, dataHora } from "./util";
 
@@ -267,6 +268,15 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
               aplicar={aplicar}
             />
           </SectionCard>
+
+          {/* O elo com Operações: pedir a proposta a quem vai montá-la */}
+          <PedirProposta
+            negociacao={n}
+            produtos={catalogo}
+            usuarios={usuarios}
+            aberta={aberta}
+            onPedido={() => void recarregar()}
+          />
 
           {/* Agenda da negociação */}
           <SectionCard title="Tarefas" subtitle="Os compromissos desta negociação — cada agendamento e conclusão entra no histórico.">

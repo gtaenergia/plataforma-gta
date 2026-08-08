@@ -56,7 +56,12 @@ const CATEGORIAS: { titulo: string; subtitulo: string; itens: ItemConfig[] }[] =
     titulo: "Ferramentas GTA",
     subtitulo: "Como o CRM conversa com a outra ferramenta da conta.",
     itens: [
-      { label: "Integração com Operações", descricao: "Negociação ganha gera orçamento; proposta enviada entra no histórico da negociação." },
+      {
+        label: "Integração com Operações",
+        descricao:
+          "Já no ar: na ficha da negociação, “Pedir proposta” cria a tarefa em Operações com o serviço, o prazo e o responsável indicado — e o valor volta sozinho quando a proposta é gerada e quando é aprovada. Vincule cada produto a um serviço em Produtos e serviços.",
+        href: "/crm/configuracoes/produtos",
+      },
     ],
   },
   {
