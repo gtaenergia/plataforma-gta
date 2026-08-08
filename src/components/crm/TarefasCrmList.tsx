@@ -37,7 +37,8 @@ const GRUPOS: { classe: ClasseTarefa; titulo: string; tone: "red" | "indigo" | "
   { classe: "proxima", titulo: "Próximas", tone: "slate" },
 ];
 
-export function TarefasCrmList() {
+/** `usuarioAtual` (e-mail) vem do servidor — ver o comentário em `NegociacoesList`. */
+export function TarefasCrmList({ usuarioAtual }: { usuarioAtual: string }) {
   const [tarefas, setTarefas] = useState<TarefaCrm[]>([]);
   const [negociacoes, setNegociacoes] = useState<Negociacao[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioOpcao[]>([]);
@@ -134,11 +135,14 @@ export function TarefasCrmList() {
     setErro(null);
     setSalvando(true);
     try {
-      const usuario = usuarios.find((u) => u.email === form.responsavel);
+      // Mesmo `|| usuarioAtual` do campo: criar sem tocar no seletor tem que
+      // agendar para você, não para ninguém.
+      const responsavel = form.responsavel || usuarioAtual;
+      const usuario = usuarios.find((u) => u.email === responsavel);
       const res = await fetch("/api/crm/tarefas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, responsavelNome: usuario?.name ?? "" }),
+        body: JSON.stringify({ ...form, responsavel, responsavelNome: usuario?.name ?? "" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Falha ao salvar.");
@@ -221,8 +225,7 @@ export function TarefasCrmList() {
                 <input type="time" className="field-input" value={form.hora} onChange={(e) => set("hora", e.target.value)} />
               </Campo>
               <Campo className="sm:col-span-2" label="Responsável">
-                <select className="field-input" value={form.responsavel} onChange={(e) => set("responsavel", e.target.value)}>
-                  <option value="">Eu mesmo</option>
+                <select className="field-input" value={form.responsavel || usuarioAtual} onChange={(e) => set("responsavel", e.target.value)}>
                   {usuarios.map((u) => <option key={u.email} value={u.email}>{u.name}</option>)}
                 </select>
               </Campo>

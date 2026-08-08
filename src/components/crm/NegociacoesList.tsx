@@ -39,7 +39,13 @@ interface UsuarioOpcao {
   name: string;
 }
 
-export function NegociacoesList() {
+/**
+ * `usuarioAtual` (e-mail) vem do servidor, e não de um `fetch`: é o que deixa o
+ * campo Responsável já vir com o SEU nome. A versão anterior oferecia uma opção
+ * "Eu mesmo" além da lista de pessoas — e como você também está na lista,
+ * apareciam duas entradas para a mesma pessoa.
+ */
+export function NegociacoesList({ usuarioAtual }: { usuarioAtual: string }) {
   const [negociacoes, setNegociacoes] = useState<Negociacao[]>([]);
   const [funis, setFunis] = useState<Funil[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -120,7 +126,9 @@ export function NegociacoesList() {
     setSalvando(true);
     try {
       const empresa = clientes.find((c) => c.id === form.empresaId);
-      const usuario = usuarios.find((u) => u.email === form.responsavel);
+      // O mesmo `|| usuarioAtual` do campo: sem isso, criar sem tocar no
+      // seletor mandaria responsável vazio.
+      const usuario = usuarios.find((u) => u.email === (form.responsavel || usuarioAtual));
       const fonte = fontes.find((f) => f.id === form.fonteId);
       const res = await fetch("/api/crm/negociacoes", {
         method: "POST",
@@ -224,8 +232,10 @@ export function NegociacoesList() {
                 </select>
               </Campo>
               <Campo className="sm:col-span-2" label="Responsável">
-                <select className="field-input" value={form.responsavel} onChange={(e) => set("responsavel", e.target.value)}>
-                  <option value="">Eu mesmo</option>
+                {/* `|| usuarioAtual`: o campo abre em você mesmo sem depender de
+                    quem abriu o formulário ter preenchido (o atalho `#novo` do
+                    quadro não passa por `abrirNovo`). */}
+                <select className="field-input" value={form.responsavel || usuarioAtual} onChange={(e) => set("responsavel", e.target.value)}>
                   {usuarios.map((u) => <option key={u.email} value={u.email}>{u.name}</option>)}
                 </select>
               </Campo>

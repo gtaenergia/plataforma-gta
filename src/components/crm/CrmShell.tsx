@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { PageHeader } from "@/components/ui";
 import { requirePageUser } from "@/lib/session";
+import type { User } from "@/lib/users/types";
 
 /**
  * Casca das páginas do CRM.
@@ -14,9 +15,16 @@ import { requirePageUser } from "@/lib/session";
  * Operações.
  *
  * Ela mesma chama `requirePageUser()`, então a página só descreve o conteúdo.
+ * A página que TAMBÉM precisa do usuário (para passar ao conteúdo) o busca e
+ * entrega aqui pela prop — assim a consulta continua sendo uma só por visita.
  */
-export async function CrmShell({ titulo, subtitulo, children }: { titulo: ReactNode; subtitulo?: ReactNode; children: ReactNode }) {
-  const user = await requirePageUser();
+export async function CrmShell({ titulo, subtitulo, children, user: userDaPagina }: {
+  titulo: ReactNode;
+  subtitulo?: ReactNode;
+  children: ReactNode;
+  user?: User;
+}) {
+  const user = userDaPagina ?? (await requirePageUser());
 
   return (
     <div className="min-h-screen">
