@@ -95,16 +95,11 @@ export function AppHeader({ userName, avatarUrl, isAdmin }: { userName?: string;
           <Link href={produto.home} className="toque flex shrink-0 items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/gta-icon.png" alt="GTA" className="h-8 w-8" />
-            {/* Com o seletor de ferramenta ao lado, o nome por extenso só cabe a
-                partir do desktop; abaixo disso o ícone já identifica a marca. */}
+            {/* O nome por extenso só cabe a partir do desktop: no tablet, a
+                navegação do CRM tem sete itens e o lado direito carrega
+                engrenagem, sino, seletor e perfil. O ícone já identifica a marca. */}
             <span className="text-base font-bold tracking-tight sm:text-lg md:hidden lg:inline">GTA Energia</span>
           </Link>
-          {/* O seletor só aparece logado: na tela de login não há ferramenta a trocar. */}
-          {userName && (
-            <div className="hidden shrink-0 md:block">
-              <SeletorProduto ativo={produto} />
-            </div>
-          )}
           <nav className="sem-barra-rolagem hidden min-w-0 items-center gap-1 overflow-x-auto text-sm md:flex">
             {produto.nav.map((item) => (
               <Link
@@ -137,6 +132,11 @@ export function AppHeader({ userName, avatarUrl, isAdmin }: { userName?: string;
               </Link>
             )}
             <NotificacoesSino />
+            {/* Entre o sino e o perfil: trocar de ferramenta é ação de conta,
+                e mora com as outras — não colado na marca, que é destino. */}
+            <div className="hidden shrink-0 md:block">
+              <SeletorProduto ativo={produto} />
+            </div>
             <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuAberto((v) => !v)}

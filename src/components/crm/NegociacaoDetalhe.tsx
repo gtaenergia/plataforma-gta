@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Badge, BackLink, Kpi, KpiGrid, Loading, Marca, SectionCard } from "@/components/ui";
 import { Campo } from "@/components/Campo";
@@ -383,10 +383,25 @@ function FormDados({ n, funil, clientes, usuarios, fontes, aberta, onEditar, apl
     qualificacao: n.qualificacao,
   });
   const [salvando, setSalvando] = useState(false);
+  /**
+   * Há edição não gravada neste formulário.
+   *
+   * Sem isto o formulário se reescrevia a cada resposta do servidor — e QUASE
+   * TUDO nesta tela responde: registrar anotação, vincular contato, adicionar
+   * produto, concluir tarefa. Quem digitasse o nome novo e, antes de salvar,
+   * escrevesse uma nota via o campo de histórico, via o nome voltar sozinho ao
+   * anterior. Nada avisava; o texto simplesmente sumia.
+   */
+  const sujo = useRef(false);
+  const idAnterior = useRef(n.id);
 
-  // A resposta do servidor (transição, anotação) traz a negociação inteira; o
-  // formulário acompanha o que veio de fora quando ninguém está digitando nele.
+  // A resposta do servidor traz a negociação inteira, e o formulário acompanha
+  // — MENOS quando há edição pendente aqui. Trocar de negociação recomeça.
   useEffect(() => {
+    const outraNegociacao = idAnterior.current !== n.id;
+    idAnterior.current = n.id;
+    if (sujo.current && !outraNegociacao) return;
+    sujo.current = false;
     setForm({
       nome: n.nome,
       valor: String(n.valor).replace(".", ","),
@@ -401,6 +416,7 @@ function FormDados({ n, funil, clientes, usuarios, fontes, aberta, onEditar, apl
   }, [n.id, n.atualizadoEm]);
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => {
+    sujo.current = true;
     onEditar();
     setForm((f) => ({ ...f, [k]: v }));
   };
@@ -411,19 +427,22 @@ function FormDados({ n, funil, clientes, usuarios, fontes, aberta, onEditar, apl
     const empresa = clientes.find((c) => c.id === form.empresaId);
     const usuario = usuarios.find((u) => u.email === form.responsavel);
     const fonte = fontes.find((f) => f.id === form.fonteId);
-    await aplicar({
+    const ok = await aplicar({
       nome: form.nome,
       valor: parseNumber(form.valor),
       etapaId: form.etapaId,
       empresaId: empresa?.id ?? "",
       empresaNome: empresa?.nome ?? "",
       responsavel: usuario?.email ?? n.responsavel,
-      responsavelNome: usuario?.name ??  n.responsavelNome,
+      responsavelNome: usuario?.name ?? n.responsavelNome,
       fonteId: fonte?.id ?? "",
       fonteNome: fonte?.nome ?? "",
       previsao: form.previsao,
       qualificacao: form.qualificacao,
     });
+    // Gravou: o formulário volta a acompanhar o servidor. Sem isto ele ficaria
+    // "sujo" para sempre e nunca mais refletiria uma mudança vinda de fora.
+    if (ok) sujo.current = false;
     setSalvando(false);
   }
 

@@ -50,7 +50,9 @@ export function SeletorProduto({ ativo }: { ativo: Produto }) {
       {aberto && (
         <div
           role="menu"
-          className="absolute left-0 z-20 mt-2 w-72 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-lg border border-slate-200 bg-white text-slate-700 shadow-lg dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          /* Ancorado à DIREITA: o seletor fica no canto direito do cabeçalho,
+             ao lado do perfil — aberto para a esquerda ele vazava da tela. */
+          className="absolute right-0 z-20 mt-2 w-72 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-lg border border-slate-200 bg-white text-slate-700 shadow-lg dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
         >
           <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-700">
             <div className="hint">Ferramentas</div>
