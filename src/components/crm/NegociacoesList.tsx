@@ -87,10 +87,34 @@ export function NegociacoesList({ usuarioAtual }: { usuarioAtual: string }) {
       .finally(() => setLoading(false));
   }, []);
 
-  // O botão "+ Nova negociação" do quadro chega aqui com #novo na URL.
+  /**
+   * O botão "+ Nova negociação" do quadro chega aqui com #novo na URL.
+   *
+   * O pedido fica GUARDADO e só abre o formulário quando os funis chegarem:
+   * abrir na hora deixava funil/etapa com valor "" — o seletor MOSTRAVA a
+   * primeira opção (comportamento do <select> sem opção vazia), mas o envio ia
+   * vazio e o servidor recusava com "Dados inválidos". Era o "não consigo
+   * criar" em pessoa: o erro não apontava campo nenhum, porque na tela os
+   * campos pareciam preenchidos.
+   */
+  const [pediuNovo, setPediuNovo] = useState(false);
   useEffect(() => {
-    if (window.location.hash === "#novo") setCriando(true);
+    const olharHash = () => {
+      if (window.location.hash === "#novo") setPediuNovo(true);
+    };
+    olharHash();
+    // `hashchange`: quem JÁ está em /crm/negociacoes e clica no botão do
+    // quadro não remonta o componente — sem o listener, nada acontecia.
+    window.addEventListener("hashchange", olharHash);
+    return () => window.removeEventListener("hashchange", olharHash);
   }, []);
+  useEffect(() => {
+    if (pediuNovo && funis.length > 0) {
+      abrirNovo();
+      setPediuNovo(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pediuNovo, funis]);
 
   const porId = useMemo(() => new Map(funis.map((f) => [f.id, f])), [funis]);
   const nomeEtapa = (n: Negociacao) => porId.get(n.funilId)?.etapas.find((e) => e.id === n.etapaId)?.nome ?? "—";
@@ -122,6 +146,9 @@ export function NegociacoesList({ usuarioAtual }: { usuarioAtual: string }) {
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     if (!form.nome.trim()) { setErro("Informe o nome da negociação."); return; }
+    // Última linha de defesa do caso acima: se algum caminho novo abrir o
+    // formulário sem inicializar, o erro nomeia o campo em vez de "Dados inválidos".
+    if (!form.funilId || !form.etapaId) { setErro("Escolha o funil e a etapa."); return; }
     setErro(null);
     setSalvando(true);
     try {

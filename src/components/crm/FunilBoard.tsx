@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { Alert, Badge, EmptyState, Loading } from "@/components/ui";
 import { Campo } from "@/components/Campo";
 import { formatBRL } from "@/lib/format";
@@ -25,6 +26,10 @@ export function FunilBoard() {
   const [fResponsavel, setFResponsavel] = useState("");
   const [arrastando, setArrastando] = useState<string | null>(null);
   const [alvo, setAlvo] = useState<string | null>(null);
+  /** Criação rápida na coluna (como no RD): etapa com o formulário aberto. */
+  const [novaEm, setNovaEm] = useState<string | null>(null);
+  const [novoNome, setNovoNome] = useState("");
+  const [criandoRapida, setCriandoRapida] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -81,6 +86,30 @@ export function FunilBoard() {
     }
   }
 
+  /** A criação rápida da coluna: só o nome — o resto fica para a ficha. */
+  async function criarRapida(etapaId: string) {
+    const nome = novoNome.trim();
+    if (!nome || !funil) return;
+    setCriandoRapida(true);
+    setErro(null);
+    try {
+      const res = await fetch("/api/crm/negociacoes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome, funilId: funil.id, etapaId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Falha ao criar.");
+      setNegociacoes((prev) => [data.negociacao as Negociacao, ...prev]);
+      setNovoNome("");
+      setNovaEm(null);
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : "Falha ao criar.");
+    } finally {
+      setCriandoRapida(false);
+    }
+  }
+
   if (loading) return <Loading>Carregando o funil…</Loading>;
   if (!funil) return <EmptyState>Nenhum funil configurado.</EmptyState>;
 
@@ -107,9 +136,13 @@ export function FunilBoard() {
         <Link href="/crm/negociacoes#novo" className="btn-primary whitespace-nowrap">+ Nova negociação</Link>
       </div>
 
-      {/* O quadro: rolagem horizontal — colunas não se espremem em tela estreita. */}
+      {/* O quadro. As colunas DIVIDEM a largura disponível (`flex-1`): com o
+          funil padrão de 5 etapas, todas cabem inteiras no container — a
+          versão anterior fixava 260px por coluna e a última ficava cortada ao
+          meio, parecendo defeito. O `min-w` segura a legibilidade: com mais
+          etapas do que cabe, volta a rolagem horizontal. */}
       <div className="sem-barra-rolagem -mx-1 overflow-x-auto px-1 pb-2">
-        <div className="flex items-start gap-3" style={{ minWidth: `${funil.etapas.length * 272}px` }}>
+        <div className="flex items-start gap-3">
           {funil.etapas.map((etapa) => {
             const daColuna = doQuadro.filter((n) => n.etapaId === etapa.id);
             const soma = daColuna.reduce((s, n) => s + valorDaNegociacao(n), 0);
@@ -117,7 +150,7 @@ export function FunilBoard() {
               <section
                 key={etapa.id}
                 aria-label={`Etapa ${etapa.nome}`}
-                className={`w-[260px] shrink-0 rounded-xl border bg-slate-50 dark:bg-slate-900/50 ${
+                className={`min-w-[230px] flex-1 basis-0 rounded-xl border bg-slate-50 dark:bg-slate-900/50 ${
                   alvo === etapa.id ? "border-gta-indigo" : "border-slate-200 dark:border-slate-700"
                 }`}
                 onDragOver={(e) => {
@@ -136,12 +169,53 @@ export function FunilBoard() {
                 <header className="border-b border-slate-200 px-3 py-2 dark:border-slate-700">
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-sm font-semibold text-gta-navy dark:text-slate-100">{etapa.nome}</span>
-                    <span className="hint shrink-0">{daColuna.length}</span>
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      <span className="hint">{daColuna.length}</span>
+                      {/* Criar direto na etapa, como no RD — só o nome; o resto na ficha. */}
+                      <button
+                        type="button"
+                        className="icon-btn !h-6 !w-6"
+                        aria-label={`Nova negociação em ${etapa.nome}`}
+                        onClick={() => {
+                          setNovaEm((v) => (v === etapa.id ? null : etapa.id));
+                          setNovoNome("");
+                        }}
+                      >
+                        <Plus className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    </span>
                   </div>
                   <div className="hint mt-0.5">{soma > 0 ? formatBRL(soma) : "—"}</div>
                 </header>
                 <div className="space-y-2 p-2">
-                  {daColuna.length === 0 && (
+                  {novaEm === etapa.id && (
+                    <form
+                      className="space-y-2 rounded-lg border border-gta-indigo bg-white p-2 dark:bg-slate-800"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void criarRapida(etapa.id);
+                      }}
+                    >
+                      <input
+                        className="field-input !py-1.5 text-sm"
+                        value={novoNome}
+                        onChange={(e) => setNovoNome(e.target.value)}
+                        placeholder="Nome da negociação…"
+                        aria-label={`Nome da nova negociação em ${etapa.nome}`}
+                        // eslint-disable-next-line jsx-a11y/no-autofocus
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <button type="submit" className="btn-primary flex-1 justify-center !py-1 text-xs" disabled={criandoRapida || !novoNome.trim()}>
+                          {criandoRapida ? "Criando…" : "Criar"}
+                        </button>
+                        <button type="button" className="btn-secondary !py-1 text-xs" onClick={() => setNovaEm(null)}>
+                          Cancelar
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                  {daColuna.length === 0 && novaEm !== etapa.id && (
                     <p className="px-1 py-3 text-center text-xs text-slate-500 dark:text-slate-400">Sem negociações</p>
                   )}
                   {daColuna.map((n) => (
@@ -157,21 +231,22 @@ export function FunilBoard() {
                         arrastando === n.id ? "opacity-50" : ""
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <Link
-                          href={`/crm/negociacoes/${n.id}`}
-                          className="toque min-w-0 text-sm font-medium text-gta-navy hover:underline dark:text-slate-100"
-                        >
-                          {n.nome}
-                        </Link>
-                        {n.situacao === "pausada" && <Badge tone="amber" className="shrink-0">Pausada</Badge>}
-                      </div>
-                      {n.empresaNome && <div className="mt-0.5 truncate text-xs text-slate-600 dark:text-slate-400">{n.empresaNome}</div>}
-                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-600 dark:text-slate-400">
-                        <span className="font-semibold text-gta-navy dark:text-slate-200">{formatBRL(valorDaNegociacao(n))}</span>
-                        {n.previsao && <span>{dataCurta(n.previsao)}</span>}
-                      </div>
-                      {n.responsavelNome && <div className="hint mt-1 truncate">{n.responsavelNome}</div>}
+                      {/* O bloco de informações inteiro leva à ficha — só o
+                          título era alvo pequeno demais para um cartão. */}
+                      <Link href={`/crm/negociacoes/${n.id}`} className="block">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="min-w-0 truncate text-sm font-medium text-gta-navy hover:underline dark:text-slate-100">
+                            {n.nome}
+                          </span>
+                          {n.situacao === "pausada" && <Badge tone="amber" className="shrink-0">Pausada</Badge>}
+                        </div>
+                        {n.empresaNome && <div className="mt-0.5 truncate text-xs text-slate-600 dark:text-slate-400">{n.empresaNome}</div>}
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-600 dark:text-slate-400">
+                          <span className="font-semibold text-gta-navy dark:text-slate-200">{formatBRL(valorDaNegociacao(n))}</span>
+                          {n.previsao && <span>{dataCurta(n.previsao)}</span>}
+                        </div>
+                        {n.responsavelNome && <div className="hint mt-1 truncate">{n.responsavelNome}</div>}
+                      </Link>
                       {/* Caminho sem arrasto (dedo, teclado): o mesmo movimento, por seletor. */}
                       <select
                         className="field-input mt-2 w-full !py-1 text-xs"
