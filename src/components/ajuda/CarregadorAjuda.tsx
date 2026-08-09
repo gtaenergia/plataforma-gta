@@ -84,13 +84,17 @@ export function CarregadorAjuda() {
           usa <Destaque>× 1,25</Destaque> (carga contínua — o carregador fica horas ligado); o disjuntor é o primeiro valor
           comercial acima da corrente; e a seção do cabo respeita <strong>ampacidade</strong> e <strong>queda de tensão</strong>:
         </p>
-        <Formula nota={'Tensão: 220 V (mono) / 380 V (tri, ÷ √3). Ex. 7,4 kW mono, 20 m: In = 7400/220 = 33,6 A · Ib = 33,6 × 1,25 = 42,0 A · disjuntor 40 A (2P) · cabo 10 mm² (queda ≈ 1,1%) · eletroduto 1".'}>
+        <Formula nota={'Tensão: 220 V (mono) / 380 V (tri, ÷ √3). Ex. 7,4 kW mono, 20 m: In = 7400/220 = 33,6 A · Ib = 33,6 × 1,25 = 42,0 A · disjuntor 50 A (2P) · cabo 10 mm² (queda ≈ 1,1%) · eletroduto 1".'}>
           In (corrente nominal)   = Potência ÷ tensão        (÷ √3 no trifásico){"\n"}
           Ib (corrente de projeto) = In × 1,25               (carga contínua){"\n"}
-          Disjuntor  = 1º comercial ≥ In    (16, 20, 25, 32, 40, 50, 63 A…){"\n"}
-          Seção do cabo: ampacidade ≥ Ib  E  queda de tensão ≤ 4%{"\n"}
+          Disjuntor  = 1º comercial ≥ Ib    (16, 20, 25, 32, 40, 50, 63 A…){"\n"}
+          Seção do cabo: ampacidade ≥ disjuntor  E  queda de tensão ≤ 4%{"\n"}
           Eletroduto: taxa de ocupação dos cabos ≤ 40%
         </Formula>
+        <p className="hint">
+          A coordenação é a da NBR 5410: Ib ≤ In do disjuntor ≤ Iz do cabo. O disjuntor cobre a corrente de{" "}
+          <em>projeto</em> (já com o 1,25), e o cabo suporta o que o disjuntor deixa passar — não a corrente da carga.
+        </p>
         <p>
           A alimentação muda a topologia: <strong>monofásico</strong> → 2 polos, 3 condutores (F+N+T) e 2 DPS;{" "}
           <strong>trifásico</strong> → 4 polos, 5 condutores (3F+N+T) e 4 DPS.
@@ -108,6 +112,22 @@ export function CarregadorAjuda() {
           Completam a proteção o <strong>DPS Classe II</strong> (275 V / 40 kA) e um <strong>aterramento dedicado</strong>{" "}
           (haste cobreada 5/8″ × 2,40 m + caixa de inspeção + conector).
         </p>
+        <p>
+          <strong>Duas premissas técnicas que a engenharia deve conhecer (e validar no projeto executivo):</strong>
+        </p>
+        <ul className="ml-1 list-inside list-disc space-y-1.5">
+          <li>
+            A tabela de <strong>ampacidade é aproximada</strong>: uma coluna única (EPR, método B1) serve mono e
+            trifásico, mas na Tabela 39 da NBR 5410 os dois casos têm colunas próprias, e o valor exato depende do
+            método de instalação real da obra. Em obras trifásicas de maior potência, confira a seção contra a coluna
+            de 3 condutores carregados antes de executar.
+          </li>
+          <li>
+            O configurador cobre recarga em <strong>corrente alternada até ~41,5 kW</strong> — o teto do modo 3 da
+            IEC 61851 (63 A por fase) em 380 V. Acima disso o equipamento é carregador CC, com retificador próprio e
+            requisitos de conexão distintos; o app avisa e não deve ser usado para esse orçamento.
+          </li>
+        </ul>
       </AjudaSecao>
 
       {/* Lista de materiais */}

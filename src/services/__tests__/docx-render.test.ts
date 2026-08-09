@@ -101,7 +101,8 @@ const FORM_CARREGADOR = {
     disjuntorA: 50,
     polos: 2,
     secaoMm2: 10,
-    quedaPct: 1.37,
+    // FRAÇÃO, como o engine devolve e o configurador repassa (o mapper × 100).
+    quedaPct: 0.0137,
     nCondutores: 3,
     nDps: 2,
     eletroduto: '1"',

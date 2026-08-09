@@ -17,7 +17,17 @@
 export type Fase = "mono" | "tri";
 
 const DISJUNTORES = [16, 20, 25, 32, 40, 50, 63, 80, 100, 125, 160];
-/** Ampacidade (A) por seção (mm²) — cobre EPR/HEPR, método B1 (aprox. NBR 5410). */
+/**
+ * Ampacidade (A) por seção (mm²) — cobre EPR/HEPR, método B1 (aprox. NBR 5410).
+ *
+ * RESSALVA PARA A ENGENHARIA VALIDAR: esta é uma coluna ÚNICA e aproximada,
+ * servindo mono (2 condutores carregados) e tri (3 carregados). Na Tabela 39
+ * da NBR 5410 as duas situações têm colunas diferentes, e o valor exato ainda
+ * depende do método de instalação real da obra (B1 aqui presumido). Os números
+ * seguem a família B1-XLPE da IEC 60364-5-52; a mesma ressalva está registrada
+ * na ajuda do configurador ("Como precificar"). Não afrouxar sem conferir a
+ * coordenação disjuntor ≤ ampacidade nos casos trifásicos de maior potência.
+ */
 const AMPACIDADE: { s: number; i: number }[] = [
   { s: 2.5, i: 24 }, { s: 4, i: 32 }, { s: 6, i: 41 }, { s: 10, i: 57 },
   { s: 16, i: 76 }, { s: 25, i: 101 }, { s: 35, i: 125 }, { s: 50, i: 151 }, { s: 70, i: 192 },
@@ -89,8 +99,14 @@ function quedaDeTensao(fase: Fase, corrente: number, comprimentoM: number, secao
   return (fator * corrente * comprimentoM) / (CONDUTIVIDADE_CU * secaoMm2 * tensao);
 }
 
-/** Teto prático da recarga em corrente alternada (IEC 61851 modo 3: 63 A/fase). */
-export const POTENCIA_MAX_CA_KW = 44;
+/**
+ * Teto prático da recarga em corrente alternada — IEC 61851 modo 3: 63 A/fase.
+ *
+ * Em 380 V trifásico: √3 × 380 × 63 ≈ 41,5 kW. O valor anterior (44 kW) era o
+ * teto EUROPEU, calculado em 400 V — entre 41,5 e 44 kW o aviso de "isso é
+ * carregador CC" não disparava, embora a rede daqui sature antes.
+ */
+export const POTENCIA_MAX_CA_KW = 41.5;
 
 export function dimensionarEV(i: SizingEVInput): SizingEV {
   const fase = i.fase;
