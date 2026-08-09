@@ -25,6 +25,15 @@ vi.mock("@/lib/session", () => ({
   getSessionUser: async () => usuarioAtual,
   requirePageUser: async () => usuarioAtual,
 }));
+/*
+ * `after()` do Next adia o trabalho para depois da resposta e só existe dentro
+ * de uma requisição real. Aqui ele roda na hora — o que, de quebra, faz o teste
+ * VERIFICAR os avisos em vez de ignorá-los.
+ */
+vi.mock("next/server", async (original) => {
+  const real = await original<typeof import("next/server")>();
+  return { ...real, after: (fn: () => unknown) => { void fn(); } };
+});
 // `requireApi` (usado pela esteira) fala com a mesma sessão fingida.
 vi.mock("@/lib/rbac/guards", () => ({
   requireApi: async () => ({ me: usuarioAtual }),

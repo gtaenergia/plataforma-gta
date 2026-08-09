@@ -243,6 +243,13 @@ select.field-input::-ms-expand,
          hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2
          focus-visible:ring-red-400/40 dark:hover:bg-red-900/20 dark:hover:text-red-400;
 }
+/* Mesmo botão de ícone, para ação que NÃO destrói: acrescentar, subir, descer.
+   O `.icon-btn` sozinho pinta de vermelho no hover, e vermelho promete
+   exclusão — quem passa o mouse em "Nova negociação" hesita. */
+.icon-btn-neutro {
+  @apply hover:!bg-slate-100 hover:!text-gta-indigo focus-visible:!ring-gta-indigo/40
+         dark:hover:!bg-slate-700 dark:hover:!text-indigo-300;
+}
 
 /* Alternador de dia da semana: quadrado com a inicial, ligado/desligado por
    `aria-pressed`. Existe como classe porque aparece em dois contextos de

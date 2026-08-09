@@ -7,6 +7,7 @@ import { Alert, Badge, EmptyState, Loading } from "@/components/ui";
 import { Campo } from "@/components/Campo";
 import { formatBRL } from "@/lib/format";
 import { valorDaNegociacao, type Funil, type Negociacao } from "@/lib/crm/types";
+import { buscarJson, enviarJson } from "./buscar";
 import { dataCurta } from "./util";
 
 /**
@@ -33,16 +34,16 @@ export function FunilBoard() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/crm/funis").then((r) => r.json()),
-      fetch("/api/crm/negociacoes").then((r) => r.json()),
+      buscarJson<{ funis: Funil[] }>("/api/crm/funis"),
+      buscarJson<{ negociacoes: Negociacao[] }>("/api/crm/negociacoes"),
     ])
       .then(([f, n]) => {
-        const lista: Funil[] = f.funis ?? [];
+        const lista = f.funis ?? [];
         setFunis(lista);
         setNegociacoes(n.negociacoes ?? []);
         if (lista.length > 0) setFunilId((atual) => atual || lista[0].id);
       })
-      .catch(() => setErro("Falha ao carregar o funil."))
+      .catch((e) => setErro(e instanceof Error ? e.message : "Falha ao carregar o funil."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -72,14 +73,8 @@ export function FunilBoard() {
     // (e traz o histórico novo) ou devolve com a mensagem de erro.
     setNegociacoes((prev) => prev.map((x) => (x.id === n.id ? { ...x, etapaId } : x)));
     try {
-      const res = await fetch(`/api/crm/negociacoes/${n.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ etapaId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Falha ao mover.");
-      setNegociacoes((prev) => prev.map((x) => (x.id === n.id ? (data.negociacao as Negociacao) : x)));
+      const data = await enviarJson<{ negociacao: Negociacao }>(`/api/crm/negociacoes/${n.id}`, "PATCH", { etapaId });
+      setNegociacoes((prev) => prev.map((x) => (x.id === n.id ? data.negociacao : x)));
     } catch (err) {
       setNegociacoes((prev) => prev.map((x) => (x.id === n.id ? n : x)));
       setErro(err instanceof Error ? err.message : "Falha ao mover.");
@@ -93,14 +88,10 @@ export function FunilBoard() {
     setCriandoRapida(true);
     setErro(null);
     try {
-      const res = await fetch("/api/crm/negociacoes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome, funilId: funil.id, etapaId }),
+      const data = await enviarJson<{ negociacao: Negociacao }>("/api/crm/negociacoes", "POST", {
+        nome, funilId: funil.id, etapaId,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Falha ao criar.");
-      setNegociacoes((prev) => [data.negociacao as Negociacao, ...prev]);
+      setNegociacoes((prev) => [data.negociacao, ...prev]);
       setNovoNome("");
       setNovaEm(null);
     } catch (err) {
@@ -111,7 +102,31 @@ export function FunilBoard() {
   }
 
   if (loading) return <Loading>Carregando o funil…</Loading>;
-  if (!funil) return <EmptyState>Nenhum funil configurado.</EmptyState>;
+  /*
+   * O ERRO vem antes do vazio.
+   *
+   * Sem esta ordem, uma falha de rede virava "Nenhum funil configurado" — uma
+   * frase falsa, sobre um estado sem saída: a pessoa ia às Configurações,
+   * encontrava o funil lá, e não entendia nada.
+   */
+  if (erro) {
+    return (
+      <Alert tone="red" titulo="Não foi possível carregar o funil.">
+        {erro}{" "}
+        <button type="button" className="btn-link" onClick={() => window.location.reload()}>
+          Tentar de novo
+        </button>
+      </Alert>
+    );
+  }
+  if (!funil) {
+    return (
+      <EmptyState>
+        Nenhum funil configurado.{" "}
+        <Link href="/crm/configuracoes/funis" className="btn-link">Criar o primeiro funil</Link>
+      </EmptyState>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -172,9 +187,14 @@ export function FunilBoard() {
                     <span className="flex shrink-0 items-center gap-1.5">
                       <span className="hint">{daColuna.length}</span>
                       {/* Criar direto na etapa, como no RD — só o nome; o resto na ficha. */}
+                      {/* `icon-btn` sem os `!h-6 !w-6` de antes: eles venciam a
+                          media query de toque (que não usa `!important`) e
+                          deixavam o botão com 24px no celular, metade do
+                          mínimo. E `icon-btn-neutro` porque criar não é
+                          remover — o hover vermelho enganava. */}
                       <button
                         type="button"
-                        className="icon-btn !h-6 !w-6"
+                        className="icon-btn icon-btn-neutro h-7 w-7"
                         aria-label={`Nova negociação em ${etapa.nome}`}
                         onClick={() => {
                           setNovaEm((v) => (v === etapa.id ? null : etapa.id));

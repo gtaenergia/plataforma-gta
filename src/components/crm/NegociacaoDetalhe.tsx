@@ -166,7 +166,22 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
   }
 
   if (loading) return <Loading>Carregando negociação…</Loading>;
-  if (!n) return <Alert tone="red">{erro ?? "Negociação não encontrada."}</Alert>;
+  /*
+   * Sem a volta, isto era um beco: quem chegasse por um link de uma negociação
+   * já excluída (o botão "Ver a negociação" da tarefa em Operações, por
+   * exemplo) via um alerta vermelho e mais nada — sem menu, sem link, só o
+   * botão de voltar do navegador.
+   */
+  if (!n) {
+    return (
+      <div className="space-y-4">
+        <BackLink href="/crm/negociacoes">Negociações</BackLink>
+        <Alert tone="red" titulo="Negociação não encontrada.">
+          {erro ?? "Ela pode ter sido excluída por outra pessoa."}
+        </Alert>
+      </div>
+    );
+  }
 
   const aberta = n.situacao === "aberta" || n.situacao === "pausada";
   const acoes = acoesDisponiveis(n.situacao);
@@ -200,7 +215,14 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
                   key={a}
                   className={`${primaria ? "btn-primary" : "btn-secondary"} !py-1.5 text-sm`}
                   disabled={agindo}
-                  onClick={() => void transicionar(a)}
+                  onClick={() => {
+                    // Ganhar fecha a negociação e trava a ficha inteira — é tão
+                    // irreversível quanto perder, que já pedia o motivo. Um
+                    // clique errado ao lado de "Pausar" custava um Reabrir e
+                    // uma linha torta no relatório de conversão.
+                    if (a === "ganhar" && !window.confirm(`Marcar "${n.nome}" como GANHA?\n\nA negociação sai do funil e a ficha fica travada para edição.`)) return;
+                    void transicionar(a);
+                  }}
                 >
                   {ACAO_LABEL[a]}
                 </button>
@@ -225,6 +247,15 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
               Confirmar perda
             </button>
           </div>
+        )}
+        {/* Fechada, TODOS os campos ficam cinzas e os botões somem. Sem esta
+            faixa a pessoa acha que a tela quebrou — a regra só existia num
+            comentário do código. */}
+        {!aberta && (
+          <Alert tone="indigo" className="mb-4" titulo={`Negociação ${SITUACAO_LABEL[n.situacao].toLowerCase()}.`}>
+            Os campos ficam travados para o registro não mudar depois do fechamento. Use <strong>Reabrir</strong> para
+            voltar a editar — a decisão anterior continua no histórico.
+          </Alert>
         )}
         <KpiGrid>
           <Kpi destaque label="Valor da negociação" value={formatBRL(valorDaNegociacao(n))} />
@@ -437,16 +468,30 @@ function FormDados({ n, funil, clientes, usuarios, fontes, aberta, onEditar, apl
     const empresa = clientes.find((c) => c.id === form.empresaId);
     const usuario = usuarios.find((u) => u.email === form.responsavel);
     const fonte = fontes.find((f) => f.id === form.fonteId);
+    /*
+     * O nome denormalizado só é reescrito quando o cadastro foi ENCONTRADO.
+     *
+     * Antes, `empresa?.nome ?? ""` apagava o nome sempre que o id não batia —
+     * e isso acontece quando alguém exclui a empresa em /crm/empresas. Bastava
+     * então corrigir a previsão e salvar para o cliente sumir da negociação, da
+     * lista e do funil, sem aviso. A denormalização existe justamente para o
+     * cadastro apagado NÃO levar a história junto (ver crm/types.ts).
+     *
+     * Trocou de empresa (id diferente e achado) → atualiza os dois.
+     * Manteve o id de um cadastro que sumiu → preserva o nome gravado.
+     */
+    const trocouEmpresa = form.empresaId !== n.empresaId;
+    const trocouFonte = form.fonteId !== n.fonteId;
     const ok = await aplicar({
       nome: form.nome,
       valor: parseNumber(form.valor),
       etapaId: form.etapaId,
-      empresaId: empresa?.id ?? "",
-      empresaNome: empresa?.nome ?? "",
+      empresaId: form.empresaId,
+      empresaNome: empresa?.nome ?? (trocouEmpresa ? "" : n.empresaNome),
       responsavel: usuario?.email ?? n.responsavel,
       responsavelNome: usuario?.name ?? n.responsavelNome,
-      fonteId: fonte?.id ?? "",
-      fonteNome: fonte?.nome ?? "",
+      fonteId: form.fonteId,
+      fonteNome: fonte?.nome ?? (trocouFonte ? "" : n.fonteNome),
       previsao: form.previsao,
       qualificacao: form.qualificacao,
     });
@@ -462,7 +507,11 @@ function FormDados({ n, funil, clientes, usuarios, fontes, aberta, onEditar, apl
         <Campo className="sm:col-span-4" label="Nome">
           <input className="field-input" value={form.nome} onChange={(e) => set("nome", e.target.value)} disabled={!aberta} />
         </Campo>
-        <Campo className="sm:col-span-2" label="Valor (R$)">
+        <Campo
+          className="sm:col-span-2"
+          label="Valor (R$)"
+          hint={n.produtos.length > 0 ? <p className="hint mt-1">Calculado pela soma dos produtos abaixo.</p> : undefined}
+        >
           <input className="field-input" inputMode="decimal" value={form.valor} onChange={(e) => set("valor", e.target.value)} disabled={!aberta || n.produtos.length > 0} />
         </Campo>
         <Campo className="sm:col-span-2" label="Etapa">

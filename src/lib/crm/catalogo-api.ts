@@ -2,6 +2,25 @@ import { NextResponse } from "next/server";
 import type { CatalogoStore } from "./catalogo-store";
 import { getNegociacaoStore } from "./negociacoes-store";
 import { atualizarItemCatalogoSchema, criarItemCatalogoSchema, type Negociacao } from "./types";
+import { getSettingsStore } from "../settings/store";
+
+/**
+ * "Este catálogo já foi semeado alguma vez?" — e marca que foi.
+ *
+ * Guardado em `settings`, como as demais decisões de conta. Devolve `true`
+ * quando JÁ estava marcado (então não se deve semear), e marca ao devolver
+ * `false`. Marcar ANTES de semear é de propósito: se duas requisições chegarem
+ * juntas, a segunda encontra a marca e desiste, mesmo que a primeira ainda
+ * esteja inserindo.
+ */
+async function marcaDeSemeadura(chave: string): Promise<boolean> {
+  const settings = getSettingsStore();
+  const nome = `crm:semeado:${chave}`;
+  const ja = await settings.get<boolean>(nome);
+  if (ja) return true;
+  await settings.set(nome, true, "sistema");
+  return false;
+}
 
 /**
  * Handlers compartilhados dos catálogos simples (fontes e motivos de perda).
@@ -27,8 +46,20 @@ export function catalogoHandlers(cfg: ConfigCatalogo) {
     const store = cfg.store();
     let itens = await store.list();
     if (itens.length === 0) {
-      for (const nome of cfg.sementes) await store.create({ nome, descricao: "" });
-      itens = await store.list();
+      /*
+       * Semear é para a PRIMEIRA visita, não para toda lista vazia.
+       *
+       * Sem a marca, quem apagasse as cinco fontes padrão para cadastrar as da
+       * empresa via as cinco voltarem ao trocar de tela — parecia defeito, e
+       * dava trabalho de novo. E duas requisições simultâneas numa conta nova
+       * (duas abas, ou o funil e a lista carregando juntos) semeavam as duas,
+       * deixando o catálogo duplicado.
+       */
+      const jaSemeado = await marcaDeSemeadura(cfg.chaveLista);
+      if (!jaSemeado) {
+        for (const nome of cfg.sementes) await store.create({ nome, descricao: "" });
+        itens = await store.list();
+      }
     }
     return NextResponse.json({ [cfg.chaveLista]: itens });
   }

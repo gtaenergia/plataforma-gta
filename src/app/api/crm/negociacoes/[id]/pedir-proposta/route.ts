@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
+import { notifyTaskAssigned } from "@/lib/email/notifyTask";
+import { avisarSeEstourou } from "@/lib/capacidade/aviso-estouro";
 import { descricaoDoPedido, tituloDoPedido } from "@/lib/crm/elo";
 import { getNegociacaoStore, novaAnotacao } from "@/lib/crm/negociacoes-store";
 import { valorDaNegociacao } from "@/lib/crm/types";
@@ -63,6 +65,9 @@ export async function POST(req: Request, ctx: Ctx) {
   const servico = parsed.data.serviceKey ? getService(parsed.data.serviceKey) : undefined;
   const solicitante = user.name || user.email;
 
+  // Retrato ANTES de criar: é contra ele que se mede se este pedido estourou a
+  // semana de quem vai montar. Mesmo caminho de /api/tarefas.
+  const antesDaCriacao = await getTaskStore().list();
   const tarefa = await getTaskStore().create({
     titulo: tituloDoPedido(servico?.label ?? "", negociacao.empresaNome),
     descricao: descricaoDoPedido({
@@ -104,13 +109,27 @@ export async function POST(req: Request, ctx: Ctx) {
       }),
     )) ?? negociacao;
 
-  await notificar({
-    paraEmail: parsed.data.responsavel,
-    tipo: "crm_pedido_proposta",
-    titulo: "Pedido de proposta do comercial",
-    mensagem: `${solicitante} pediu a proposta de "${negociacao.nome}"${negociacao.empresaNome ? ` (${negociacao.empresaNome})` : ""}.`,
-    link: `/tarefas/${tarefa.id}`,
-  });
+  /*
+   * O pedido usa o MESMO caminho de aviso de uma tarefa comum.
+   *
+   * Antes só tocava o sino. Quem estivesse de licença, ou simplesmente não
+   * abrisse a plataforma naquele dia, nunca sabia — e do outro lado o comercial
+   * via "Em Operações" e esperava. O e-mail e o alerta de capacidade estourada
+   * já existem; faltava usá-los.
+   */
+  if (tarefa.responsavel && tarefa.responsavel.trim().toLowerCase() !== user.email.trim().toLowerCase()) {
+    after(() =>
+      notificar({
+        paraEmail: tarefa.responsavel,
+        tipo: "crm_pedido_proposta",
+        titulo: "Pedido de proposta do comercial",
+        mensagem: `${solicitante} pediu a proposta de "${negociacao.nome}"${negociacao.empresaNome ? ` (${negociacao.empresaNome})` : ""}.`,
+        link: `/tarefas/${tarefa.id}`,
+      }),
+    );
+    after(() => notifyTaskAssigned(tarefa));
+  }
+  after(() => avisarSeEstourou(tarefa, antesDaCriacao));
 
   return NextResponse.json({ tarefa, negociacao: atualizada }, { status: 201 });
 }

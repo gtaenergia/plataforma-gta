@@ -70,6 +70,23 @@ export function PedirProposta({ negociacao, produtos, usuarios, aberta, onPedido
       });
   }, [negociacao.id]);
 
+  /*
+   * Os serviços vêm do REGISTRO da plataforma, não do catálogo de produtos.
+   *
+   * Antes a lista era montada com os produtos que tivessem `serviceKey` — o que
+   * fazia o campo "Serviço" exibir NOME DE PRODUTO, perder um deles quando dois
+   * apontavam para o mesmo serviço, e ficar vazio numa conta que ainda não
+   * vinculou nada. O vínculo produto→serviço é atalho (pré-seleção), nunca
+   * porteiro: os 13 serviços existem sempre.
+   */
+  const [servicos, setServicos] = useState<{ key: string; label: string }[]>([]);
+  useEffect(() => {
+    fetch("/api/services")
+      .then((r) => r.json())
+      .then((d) => setServicos((d.services ?? []).map((s: { key: string; label: string }) => ({ key: s.key, label: s.label }))))
+      .catch(() => setServicos([]));
+  }, []);
+
   /** O serviço sugerido: o do primeiro produto da negociação que aponte para um. */
   const servicoDoProduto = useMemo(() => {
     for (const p of negociacao.produtos) {
@@ -79,18 +96,18 @@ export function PedirProposta({ negociacao, produtos, usuarios, aberta, onPedido
     return "";
   }, [negociacao.produtos, produtos]);
 
-  /** Serviços disponíveis: os que algum produto do catálogo aponta. */
-  const servicos = useMemo(() => {
-    const mapa = new Map<string, string>();
-    for (const p of produtos) if (p.serviceKey) mapa.set(p.serviceKey, p.nome);
-    return Array.from(mapa, ([key, nome]) => ({ key, nome }));
-  }, [produtos]);
-
   function abrir() {
     setErro(null);
-    const chave = servicoDoProduto || servicos[0]?.key || "";
-    setServiceKey(chave);
-    setTipoDemanda(chave ? (tipoSugeridoDoServico(chave, "orcamento")?.nome ?? "") : "");
+    /*
+     * Sem produto vinculado, o campo abre VAZIO e exige escolha.
+     *
+     * A versão anterior caía no primeiro serviço do catálogo — e "primeiro"
+     * não tem relação nenhuma com a negociação. Quem não reparasse mandava o
+     * pedido de uma subestação como se fosse carregador veicular, e o erro só
+     * aparecia quando o engenheiro abrisse o configurador errado.
+     */
+    setServiceKey(servicoDoProduto);
+    setTipoDemanda(servicoDoProduto ? (tipoSugeridoDoServico(servicoDoProduto, "orcamento")?.nome ?? "") : "");
     setResponsavel("");
     setPrazo("");
     setObservacao("");
@@ -106,6 +123,12 @@ export function PedirProposta({ negociacao, produtos, usuarios, aberta, onPedido
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
+    /*
+     * Serviço é OBRIGATÓRIO: sem ele a tarefa nasce sem `serviceKey`, o botão
+     * "Montar proposta" some do outro lado, o engenheiro monta por fora e o
+     * valor nunca volta — quebra silenciosa, e ninguém dos dois lados descobre.
+     */
+    if (!serviceKey) { setErro("Escolha o serviço — é ele que abre o configurador certo para quem vai montar."); return; }
     if (!responsavel) { setErro("Escolha quem vai montar a proposta."); return; }
     setEnviando(true);
     setErro(null);
@@ -168,8 +191,14 @@ export function PedirProposta({ negociacao, produtos, usuarios, aberta, onPedido
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
             <Campo
               className="sm:col-span-3"
-              label="Serviço"
-              hint={servicos.length === 0 ? <p className="hint mt-1">Nenhum produto do catálogo aponta para um serviço — configure em Configurações → Produtos.</p> : undefined}
+              label="Serviço *"
+              hint={
+                <p className="hint mt-1">
+                  {servicoDoProduto
+                    ? "Sugerido pelo produto da negociação. Define qual configurador o colega vai abrir."
+                    : "Define qual configurador o colega vai abrir. Vincule o produto ao serviço em Configurações → Produtos para vir preenchido."}
+                </p>
+              }
             >
               <select
                 className="field-input"
@@ -179,8 +208,8 @@ export function PedirProposta({ negociacao, produtos, usuarios, aberta, onPedido
                   setTipoDemanda(e.target.value ? (tipoSugeridoDoServico(e.target.value, "orcamento")?.nome ?? "") : "");
                 }}
               >
-                <option value="">—</option>
-                {servicos.map((s) => <option key={s.key} value={s.key}>{s.nome}</option>)}
+                <option value="">Escolha o serviço…</option>
+                {servicos.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
               </select>
             </Campo>
             <Campo className="sm:col-span-3" label="Tipo de demanda" hint={<p className="hint mt-1">Define a duração estimada e, com ela, a indicação de responsável.</p>}>

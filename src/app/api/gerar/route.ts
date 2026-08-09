@@ -6,6 +6,7 @@ import { renderDocx } from "@/lib/docx/generate";
 import { getCurrentUser } from "@/lib/session";
 import { getPropostaStore } from "@/lib/propostas/store";
 import { devolverAoComercial, negociacaoDaProposta } from "@/lib/crm/retorno";
+import { parseNumber } from "@/lib/format";
 
 export const runtime = "nodejs";
 
@@ -84,10 +85,21 @@ export async function POST(req: Request) {
         body.negociacaoId ||
         negociacaoDaProposta(body.propostaId ? (await store.get(body.propostaId))?.dados : undefined);
       if (negociacaoId) {
+        /*
+         * O preço sai do PRÓPRIO documento que acabou de ser montado.
+         *
+         * A versão anterior lia `body.valor` — que nenhum dos 13 configuradores
+         * envia. O resultado era a integração inteira mentindo em silêncio: a
+         * negociação recebia "proposta gerada, sem valor informado" e seguia com
+         * a estimativa do comercial. `valorTotal` é o marcador que vai impresso
+         * no .docx, e vem formatado ("R$ 1.234,56") — mesmo caminho que
+         * /api/orcamentos/da-proposta já usa para preencher a esteira.
+         */
+        const doDocumento = parseNumber((data as Record<string, unknown>).valorTotal);
         await devolverAoComercial({
           negociacaoId,
           referencia: ref ?? service.key,
-          valor: Number(body.valor ?? 0),
+          valor: doDocumento > 0 ? doDocumento : Number(body.valor ?? 0),
           momento: "gerada",
           autor: user.email,
           autorNome: user.name || user.email,
