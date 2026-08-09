@@ -66,7 +66,7 @@ export function CrmInicio() {
         {recentes.length === 0 ? (
           <EmptyState>
             Nenhuma negociação ainda. <Link href="/crm/negociacoes#novo" className="btn-link">Crie a primeira</Link> ou
-            cadastre <Link href="/crm/empresas" className="btn-link">empresas</Link> e{" "}
+            cadastre <Link href="/crm/clientes" className="btn-link">clientes</Link> e{" "}
             <Link href="/crm/contatos" className="btn-link">contatos</Link> antes.
           </EmptyState>
         ) : (

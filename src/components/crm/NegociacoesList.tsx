@@ -252,7 +252,7 @@ export function NegociacoesList({ usuarioAtual }: { usuarioAtual: string }) {
               <Campo className="sm:col-span-2" label="Previsão de fechamento">
                 <input type="date" className="field-input" value={form.previsao} onChange={(e) => set("previsao", e.target.value)} />
               </Campo>
-              <Campo className="sm:col-span-2" label="Empresa">
+              <Campo className="sm:col-span-2" label="Cliente">
                 <select className="field-input" value={form.empresaId} onChange={(e) => set("empresaId", e.target.value)}>
                   <option value="">—</option>
                   {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
@@ -317,7 +317,7 @@ export function NegociacoesList({ usuarioAtual }: { usuarioAtual: string }) {
           <thead>
             <tr>
               <th>Negociação</th>
-              <th>Empresa</th>
+              <th>Cliente</th>
               <th>Etapa</th>
               <th className="text-right">Valor</th>
               <th>Responsável</th>

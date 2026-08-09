@@ -557,7 +557,7 @@ function FormDados({ n, funil, clientes, usuarios, fontes, aberta, onEditar, apl
      * O nome denormalizado só é reescrito quando o cadastro foi ENCONTRADO.
      *
      * Antes, `empresa?.nome ?? ""` apagava o nome sempre que o id não batia —
-     * e isso acontece quando alguém exclui a empresa em /crm/empresas. Bastava
+     * e isso acontece quando alguém exclui o cliente em /crm/clientes. Bastava
      * então corrigir a previsão e salvar para o cliente sumir da negociação, da
      * lista e do funil, sem aviso. A denormalização existe justamente para o
      * cadastro apagado NÃO levar a história junto (ver crm/types.ts).
@@ -604,7 +604,7 @@ function FormDados({ n, funil, clientes, usuarios, fontes, aberta, onEditar, apl
             {(funil?.etapas ?? []).map((et) => <option key={et.id} value={et.id}>{et.nome}</option>)}
           </select>
         </Campo>
-        <Campo className="sm:col-span-2" label="Empresa">
+        <Campo className="sm:col-span-2" label="Cliente">
           <select className="field-input" value={form.empresaId} onChange={(e) => set("empresaId", e.target.value)} disabled={!aberta}>
             <option value="">—</option>
             {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}

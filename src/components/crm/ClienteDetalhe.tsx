@@ -16,18 +16,22 @@ import { buscarJson } from "./buscar";
 import { dataCurta } from "./util";
 
 /**
- * A empresa como HUB, não como linha de cadastro.
+ * O cliente como HUB, não como linha de cadastro.
  *
- * A lista de Empresas responde "esse cliente existe?". Não respondia "o que
+ * A lista de Clientes responde "esse cliente existe?". Não respondia "o que
  * temos com ele?" — para saber, era preciso ir às Negociações e buscar pelo
  * nome, torcendo para estar escrito igual. Um cliente com seis negociações
  * era invisível como cliente.
  *
  * Aqui ficam as três coisas que se pergunta antes de ligar para alguém: o que
  * está em aberto, quanto já se fechou, e com quem falar.
+ *
+ * (No modelo interno a negociação guarda `empresaId`/`empresaNome` — o nome
+ * herdado do RD Station. Renomear essas chaves seria migração de dado gravado;
+ * o que a pessoa vê diz "cliente".)
  */
-export function EmpresaDetalhe({ id }: { id: string }) {
-  const [empresa, setEmpresa] = useState<Cliente | null>(null);
+export function ClienteDetalhe({ id }: { id: string }) {
+  const [cliente, setCliente] = useState<Cliente | null>(null);
   const [negociacoes, setNegociacoes] = useState<Negociacao[]>([]);
   const [contatos, setContatos] = useState<Contato[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,13 +44,13 @@ export function EmpresaDetalhe({ id }: { id: string }) {
       buscarJson<{ contatos: Contato[] }>("/api/crm/contatos"),
     ])
       .then(([e, n, c]) => {
-        setEmpresa(e.cliente);
+        setCliente(e.cliente);
         /*
          * Casa por id OU por nome.
          *
          * Nem toda negociação tem `empresaId`: a criação rápida na coluna do
-         * funil pede só o nome, e negociações antigas nasceram antes de a
-         * empresa existir no cadastro. Filtrar só por id mostraria "nenhuma
+         * funil pede só o nome, e negociações antigas nasceram antes de o
+         * cliente existir no cadastro. Filtrar só por id mostraria "nenhuma
          * negociação" para um cliente com seis — e o nome está denormalizado
          * justamente para casos assim.
          */
@@ -54,7 +58,7 @@ export function EmpresaDetalhe({ id }: { id: string }) {
         setNegociacoes((n.negociacoes ?? []).filter((x) => (x.empresaId ? x.empresaId === id : mesmoNome(x.empresaNome))));
         setContatos((c.contatos ?? []).filter((x) => (x.empresaId ? x.empresaId === id : mesmoNome(x.empresaNome))));
       })
-      .catch((err) => setErro(err instanceof Error ? err.message : "Falha ao carregar a empresa."))
+      .catch((err) => setErro(err instanceof Error ? err.message : "Falha ao carregar o cliente."))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -69,24 +73,24 @@ export function EmpresaDetalhe({ id }: { id: string }) {
     };
   }, [negociacoes]);
 
-  if (loading) return <Loading>Carregando a empresa…</Loading>;
-  if (!empresa) {
+  if (loading) return <Loading>Carregando o cliente…</Loading>;
+  if (!cliente) {
     return (
       <div className="space-y-4">
-        <BackLink href="/crm/empresas">Empresas</BackLink>
-        <Alert tone="red" titulo="Empresa não encontrada.">{erro ?? "Ela pode ter sido excluída."}</Alert>
+        <BackLink href="/crm/clientes">Clientes</BackLink>
+        <Alert tone="red" titulo="Cliente não encontrado.">{erro ?? "Ele pode ter sido excluído."}</Alert>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <BackLink href="/crm/empresas">Empresas</BackLink>
+      <BackLink href="/crm/clientes">Clientes</BackLink>
       {erro && <Alert tone="red">{erro}</Alert>}
 
       <SectionCard
-        title={empresa.nome}
-        subtitle={[cidadeUf(empresa), empresa.segmento, empresa.documento].filter(Boolean).join(" · ") || undefined}
+        title={cliente.nome}
+        subtitle={[cidadeUf(cliente), cliente.segmento, cliente.documento].filter(Boolean).join(" · ") || undefined}
       >
         <KpiGrid>
           <Kpi destaque label="Em jogo agora" value={formatBRL(resumo.emJogo)} />
@@ -103,7 +107,7 @@ export function EmpresaDetalhe({ id }: { id: string }) {
       >
         {negociacoes.length === 0 ? (
           <EmptyState>
-            Nenhuma negociação com esta empresa ainda.{" "}
+            Nenhuma negociação com este cliente ainda.{" "}
             <Link href="/crm/negociacoes#novo" className="btn-link">Criar a primeira</Link>
           </EmptyState>
         ) : (
@@ -154,7 +158,7 @@ export function EmpresaDetalhe({ id }: { id: string }) {
         )}
       </SectionCard>
 
-      <SectionCard title="Contatos" subtitle="Com quem falar nesta empresa.">
+      <SectionCard title="Contatos" subtitle="Com quem falar neste cliente.">
         {contatos.length === 0 ? (
           <EmptyState>
             Nenhum contato cadastrado.{" "}
@@ -178,26 +182,26 @@ export function EmpresaDetalhe({ id }: { id: string }) {
         )}
       </SectionCard>
 
-      {(empresa.logradouro || empresa.observacoes) && (
+      {(cliente.logradouro || cliente.observacoes) && (
         <SectionCard title="Cadastro">
           <dl className="space-y-1.5 text-sm">
-            {empresa.logradouro && (
+            {cliente.logradouro && (
               <div className="flex flex-wrap justify-between gap-2">
                 <dt className="hint">Endereço</dt>
                 <dd className="text-right">
-                  {[empresa.logradouro, empresa.numero, empresa.bairro].filter(Boolean).join(", ")}
+                  {[cliente.logradouro, cliente.numero, cliente.bairro].filter(Boolean).join(", ")}
                 </dd>
               </div>
             )}
-            {empresa.observacoes && (
+            {cliente.observacoes && (
               <div>
                 <dt className="hint">Observações</dt>
-                <dd className="mt-1 whitespace-pre-wrap text-slate-700 dark:text-slate-300">{empresa.observacoes}</dd>
+                <dd className="mt-1 whitespace-pre-wrap text-slate-700 dark:text-slate-300">{cliente.observacoes}</dd>
               </div>
             )}
           </dl>
           <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-700">
-            <Link href="/crm/empresas" className="btn-link text-sm">Editar cadastro na lista de Empresas</Link>
+            <Link href="/crm/clientes" className="btn-link text-sm">Editar cadastro na lista de Clientes</Link>
           </div>
         </SectionCard>
       )}

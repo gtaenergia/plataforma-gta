@@ -80,7 +80,7 @@ const CATEGORIAS: { titulo: string; subtitulo: string; itens: ItemConfig[] }[] =
     itens: [
       { label: "Fontes", descricao: "De onde a negociação veio, para medir o retorno de cada ação.", href: "/crm/configuracoes/fontes", configurar: true },
       { label: "Produtos e serviços", descricao: "O catálogo do que se vende, com preço base. Itens fora de linha são ocultados, nunca excluídos.", href: "/crm/configuracoes/produtos", configurar: true },
-      { label: "Segmentos", descricao: "Área de atuação das empresas." },
+      { label: "Segmentos", descricao: "Área de atuação dos clientes." },
       { label: "Motivo de perda", descricao: "Por que a negociação não foi ganha. Toda perda exige um motivo.", href: "/crm/configuracoes/motivos-perda", configurar: true },
       { label: "Informações pré-definidas", descricao: "Textos e valores que já vêm preenchidos ao criar uma negociação." },
       { label: "Modelos de e-mail", descricao: "Mensagens prontas para enviar a partir da negociação." },
@@ -90,7 +90,7 @@ const CATEGORIAS: { titulo: string; subtitulo: string; itens: ItemConfig[] }[] =
     titulo: "Avançado",
     subtitulo: "Entrada de dados, metas e o que sai da plataforma.",
     itens: [
-      { label: "Importar dados", descricao: "Trazer empresas, contatos e negociações de planilha ou de outro CRM." },
+      { label: "Importar dados", descricao: "Trazer clientes, contatos e negociações de planilha ou de outro CRM." },
       { label: "Metas", descricao: "Objetivo de venda por vendedor e por equipe, para comparar com o realizado nos relatórios." },
       { label: "Multi-vendas", descricao: "Registrar mais de uma venda na mesma negociação." },
       { label: "Preferências", descricao: "Comportamento padrão do CRM na conta." },

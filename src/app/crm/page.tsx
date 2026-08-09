@@ -11,7 +11,7 @@ export default async function CrmInicioPage() {
   return (
     <CrmShell
       titulo="CRM"
-      subtitulo="A ferramenta comercial da GTA: do primeiro contato ao fechamento. Empresas, contatos, negociações no funil e as tarefas de cada uma."
+      subtitulo="A ferramenta comercial da GTA: do primeiro contato ao fechamento. Clientes, contatos, negociações no funil e as tarefas de cada uma."
     >
       <div className="space-y-4">
         <CrmInicio />

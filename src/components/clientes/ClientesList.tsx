@@ -39,13 +39,18 @@ function paraForm(c: Cliente): FormState {
 }
 
 /**
- * `hrefFicha` liga a linha a uma tela de detalhe, quando existe uma.
+ * `fichaBase` liga a linha a uma tela de detalhe, quando existe uma.
  *
- * O CRM passa `/crm/empresas/{id}`, onde a empresa vira hub (negociações,
- * contatos, quanto já fechou). Em Operações a mesma lista continua sendo só
- * cadastro — e sem a prop nada muda ali.
+ * O CRM passa `/crm/clientes`, e a linha vira link para `{fichaBase}/{id}` —
+ * o hub do cliente (negociações, contatos, quanto já fechou). Sem a prop, o
+ * nome é texto puro.
+ *
+ * É string, e não função `(c) => href`, de propósito: quem monta esta lista é
+ * uma página de SERVIDOR, e função não atravessa a fronteira servidor→cliente
+ * — o Next recusa a serialização e a página cai com erro 500.
  */
-export function ClientesList({ hrefFicha }: { hrefFicha?: (c: Cliente) => string } = {}) {
+export function ClientesList({ fichaBase }: { fichaBase?: string } = {}) {
+  const hrefFicha = fichaBase ? (c: Cliente) => `${fichaBase}/${c.id}` : undefined;
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);

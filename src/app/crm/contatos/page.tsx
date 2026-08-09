@@ -5,7 +5,7 @@ export default async function CrmContatosPage() {
   return (
     <CrmShell
       titulo="Contatos"
-      subtitulo="As pessoas com quem se negocia. Um contato pertence a uma empresa e pode participar de várias negociações."
+      subtitulo="As pessoas com quem se negocia. Um contato pertence a um cliente e pode participar de várias negociações."
     >
       <ContatosList />
     </CrmShell>

@@ -57,7 +57,7 @@ export const PRODUTOS: Produto[] = [
   {
     key: "crm",
     label: "CRM",
-    descricao: "Funil de vendas, negociações, contatos e empresas",
+    descricao: "Funil de vendas, negociações, contatos e clientes",
     home: "/crm",
     icone: Handshake,
     nav: [
@@ -65,7 +65,9 @@ export const PRODUTOS: Produto[] = [
       { href: "/crm/funil", label: "Funil" },
       { href: "/crm/negociacoes", label: "Negociações" },
       { href: "/crm/contatos", label: "Contatos" },
-      { href: "/crm/empresas", label: "Empresas" },
+      // "Clientes", e não "Empresas" como no RD Station: é o nome que a GTA
+      // sempre usou — a mesma entidade que os configuradores autocompletam.
+      { href: "/crm/clientes", label: "Clientes" },
       { href: "/crm/tarefas", label: "Tarefas" },
       { href: "/crm/relatorios", label: "Relatórios" },
     ],

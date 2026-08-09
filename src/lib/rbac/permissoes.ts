@@ -36,7 +36,7 @@ export const PERMISSOES = {
   // trancaria para fora todo mundo que ainda não tem cargo.
   "crm.acessar": "Acessar o CRM (ainda não exigida)",
   "crm.negociacoes.editar": "Criar e editar negociações (ainda não exigida)",
-  "crm.cadastros.editar": "Criar e editar empresas e contatos (ainda não exigida)",
+  "crm.cadastros.editar": "Criar e editar clientes e contatos (ainda não exigida)",
   "crm.relatorios.ver": "Ver os relatórios do CRM (ainda não exigida)",
   "crm.configurar": "Configurar funis, etapas, fontes, motivos de perda e produtos",
 } as const;

@@ -49,10 +49,14 @@ const nextConfig = {
       // saiu com o link antigo, e pode haver favorito salvo — o redirecionamento
       // evita 404 para quem clicar neles.
       { source: "/tracker", destination: "/apontamentos", permanent: true },
-      // "Clientes" saiu de Operações e virou "Empresas", dentro do CRM: é dela
-      // que nascem as negociações. Mesma tabela, mesma /api/clientes — só o
-      // lugar na navegação mudou. O redirecionamento cobre favorito salvo.
-      { source: "/clientes", destination: "/crm/empresas", permanent: true },
+      // "Clientes" saiu de Operações e mora no CRM: é dele que nascem as
+      // negociações. Mesma tabela, mesma /api/clientes — só o lugar na
+      // navegação mudou. O redirecionamento cobre favorito salvo.
+      { source: "/clientes", destination: "/crm/clientes", permanent: true },
+      // A aba chegou a se chamar "Empresas" (nome do RD Station) por algumas
+      // versões — links e favoritos desse período continuam chegando.
+      { source: "/crm/empresas", destination: "/crm/clientes", permanent: true },
+      { source: "/crm/empresas/:id", destination: "/crm/clientes/:id", permanent: true },
     ];
   },
   // Garante que os moldes .docx sejam empacotados na build de produção (Vercel)

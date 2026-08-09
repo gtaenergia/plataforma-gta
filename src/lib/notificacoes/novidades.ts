@@ -20,6 +20,13 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "crm-clientes-2026-08",
+    titulo: "CRM: a aba Empresas voltou a se chamar Clientes",
+    mensagem:
+      "Mesmo cadastro, mesmo lugar no CRM — só o nome mudou, para o que a GTA sempre usou. A ficha continua sendo o resumo do cliente: negociações abertas, quanto já se fechou e com quem falar. Links e favoritos antigos (Empresas ou o Clientes de Operações) redirecionam sozinhos, e os configuradores de proposta seguem preenchendo o cliente a partir do mesmo cadastro.",
+    link: "/crm/clientes",
+  },
+  {
     slug: "crm-campos-personalizados-2026-08",
     titulo: "CRM: campos personalizados na negociação",
     mensagem:

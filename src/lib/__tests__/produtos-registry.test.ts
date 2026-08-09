@@ -14,7 +14,7 @@ const item = (produto: typeof crm, href: string) => produto.nav.find((i) => i.hr
 
 describe("produtoDaRota", () => {
   it("manda as rotas do CRM para o CRM", () => {
-    for (const p of ["/crm", "/crm/funil", "/crm/empresas", "/crm/configuracoes"]) {
+    for (const p of ["/crm", "/crm/funil", "/crm/clientes", "/crm/configuracoes"]) {
       expect(produtoDaRota(p).key).toBe("crm");
     }
   });

@@ -1,12 +1,12 @@
 import { AppHeader } from "@/components/AppHeader";
-import { EmpresaDetalhe } from "@/components/crm/EmpresaDetalhe";
+import { ClienteDetalhe } from "@/components/crm/ClienteDetalhe";
 import { requirePageUser } from "@/lib/session";
 
 /**
- * Ficha da empresa. Sem `CrmShell`: o título é o nome da empresa, que o
- * componente de cliente carrega — a casca aqui é só o cabeçalho.
+ * Ficha do cliente. Sem `CrmShell`: o título é o nome do cliente, que o
+ * componente carrega — a casca aqui é só o cabeçalho.
  */
-export default async function CrmEmpresaPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CrmClientePage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requirePageUser();
   const { id } = await params;
 
@@ -14,7 +14,7 @@ export default async function CrmEmpresaPage({ params }: { params: Promise<{ id:
     <div className="min-h-screen">
       <AppHeader userName={user.name} avatarUrl={user.avatarUrl} isAdmin={user.role === "admin"} />
       <main className="app-container py-8">
-        <EmpresaDetalhe id={id} />
+        <ClienteDetalhe id={id} />
       </main>
     </div>
   );

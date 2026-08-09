@@ -129,9 +129,9 @@ export function ContatosList() {
         <Campo className="flex-1 sm:min-w-[220px]" label="Buscar nome / e-mail / telefone">
           <input className="field-input" placeholder="Digite para filtrar…" value={busca} onChange={(e) => setBusca(e.target.value)} />
         </Campo>
-        <Campo className="min-w-[180px]" label="Empresa">
+        <Campo className="min-w-[180px]" label="Cliente">
           <select className="field-input" value={fEmpresa} onChange={(e) => setFEmpresa(e.target.value)}>
-            <option value="">Todas</option>
+            <option value="">Todos</option>
             {empresasComContatos.map((n) => <option key={n} value={n}>{n}</option>)}
           </select>
         </Campo>
@@ -157,7 +157,7 @@ export function ContatosList() {
               <Campo className="sm:col-span-2" label="Telefone / WhatsApp">
                 <input className="field-input" value={form.telefone} onChange={(e) => set("telefone", e.target.value)} placeholder="(62) 99999-9999" />
               </Campo>
-              <Campo className="sm:col-span-2" label="Empresa">
+              <Campo className="sm:col-span-2" label="Cliente">
                 <select className="field-input" value={form.empresaId} onChange={(e) => set("empresaId", e.target.value)}>
                   <option value="">—</option>
                   {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
@@ -213,7 +213,7 @@ export function ContatosList() {
             <tr>
               <th>Nome</th>
               <th>Cargo</th>
-              <th>Empresa</th>
+              <th>Cliente</th>
               <th>Contato</th>
               <th className="text-right">Ações</th>
             </tr>
