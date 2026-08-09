@@ -10,7 +10,7 @@ const neg = (sobre: Partial<Negociacao>): Negociacao => ({
   responsavel: "ana@gta.com", responsavelNome: "Ana",
   fonteId: "", fonteNome: "", situacao: "aberta",
   motivoPerdaId: "", motivoPerdaNome: "", previsao: "", qualificacao: 0,
-  produtos: [], anotacoes: [], fechadoEm: "", fechadoPor: "",
+  produtos: [], campos: {}, anotacoes: [], fechadoEm: "", fechadoPor: "",
   criadoPor: "ana@gta.com", criadoEm: "2026-08-01T00:00:00.000Z", atualizadoEm: "2026-08-01T00:00:00.000Z",
   ...sobre,
 });

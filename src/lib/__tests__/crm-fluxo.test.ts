@@ -342,6 +342,48 @@ describe("CRM — ciclo comercial completo pelas rotas", () => {
     expect(depois.every((t) => t.negociacaoId !== ids.ganha)).toBe(true);
   });
 
+  it("campo obrigatório por etapa BARRA o avanço, nomeando o campo", async () => {
+    const campos = await import("@/app/api/crm/campos/route");
+    const etapaProposta = ids.etapas[2];
+
+    const criado = await corpoDe(await campos.POST(req({
+      rotulo: "Distribuidora", tipo: "texto", obrigatorioNaEtapaId: etapaProposta.id,
+    })));
+    const campoId = (criado.campo as unknown as { id: string }).id;
+
+    const nova = (await corpoDe(await r.negociacoes.POST(req({
+      nome: "Precisa da distribuidora", funilId: ids.funil, etapaId: ids.etapas[0].id,
+    })))).negociacao as unknown as { id: string };
+
+    // A criação NÃO é barrada: o "+" da coluna pede só o nome, de propósito.
+    // Avançar até a etapa que exige o campo, sim.
+    const barrado = await r.negociacaoId.PATCH(req({ etapaId: etapaProposta.id }, "PATCH"), ctx(nova.id));
+    expect(barrado.status).toBe(422);
+    const erro = (await corpoDe(barrado)).error as unknown as string;
+    expect(erro).toContain("Distribuidora");
+    expect(erro).toContain(etapaProposta.nome);
+
+    // Movida para uma etapa que não exige: passa.
+    expect((await r.negociacaoId.PATCH(req({ etapaId: ids.etapas[1].id }, "PATCH"), ctx(nova.id))).status).toBe(200);
+
+    // Com o campo preenchido, o avanço passa.
+    const ok = await r.negociacaoId.PATCH(
+      req({ etapaId: etapaProposta.id, campos: { [campoId]: "Equatorial GO" } }, "PATCH"),
+      ctx(nova.id),
+    );
+    expect(ok.status).toBe(200);
+    const n = (await corpoDe(ok)).negociacao as unknown as { etapaId: string; campos: Record<string, string> };
+    expect(n.etapaId).toBe(etapaProposta.id);
+    expect(n.campos[campoId]).toBe("Equatorial GO");
+
+    // Arquivar o campo destrava as negociações que nunca o conheceram.
+    const campoId2 = (await corpoDe(await campos.POST(req({ rotulo: "Classe", tipo: "texto", obrigatorio: true })))).campo as unknown as { id: string };
+    const camposId = await import("@/app/api/crm/campos/[id]/route");
+    expect((await r.negociacaoId.PATCH(req({ nome: "Renomeada" }, "PATCH"), ctx(nova.id))).status).toBe(422);
+    await camposId.PATCH(req({ arquivado: true }, "PATCH"), ctx(campoId2.id));
+    expect((await r.negociacaoId.PATCH(req({ nome: "Renomeada" }, "PATCH"), ctx(nova.id))).status).toBe(200);
+  });
+
   it("sem `crm.configurar`, o catálogo e o funil ficam trancados — mas o dia a dia segue", async () => {
     podeConfigurar = false;
     try {

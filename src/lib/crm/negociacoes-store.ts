@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { createPool, type VercelPool } from "@vercel/postgres";
+import type { ValoresCampos } from "./campos";
 import type { Anotacao, Negociacao, ProdutoNegociado } from "./types";
 import { getDbUrl } from "../tasks/postgres-store";
 
@@ -55,7 +56,11 @@ class JsonNegociacaoStore implements NegociacaoStore {
   private readAll(): Negociacao[] {
     try {
       const parsed = JSON.parse(fs.readFileSync(this.file, "utf8"));
-      return Array.isArray(parsed) ? (parsed as Negociacao[]) : [];
+      if (!Array.isArray(parsed)) return [];
+      // Registro gravado antes de os campos personalizados existirem não tem
+      // `campos`. Normalizar na leitura é o equivalente ao DEFAULT '{}' da
+      // coluna no Postgres: quem consome recebe sempre um mapa, nunca `undefined`.
+      return (parsed as Negociacao[]).map((n) => (n.campos ? n : { ...n, campos: {} }));
     } catch {
       return [];
     }
@@ -145,6 +150,8 @@ interface Row {
   previsao: string;
   qualificacao: number;
   produtos: ProdutoNegociado[] | string;
+  /** Opcional: linha anterior à coluna existir devolve a linha sem ela. */
+  campos?: Record<string, string | string[]> | string | null;
   anotacoes: Anotacao[] | string;
   fechado_em: string;
   fechado_por: string;
@@ -152,6 +159,20 @@ interface Row {
   criado_por_nome: string | null;
   criado_em: string;
   atualizado_em: string;
+}
+
+/** Como `jsonb`, mas para OBJETO (mapa de campo → valor), não lista. */
+function objetoJsonb(v: Record<string, string | string[]> | string | null | undefined): ValoresCampos {
+  if (v && typeof v === "object" && !Array.isArray(v)) return v as ValoresCampos;
+  if (typeof v === "string") {
+    try {
+      const p = JSON.parse(v);
+      return p && typeof p === "object" && !Array.isArray(p) ? (p as ValoresCampos) : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
 }
 
 function jsonb<T>(v: T[] | string | null | undefined): T[] {
@@ -186,6 +207,7 @@ const rowTo = (r: Row): Negociacao => ({
   previsao: r.previsao ?? "",
   qualificacao: Number(r.qualificacao ?? 0),
   produtos: jsonb<ProdutoNegociado>(r.produtos),
+  campos: objetoJsonb(r.campos),
   anotacoes: jsonb<Anotacao>(r.anotacoes),
   fechadoEm: r.fechado_em ?? "",
   fechadoPor: r.fechado_por ?? "",
@@ -223,6 +245,7 @@ class PostgresNegociacaoStore implements NegociacaoStore {
           previsao text NOT NULL DEFAULT '',
           qualificacao integer NOT NULL DEFAULT 0,
           produtos jsonb NOT NULL DEFAULT '[]',
+          campos jsonb NOT NULL DEFAULT '{}',
           anotacoes jsonb NOT NULL DEFAULT '[]',
           fechado_em text NOT NULL DEFAULT '',
           fechado_por text NOT NULL DEFAULT '',
@@ -233,6 +256,9 @@ class PostgresNegociacaoStore implements NegociacaoStore {
         )
       `
         .then(() => this.pool.sql`CREATE INDEX IF NOT EXISTS crm_negociacoes_funil_idx ON crm_negociacoes (funil_id, situacao)`)
+        // Coluna acrescentada depois: as negociações já gravadas continuam
+        // válidas, com o mapa de campos vazio.
+        .then(() => this.pool.sql`ALTER TABLE crm_negociacoes ADD COLUMN IF NOT EXISTS campos jsonb NOT NULL DEFAULT '{}'`)
         .then(() => undefined)
         .catch((e) => {
           this.ready = null;
@@ -248,7 +274,7 @@ class PostgresNegociacaoStore implements NegociacaoStore {
     const { rows } = await this.pool.sql<Row>`
       SELECT id, nome, funil_id, etapa_id, valor, empresa_id, empresa_nome, contato_ids,
              responsavel, responsavel_nome, fonte_id, fonte_nome, situacao, motivo_perda_id,
-             motivo_perda_nome, previsao, qualificacao, produtos, '[]'::jsonb AS anotacoes,
+             motivo_perda_nome, previsao, qualificacao, produtos, campos, '[]'::jsonb AS anotacoes,
              fechado_em, fechado_por, criado_por, criado_por_nome, criado_em, atualizado_em
       FROM crm_negociacoes
       ORDER BY criado_em DESC
@@ -268,14 +294,15 @@ class PostgresNegociacaoStore implements NegociacaoStore {
       INSERT INTO crm_negociacoes
         (id, nome, funil_id, etapa_id, valor, empresa_id, empresa_nome, contato_ids,
          responsavel, responsavel_nome, fonte_id, fonte_nome, situacao, motivo_perda_id,
-         motivo_perda_nome, previsao, qualificacao, produtos, anotacoes, fechado_em,
+         motivo_perda_nome, previsao, qualificacao, produtos, campos, anotacoes, fechado_em,
          fechado_por, criado_por, criado_por_nome, criado_em, atualizado_em)
       VALUES
         (${id}, ${data.nome}, ${data.funilId}, ${data.etapaId}, ${data.valor}, ${data.empresaId},
          ${data.empresaNome}, ${JSON.stringify(data.contatoIds)}::jsonb, ${data.responsavel},
          ${data.responsavelNome}, ${data.fonteId}, ${data.fonteNome}, ${data.situacao},
          ${data.motivoPerdaId}, ${data.motivoPerdaNome}, ${data.previsao}, ${data.qualificacao},
-         ${JSON.stringify(data.produtos)}::jsonb, ${JSON.stringify(data.anotacoes)}::jsonb,
+         ${JSON.stringify(data.produtos)}::jsonb, ${JSON.stringify(data.campos ?? {})}::jsonb,
+         ${JSON.stringify(data.anotacoes)}::jsonb,
          ${data.fechadoEm}, ${data.fechadoPor}, ${data.criadoPor}, ${data.criadoPorNome ?? null}, ${now}, ${now})
     `;
     return { ...data, id, criadoEm: now, atualizadoEm: now };
@@ -302,6 +329,7 @@ class PostgresNegociacaoStore implements NegociacaoStore {
         previsao = COALESCE(${patch.previsao ?? null}::text, previsao),
         qualificacao = COALESCE(${patch.qualificacao ?? null}::integer, qualificacao),
         produtos = COALESCE(${patch.produtos ? JSON.stringify(patch.produtos) : null}::jsonb, produtos),
+        campos = COALESCE(${patch.campos ? JSON.stringify(patch.campos) : null}::jsonb, campos),
         fechado_em = COALESCE(${patch.fechadoEm ?? null}::text, fechado_em),
         fechado_por = COALESCE(${patch.fechadoPor ?? null}::text, fechado_por),
         atualizado_em = ${atualizadoEm}

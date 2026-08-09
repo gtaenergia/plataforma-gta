@@ -20,6 +20,13 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "crm-campos-personalizados-2026-08",
+    titulo: "CRM: campos personalizados na negociação",
+    mensagem:
+      "O que a negociação de engenharia carrega e a genérica não tem — potência, distribuidora, classe de tensão, número da UC — agora tem lugar próprio, em vez de virar texto solto em observações. Em Configurações → Campos personalizados dá para criar campos de texto, número, data e escolha, e definir a obrigatoriedade de dois jeitos: sempre, ou só para entrar numa etapa do funil. Quem tentar avançar sem preencher recebe o nome do campo que falta, com o atalho para corrigir.",
+    link: "/crm/configuracoes/campos",
+  },
+  {
     slug: "crm-cobranca-diaria-2026-08",
     titulo: "CRM: o aviso da manhã",
     mensagem:

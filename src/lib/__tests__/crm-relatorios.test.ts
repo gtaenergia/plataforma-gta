@@ -33,6 +33,7 @@ function neg(sobre: Partial<Negociacao>): Negociacao {
     previsao: "",
     qualificacao: 0,
     produtos: [],
+    campos: {},
     anotacoes: [],
     fechadoEm: "",
     fechadoPor: "",

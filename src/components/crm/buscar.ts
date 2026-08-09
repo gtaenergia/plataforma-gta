@@ -72,10 +72,37 @@ export function mensagemDeErro(dados: { error?: string; issues?: { fieldErrors?:
   const campos = dados.issues?.fieldErrors;
   if (campos) {
     for (const [campo, msgs] of Object.entries(campos)) {
-      if (msgs?.length) return `${rotulo(campo)}: ${msgs[0]}`;
+      if (msgs?.length) return `${rotulo(campo)}: ${emPortugues(msgs[0])}`;
     }
   }
   return dados.error ?? "Não foi possível concluir. Tente de novo.";
+}
+
+/**
+ * O zod só tem mensagem própria onde alguém escreveu uma.
+ *
+ * Nas demais regras ele devolve o texto padrão, em inglês — e ele chega inteiro
+ * à tela: "String must contain at most 200 character(s)". Traduzir aqui, na
+ * camada que exibe, resolve para todas as rotas de uma vez; escrever a mensagem
+ * em cada `.max()` dos esquemas seria a mesma frase repetida dezenas de vezes.
+ * O que não casar continua aparecendo como veio — nunca some.
+ */
+function emPortugues(msg: string): string {
+  const limite = /String must contain at (most|least) (\d+) character\(s\)/.exec(msg);
+  if (limite) {
+    const [, lado, n] = limite;
+    return lado === "most" ? `no máximo ${n} caracteres.` : `no mínimo ${n} caracteres.`;
+  }
+  const numero = /Number must be (less|greater) than or equal to (-?[\d.]+)/.exec(msg);
+  if (numero) {
+    const [, lado, n] = numero;
+    return lado === "less" ? `no máximo ${n}.` : `no mínimo ${n}.`;
+  }
+  if (msg === "Required") return "obrigatório.";
+  if (msg === "Invalid email") return "e-mail inválido.";
+  if (msg.startsWith("Expected number")) return "informe um número.";
+  if (msg.startsWith("Invalid enum value")) return "opção inválida.";
+  return msg;
 }
 
 /** Nome do campo como a pessoa o vê na tela, não como ele se chama no código. */

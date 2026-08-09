@@ -45,7 +45,13 @@ const CATEGORIAS: { titulo: string; subtitulo: string; itens: ItemConfig[] }[] =
     subtitulo: "O desenho do funil e os campos que cada negociação precisa carregar.",
     itens: [
       { label: "Funis de venda", descricao: "Criar funis e ordenar as etapas de cada um (até 12 etapas).", href: "/crm/configuracoes/funis", configurar: true },
-      { label: "Configurar campos", descricao: "Campos personalizados de negociação, contato, empresa e produto: texto, data, escolha única e múltipla, com obrigatoriedade por etapa." },
+      {
+        label: "Campos personalizados",
+        descricao:
+          "O que a negociação de engenharia carrega além do padrão: potência, distribuidora, classe de tensão, UC. Texto, número, data e escolha — com obrigatoriedade sempre ou só para entrar numa etapa.",
+        href: "/crm/configuracoes/campos",
+        configurar: true,
+      },
     ],
   },
   {

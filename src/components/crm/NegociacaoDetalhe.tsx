@@ -20,7 +20,9 @@ import {
   type ProdutoCrm,
   type ProdutoNegociado,
 } from "@/lib/crm/types";
+import type { ValoresCampos } from "@/lib/crm/campos";
 import { enviarJson } from "./buscar";
+import { CamposDaNegociacao } from "./CamposDaNegociacao";
 import { PedirProposta } from "./PedirProposta";
 import { TarefasDaNegociacao } from "./TarefasDaNegociacao";
 import { dataCurta, dataHora } from "./util";
@@ -60,7 +62,20 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
   const [novoProduto, setNovoProduto] = useState("");
   /** Pedidos de proposta em Operações — a confirmação de exclusão os menciona. */
   const [tarefasDeOperacoes, setTarefasDeOperacoes] = useState<{ id: string }[]>([]);
+  /** `null` = nada editado nos campos personalizados; o botão de salvar só aparece com edição. */
+  const [camposLocais, setCamposLocais] = useState<ValoresCampos | null>(null);
+  const [salvandoCampos, setSalvandoCampos] = useState(false);
   const edicao = useEdicaoPendente();
+
+  /**
+   * O aviso fica no topo; os botões que o disparam, no fim de uma ficha longa.
+   * Sem trazer a mensagem para a vista, clicar em "Salvar informações" e ser
+   * recusado parece que o clique não funcionou — e a pessoa clica de novo.
+   */
+  const avisoRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (erro) avisoRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [erro]);
 
   useEffect(() => {
     Promise.all([
@@ -209,7 +224,11 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
   return (
     <div className="space-y-4">
       <BackLink href="/crm/negociacoes">Negociações</BackLink>
-      {erro && <Alert tone="red">{erro}</Alert>}
+      {erro && (
+        <div ref={avisoRef}>
+          <Alert tone="red">{erro}</Alert>
+        </div>
+      )}
 
       {/* Situação + indicadores + ações da máquina */}
       <SectionCard
@@ -329,6 +348,40 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
               setNovoProduto={setNovoProduto}
               aplicar={aplicar}
             />
+          </SectionCard>
+
+          {/* Campos personalizados: o que a negociação de engenharia carrega */}
+          <SectionCard
+            title="Informações do projeto"
+            subtitle="Campos definidos pela empresa em Configurações → Campos personalizados."
+          >
+            <div className="space-y-4">
+              {/* Enquanto há edição pendente, quem manda na tela é ela: alimentar
+                  os campos com `n.campos` faria o que a pessoa digita não aparecer.
+                  `?? {}` porque negociação anterior aos campos não traz o mapa. */}
+              <CamposDaNegociacao
+                valores={camposLocais ?? n.campos ?? {}}
+                aberta={aberta}
+                onChange={setCamposLocais}
+              />
+              {aberta && camposLocais && (
+                <div className="flex justify-end">
+                  <button
+                    className="btn-primary"
+                    disabled={salvandoCampos}
+                    onClick={async () => {
+                      setSalvandoCampos(true);
+                      // Guarda o que ia ser gravado: se o servidor recusar por
+                      // campo faltando, o que a pessoa digitou não pode sumir.
+                      if (await aplicar({ campos: camposLocais })) setCamposLocais(null);
+                      setSalvandoCampos(false);
+                    }}
+                  >
+                    {salvandoCampos ? "Salvando…" : "Salvar informações"}
+                  </button>
+                </div>
+              )}
+            </div>
           </SectionCard>
 
           {/* O elo com Operações: pedir a proposta a quem vai montá-la */}

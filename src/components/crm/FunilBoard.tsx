@@ -21,7 +21,18 @@ export function FunilBoard() {
   const [funis, setFunis] = useState<Funil[]>([]);
   const [negociacoes, setNegociacoes] = useState<Negociacao[]>([]);
   const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
+  /**
+   * DOIS erros, de propósito.
+   *
+   * `erroCarregar` é a falha que deixa a tela sem dado — aí o funil não pode ser
+   * mostrado. `erroAcao` é a recusa de um movimento (campo obrigatório faltando,
+   * por exemplo): o funil continua correto na tela e só aquele cartão voltou.
+   * Com um estado só, recusar um arrasto apagava o quadro inteiro e dizia "não
+   * foi possível carregar o funil" — falso, e sem saída para quem lê.
+   */
+  const [erroCarregar, setErroCarregar] = useState<string | null>(null);
+  /** `negociacaoId` presente = o aviso oferece o atalho para corrigir na ficha. */
+  const [erroAcao, setErroAcao] = useState<{ texto: string; negociacaoId?: string } | null>(null);
 
   const [funilId, setFunilId] = useState("");
   const [fResponsavel, setFResponsavel] = useState("");
@@ -43,7 +54,7 @@ export function FunilBoard() {
         setNegociacoes(n.negociacoes ?? []);
         if (lista.length > 0) setFunilId((atual) => atual || lista[0].id);
       })
-      .catch((e) => setErro(e instanceof Error ? e.message : "Falha ao carregar o funil."))
+      .catch((e) => setErroCarregar(e instanceof Error ? e.message : "Falha ao carregar o funil."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -72,12 +83,16 @@ export function FunilBoard() {
     // Otimista: o cartão muda de coluna já no arrasto; a resposta confirma
     // (e traz o histórico novo) ou devolve com a mensagem de erro.
     setNegociacoes((prev) => prev.map((x) => (x.id === n.id ? { ...x, etapaId } : x)));
+    setErroAcao(null);
     try {
       const data = await enviarJson<{ negociacao: Negociacao }>(`/api/crm/negociacoes/${n.id}`, "PATCH", { etapaId });
       setNegociacoes((prev) => prev.map((x) => (x.id === n.id ? data.negociacao : x)));
     } catch (err) {
       setNegociacoes((prev) => prev.map((x) => (x.id === n.id ? n : x)));
-      setErro(err instanceof Error ? err.message : "Falha ao mover.");
+      // Nomear a negociação: com o cartão já de volta ao lugar, "preencha o
+      // campo X" sozinho não diz de QUAL das doze o quadro está falando.
+      const motivo = err instanceof Error ? err.message : "Falha ao mover.";
+      setErroAcao({ texto: `${n.nome}: ${motivo}`, negociacaoId: n.id });
     }
   }
 
@@ -86,7 +101,7 @@ export function FunilBoard() {
     const nome = novoNome.trim();
     if (!nome || !funil) return;
     setCriandoRapida(true);
-    setErro(null);
+    setErroAcao(null);
     try {
       const data = await enviarJson<{ negociacao: Negociacao }>("/api/crm/negociacoes", "POST", {
         nome, funilId: funil.id, etapaId,
@@ -95,7 +110,7 @@ export function FunilBoard() {
       setNovoNome("");
       setNovaEm(null);
     } catch (err) {
-      setErro(err instanceof Error ? err.message : "Falha ao criar.");
+      setErroAcao({ texto: err instanceof Error ? err.message : "Falha ao criar." });
     } finally {
       setCriandoRapida(false);
     }
@@ -109,10 +124,10 @@ export function FunilBoard() {
    * frase falsa, sobre um estado sem saída: a pessoa ia às Configurações,
    * encontrava o funil lá, e não entendia nada.
    */
-  if (erro) {
+  if (erroCarregar) {
     return (
       <Alert tone="red" titulo="Não foi possível carregar o funil.">
-        {erro}{" "}
+        {erroCarregar}{" "}
         <button type="button" className="btn-link" onClick={() => window.location.reload()}>
           Tentar de novo
         </button>
@@ -130,7 +145,21 @@ export function FunilBoard() {
 
   return (
     <div className="space-y-4">
-      {erro && <Alert tone="red">{erro}</Alert>}
+      {erroAcao && (
+        <Alert tone="red" titulo="A ação não foi concluída.">
+          {erroAcao.texto}{" "}
+          {/* Dizer o que falta sem dar onde preencher deixa a pessoa presa no
+              quadro: o campo mora na ficha, não na coluna. */}
+          {erroAcao.negociacaoId && (
+            <Link href={`/crm/negociacoes/${erroAcao.negociacaoId}`} className="btn-link">
+              Abrir a negociação
+            </Link>
+          )}{" "}
+          <button type="button" className="btn-link" onClick={() => setErroAcao(null)}>
+            Fechar
+          </button>
+        </Alert>
+      )}
 
       {/* Barra: seletor de funil + filtro + nova negociação */}
       <div className="flex flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-end sm:p-4 card">

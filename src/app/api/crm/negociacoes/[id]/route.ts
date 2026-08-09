@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { camposFaltando, mensagemDeFaltantes, sanearValores } from "@/lib/crm/campos";
+import { getCampoStore } from "@/lib/crm/campos-store";
 import { getFunilStore } from "@/lib/crm/funis-store";
 import { getNegociacaoStore, novaAnotacao } from "@/lib/crm/negociacoes-store";
 import { getTarefaCrmStore } from "@/lib/crm/tarefas-store";
@@ -41,18 +43,43 @@ export async function PATCH(req: Request, ctx: Ctx) {
   // Mudança de etapa (o arrasto no quadro) valida o destino e entra no
   // histórico — é o "changelog" do RD, gerado pelo sistema.
   let registroDeMovimento: string | null = null;
+  let nomeDaEtapaDestino: string | undefined;
   if (parsed.data.etapaId && parsed.data.etapaId !== atual.etapaId) {
     const funil = await getFunilStore().get(parsed.data.funilId ?? atual.funilId);
     if (!funil) return NextResponse.json({ error: "Funil não encontrado." }, { status: 422 });
     const destino = funil.etapas.find((e) => e.id === parsed.data.etapaId);
     if (!destino) return NextResponse.json({ error: "Etapa não pertence ao funil." }, { status: 422 });
     const origem = funil.etapas.find((e) => e.id === atual.etapaId);
+    nomeDaEtapaDestino = destino.nome;
     registroDeMovimento = origem
       ? `Movida de "${origem.nome}" para "${destino.nome}".`
       : `Movida para "${destino.nome}".`;
   }
 
-  const negociacao = await store.update(id, parsed.data);
+  /*
+   * Campos personalizados: sanear e cobrar.
+   *
+   * Sanear ANTES de gravar porque o payload é do cliente: chave inventada
+   * incharia o jsonb, e array onde a tela espera texto quebraria a ficha na
+   * leitura. Cobrar DEPOIS de montar o estado final — o que vale é o que a
+   * negociação FICARÁ tendo, não o que veio no patch.
+   *
+   * A etapa de destino manda: é ela que decide o "obrigatório para entrar em".
+   */
+  const definicoes = await getCampoStore().list();
+  const camposSaneados = parsed.data.campos !== undefined ? sanearValores(definicoes, parsed.data.campos) : undefined;
+  const valoresFinais = camposSaneados ?? atual.campos;
+  const etapaAlvo = parsed.data.etapaId ?? atual.etapaId;
+
+  const faltando = camposFaltando(definicoes, valoresFinais, etapaAlvo);
+  if (faltando.length > 0) {
+    return NextResponse.json(
+      { error: mensagemDeFaltantes(faltando, nomeDaEtapaDestino), campos: faltando.map((c) => c.id) },
+      { status: 422 },
+    );
+  }
+
+  const negociacao = await store.update(id, { ...parsed.data, ...(camposSaneados ? { campos: camposSaneados } : {}) });
   if (!negociacao) return NextResponse.json({ error: "Negociação não encontrada." }, { status: 404 });
 
   const final = registroDeMovimento

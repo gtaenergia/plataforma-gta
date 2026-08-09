@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { sanearValores } from "@/lib/crm/campos";
+import { getCampoStore } from "@/lib/crm/campos-store";
 import { getFunilStore } from "@/lib/crm/funis-store";
 import { getNegociacaoStore, novaAnotacao } from "@/lib/crm/negociacoes-store";
 import { criarNegociacaoSchema } from "@/lib/crm/types";
@@ -36,9 +38,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Etapa não pertence ao funil." }, { status: 422 });
   }
 
+  /*
+   * A CRIAÇÃO não cobra campo obrigatório, de propósito.
+   *
+   * O "+" da coluna do funil pede só o nome — é assim que a negociação nasce
+   * antes de esfriar. Exigir a distribuidora ali transformaria a anotação
+   * rápida de uma ligação num formulário, e o vendedor voltaria para o papel.
+   * A cobrança vem ao salvar a ficha e ao avançar de etapa.
+   */
+  const camposSaneados = sanearValores(await getCampoStore().list(), parsed.data.campos);
+
   const autor = { autor: user.email, autorNome: user.name || user.email };
   const negociacao = await getNegociacaoStore().create({
     ...parsed.data,
+    campos: camposSaneados,
     // Sem responsável indicado, quem cria assume — mesma regra do RD.
     responsavel: parsed.data.responsavel || user.email,
     responsavelNome: parsed.data.responsavelNome || user.name || user.email,

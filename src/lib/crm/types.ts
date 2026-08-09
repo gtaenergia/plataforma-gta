@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ValoresCampos } from "./campos";
 
 /**
  * Modelo do CRM — as entidades no desenho do RD Station CRM (ver plano da
@@ -115,6 +116,8 @@ export interface Negociacao {
   /** Avaliação 0–5 (0 = sem avaliação). */
   qualificacao: number;
   produtos: ProdutoNegociado[];
+  /** Campos personalizados: id do campo → valor. Ver `lib/crm/campos.ts`. */
+  campos: ValoresCampos;
   anotacoes: Anotacao[];
   fechadoEm: string;
   fechadoPor: string;
@@ -195,6 +198,11 @@ export const criarNegociacaoSchema = z.object({
   previsao: texto(10),
   qualificacao: z.number().int().min(0).max(5).default(0),
   produtos: z.array(produtoNegociadoSchema).default([]),
+  /**
+   * Os valores chegam crus e passam por `sanearValores` na rota, que os
+   * confronta com a definição dos campos. Aqui só a forma: um objeto.
+   */
+  campos: z.record(z.union([z.string(), z.array(z.string())])).default({}),
 });
 
 /**
