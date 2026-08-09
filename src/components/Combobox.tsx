@@ -2,7 +2,15 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Plus, Trash2 } from "lucide-react";
-import { ITEM_NOVO, itensVisiveis, moverAtivo, recortar, valorEscolhido } from "./combobox-lista";
+import {
+  ITEM_NOVO,
+  LARGURA_MAX_PX,
+  itensVisiveis,
+  medirPainel,
+  moverAtivo,
+  recortar,
+  valorEscolhido,
+} from "./combobox-lista";
 
 /**
  * Escolher de uma lista — com a opção de acrescentar um valor que não está nela.
@@ -91,6 +99,8 @@ export function Combobox({
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState("");
   const [ativo, setAtivo] = useState(0);
+  /** Lado e largura máxima do painel, medidos na abertura (ver `medirPainel`). */
+  const [painel, setPainel] = useState({ alinharDireita: false, maxPx: LARGURA_MAX_PX });
   const caixa = useRef<HTMLDivElement>(null);
   const campoBusca = useRef<HTMLInputElement>(null);
 
@@ -133,6 +143,8 @@ export function Combobox({
     setBusca("");
     const i = options.findIndex((o) => o === value);
     setAtivo(i >= 0 ? i : 0);
+    const r = caixa.current?.getBoundingClientRect();
+    if (r) setPainel(medirPainel(r, window.innerWidth));
     setAberto(true);
   }
 
@@ -200,6 +212,9 @@ export function Combobox({
         aria-expanded={aberto}
         aria-controls={aberto ? idLista : undefined}
         aria-label={resto["aria-label"]}
+        /* O campo FECHADO continua cortando o valor longo — é uma linha só, como
+           num <select>. `title` devolve o texto inteiro ao passar o mouse. */
+        title={value || undefined}
         className="field-input flex items-center justify-between gap-2 text-left"
       >
         <span className={value ? "truncate" : "truncate text-slate-400 dark:text-slate-500"}>
@@ -208,8 +223,21 @@ export function Combobox({
         <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
       </button>
 
+      {/* O painel NÃO herda a largura do campo.
+          "Protocolo e acompanhamento na distribuidora" num campo de um terço da
+          linha aparecia como "Protocolo e acompanha…", e a lista deixava de
+          responder à única pergunta que ela existe para responder: qual é a
+          opção. Aqui ele parte da largura do campo (`min-w-full`), cresce até o
+          conteúdo caber (`w-max`) e para no teto — que na tela estreita é a
+          própria janela. Passou do teto, o texto quebra em duas linhas em vez
+          de sumir. */}
       {aberto && (
-        <div className="absolute z-30 mt-1 w-full rounded-md border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800">
+        <div
+          style={{ maxWidth: painel.maxPx }}
+          className={`absolute z-30 mt-1 min-w-full w-max rounded-md border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800 ${
+            painel.alinharDireita ? "right-0" : "left-0"
+          }`}
+        >
           <div className="border-b border-slate-200 p-2 dark:border-slate-700">
             <input
               ref={campoBusca}
@@ -244,7 +272,10 @@ export function Combobox({
                   aria-selected={!criar && o === value}
                   onMouseEnter={() => setAtivo(i)}
                   onClick={() => escolher(i)}
-                  className={`flex cursor-pointer items-center gap-2 rounded px-3 py-2 text-sm ${
+                  /* `items-start`, e não `items-center`: com o texto podendo
+                     ocupar duas linhas, centralizar deixaria o ✓ e a lixeira
+                     boiando no meio do item em vez de junto do nome. */
+                  className={`flex cursor-pointer items-start gap-2 rounded px-3 py-2 text-sm ${
                     i === ativo
                       ? "bg-gta-indigo/10 text-gta-navy dark:bg-gta-indigo/25 dark:text-slate-100"
                       : "text-slate-700 dark:text-slate-200"
@@ -252,16 +283,16 @@ export function Combobox({
                 >
                   {criar ? (
                     <>
-                      <Plus className="h-4 w-4 shrink-0 text-gta-indigo dark:text-indigo-300" aria-hidden />
-                      <span className="truncate">{rotuloNovo.replace("{v}", busca.trim())}</span>
+                      <Plus className="mt-0.5 h-4 w-4 shrink-0 text-gta-indigo dark:text-indigo-300" aria-hidden />
+                      <span className="min-w-0 flex-1 break-words">{rotuloNovo.replace("{v}", busca.trim())}</span>
                     </>
                   ) : (
                     <>
                       <Check
-                        className={`h-4 w-4 shrink-0 ${o === value ? "text-gta-indigo dark:text-indigo-300" : "opacity-0"}`}
+                        className={`mt-0.5 h-4 w-4 shrink-0 ${o === value ? "text-gta-indigo dark:text-indigo-300" : "opacity-0"}`}
                         aria-hidden
                       />
-                      <span className="min-w-0 flex-1 truncate">{o}</span>
+                      <span className="min-w-0 flex-1 break-words">{o}</span>
                       {/* `stopPropagation`: sem ele o clique sobe para o <li> e
                           o item seria escolhido no mesmo gesto que o apaga. */}
                       {onExcluir && (
