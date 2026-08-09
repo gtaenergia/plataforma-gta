@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Alert, Badge, EmptyState, Loading, SectionCard } from "@/components/ui";
 import { usePaginacao, Paginacao } from "@/components/Paginacao";
 import { SEGMENTOS, UFS, cidadeUf, type Cliente } from "@/lib/clientes/types";
@@ -37,7 +38,14 @@ function paraForm(c: Cliente): FormState {
   };
 }
 
-export function ClientesList() {
+/**
+ * `hrefFicha` liga a linha a uma tela de detalhe, quando existe uma.
+ *
+ * O CRM passa `/crm/empresas/{id}`, onde a empresa vira hub (negociações,
+ * contatos, quanto já fechou). Em Operações a mesma lista continua sendo só
+ * cadastro — e sem a prop nada muda ali.
+ */
+export function ClientesList({ hrefFicha }: { hrefFicha?: (c: Cliente) => string } = {}) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -260,7 +268,9 @@ export function ClientesList() {
           <div key={c.id} className="p-3 card">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="truncate font-medium text-gta-navy dark:text-slate-100">{c.nome}</div>
+                <div className="truncate font-medium text-gta-navy dark:text-slate-100">
+                  {hrefFicha ? <Link href={hrefFicha(c)} className="hover:underline">{c.nome}</Link> : c.nome}
+                </div>
                 <div className="mt-0.5 text-sm text-slate-600 dark:text-slate-300">{cidadeUf(c) || "—"}</div>
               </div>
               {c.segmento && <Badge tone="indigo" className="shrink-0">{c.segmento}</Badge>}
@@ -301,7 +311,13 @@ export function ClientesList() {
             )}
             {paginados.map((c) => (
               <tr key={c.id}>
-                <td className="px-4 py-2 font-medium text-gta-navy dark:text-slate-100">{c.nome}</td>
+                <td className="px-4 py-2 font-medium text-gta-navy dark:text-slate-100">
+                  {hrefFicha ? (
+                    <Link href={hrefFicha(c)} className="hover:underline">{c.nome}</Link>
+                  ) : (
+                    c.nome
+                  )}
+                </td>
                 <td className="px-4 py-2 font-mono text-xs text-slate-600 dark:text-slate-400">{c.documento || "—"}</td>
                 <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{cidadeUf(c) || "—"}</td>
                 <td className="px-4 py-2 text-slate-600 dark:text-slate-300">
