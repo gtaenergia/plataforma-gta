@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { PageHeader } from "@/components/ui";
-import { requirePageUser } from "@/lib/session";
+import { requirePagePermissao, requirePageUser } from "@/lib/session";
+import type { PermissaoKey } from "@/lib/rbac/permissoes";
 import type { User } from "@/lib/users/types";
 
 /**
@@ -18,13 +19,22 @@ import type { User } from "@/lib/users/types";
  * A página que TAMBÉM precisa do usuário (para passar ao conteúdo) o busca e
  * entrega aqui pela prop — assim a consulta continua sendo uma só por visita.
  */
-export async function CrmShell({ titulo, subtitulo, children, user: userDaPagina }: {
+export async function CrmShell({ titulo, subtitulo, children, user: userDaPagina, exigir }: {
   titulo: ReactNode;
   subtitulo?: ReactNode;
   children: ReactNode;
   user?: User;
+  /**
+   * Permissão exigida para abrir a tela. Sem ela, a pessoa volta para a home
+   * — em vez de ver a tela e descobrir que não pode salvar só ao clicar.
+   *
+   * Usado nas telas de CONFIGURAÇÃO: mexer em funil, produto, fonte ou motivo
+   * muda o processo de todo mundo. O resto do CRM segue aberto a quem está
+   * autenticado, como o resto da plataforma.
+   */
+  exigir?: PermissaoKey;
 }) {
-  const user = userDaPagina ?? (await requirePageUser());
+  const user = exigir ? await requirePagePermissao(exigir) : (userDaPagina ?? (await requirePageUser()));
 
   return (
     <div className="min-h-screen">

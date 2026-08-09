@@ -5,6 +5,7 @@ import { CatalogoConfig } from "@/components/crm/config/CatalogoConfig";
 export default async function CrmConfigFontesPage() {
   return (
     <CrmShell
+      exigir="crm.configurar"
       titulo="Fontes"
       subtitulo="De onde cada negociação veio — a base do relatório de origem, que mostra o retorno de cada canal."
     >

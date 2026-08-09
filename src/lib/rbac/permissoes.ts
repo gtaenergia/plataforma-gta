@@ -29,10 +29,15 @@ export const PERMISSOES = {
   // definitivo, ainda que as telas desta primeira entrega sejam esqueleto: uma
   // vez concedidas num cargo elas ficam gravadas em jsonb, e renomear depois
   // revogaria em silêncio quem já as tiver.
-  "crm.acessar": "Acessar o CRM",
-  "crm.negociacoes.editar": "Criar e editar negociações",
-  "crm.cadastros.editar": "Criar e editar empresas e contatos",
-  "crm.relatorios.ver": "Ver os relatórios do CRM",
+  // `crm.configurar` é a única EXIGIDA hoje: ela guarda o processo comercial
+  // (funil, etapas, catálogos) contra mudança acidental. As demais estão
+  // declaradas para os cargos já poderem ser desenhados, mas o CRM segue aberto
+  // a quem está autenticado — como o resto da plataforma. Exigi-las agora
+  // trancaria para fora todo mundo que ainda não tem cargo.
+  "crm.acessar": "Acessar o CRM (ainda não exigida)",
+  "crm.negociacoes.editar": "Criar e editar negociações (ainda não exigida)",
+  "crm.cadastros.editar": "Criar e editar empresas e contatos (ainda não exigida)",
+  "crm.relatorios.ver": "Ver os relatórios do CRM (ainda não exigida)",
   "crm.configurar": "Configurar funis, etapas, fontes, motivos de perda e produtos",
 } as const;
 

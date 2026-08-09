@@ -29,10 +29,17 @@ const BETO = { email: "beto@gta.com", name: "Beto Vendedor" };
 /** Quem está logado. O mock lê esta variável a cada chamada. */
 let usuarioAtual = ANA;
 
+/** Ligado/desligado pelos testes de permissão no fim do arquivo. */
+let podeConfigurar = true;
+
 vi.mock("@/lib/session", () => ({
   getCurrentUser: async () => usuarioAtual,
   getSessionUser: async () => usuarioAtual,
   requirePageUser: async () => usuarioAtual,
+}));
+vi.mock("@/lib/rbac/resolve", () => ({
+  temPermissao: async (_u: unknown, chave: string) => (chave === "crm.configurar" ? podeConfigurar : true),
+  permissoesDoUsuario: async () => new Set<string>(),
 }));
 
 // Os módulos de rota são importados DEPOIS do mock (vi.mock é içado, mas o
@@ -331,6 +338,44 @@ describe("CRM — ciclo comercial completo pelas rotas", () => {
     const depois = (await corpoDe(await r.tarefas.GET(new Request("http://localhost/api/crm/tarefas")))).tarefas as unknown as { negociacaoId: string }[];
     expect(depois).toHaveLength(1);
     expect(depois.every((t) => t.negociacaoId !== ids.ganha)).toBe(true);
+  });
+
+  it("sem `crm.configurar`, o catálogo e o funil ficam trancados — mas o dia a dia segue", async () => {
+    podeConfigurar = false;
+    try {
+      // Mexer no processo da empresa é decisão de gestor.
+      expect((await r.produtos.POST(req({ nome: "Produto novo" }))).status).toBe(403);
+      expect((await r.fontes.POST(req({ nome: "Fonte nova" }))).status).toBe(403);
+      expect((await r.motivos.POST(req({ nome: "Motivo novo" }))).status).toBe(403);
+      expect((await r.funis.POST(req({ nome: "Funil novo", etapas: [{ nome: "A" }] }))).status).toBe(403);
+      expect((await r.funilId.DELETE(req({}, "DELETE"), ctx(ids.funil))).status).toBe(403);
+
+      // O trabalho do vendedor NÃO depende dessa permissão: ler e negociar
+      // seguem abertos, senão a trava viraria obstáculo em vez de proteção.
+      expect((await r.negociacoes.GET()).status).toBe(200);
+      expect((await r.fontes.GET()).status).toBe(200);
+      const criar = await r.negociacoes.POST(req({ nome: "Sem ser gestor", funilId: ids.funil, etapaId: ids.etapas[0].id }));
+      expect(criar.status).toBe(201);
+    } finally {
+      podeConfigurar = true;
+    }
+  });
+
+  it("só o dono (ou um administrador) exclui a negociação — o histórico vai junto", async () => {
+    const dela = (await corpoDe(await r.negociacoes.POST(req({
+      nome: "Da Ana", funilId: ids.funil, etapaId: ids.etapas[0].id,
+    })))).negociacao as unknown as { id: string };
+
+    // Beto tenta apagar a negociação de Ana, sem ser admin.
+    const salvo = usuarioAtual;
+    usuarioAtual = { ...BETO, role: "member" } as unknown as typeof ANA;
+    const negado = await r.negociacaoId.DELETE(req({}, "DELETE"), ctx(dela.id));
+    expect(negado.status).toBe(403);
+    expect((await corpoDe(negado)).error).toMatch(/responsável/i);
+
+    // A dona apaga.
+    usuarioAtual = salvo;
+    expect((await r.negociacaoId.DELETE(req({}, "DELETE"), ctx(dela.id))).status).toBe(200);
   });
 
   it("sem sessão, nada passa", async () => {

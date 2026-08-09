@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getProdutoCrmStore } from "@/lib/crm/produtos-store";
 import { criarProdutoCrmSchema } from "@/lib/crm/types";
+import { requirePermissaoApi } from "@/lib/rbac/guards";
 import { getCurrentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -13,8 +14,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  const guard = await requirePermissaoApi("crm.configurar");
+  if ("error" in guard) return guard.error;
 
   let body: unknown;
   try {

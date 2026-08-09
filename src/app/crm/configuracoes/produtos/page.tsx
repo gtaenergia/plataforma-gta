@@ -5,6 +5,7 @@ import { ProdutosConfig } from "@/components/crm/config/ProdutosConfig";
 export default async function CrmConfigProdutosPage() {
   return (
     <CrmShell
+      exigir="crm.configurar"
       titulo="Produtos e serviços"
       subtitulo="O catálogo do que a GTA vende, com preço base — os itens entram nas negociações e nos relatórios."
     >

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { funilPadrao, getFunilStore, novaEtapa } from "@/lib/crm/funis-store";
 import { criarFunilSchema } from "@/lib/crm/types";
+import { requirePermissaoApi } from "@/lib/rbac/guards";
 import { getCurrentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
@@ -21,8 +22,10 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  // Desenhar o funil é decisão de gestor: muda o processo comercial de todo
+  // mundo, não só o trabalho de quem clicou.
+  const guard = await requirePermissaoApi("crm.configurar");
+  if ("error" in guard) return guard.error;
 
   let body: unknown;
   try {

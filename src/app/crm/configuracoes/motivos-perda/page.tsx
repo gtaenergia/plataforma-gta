@@ -5,6 +5,7 @@ import { CatalogoConfig } from "@/components/crm/config/CatalogoConfig";
 export default async function CrmConfigMotivosPerdaPage() {
   return (
     <CrmShell
+      exigir="crm.configurar"
       titulo="Motivos de perda"
       subtitulo="Por que as negociações não fecham. Toda perda exige um destes motivos — é o que alimenta a análise depois."
     >

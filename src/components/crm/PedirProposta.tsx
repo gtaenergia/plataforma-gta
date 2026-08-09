@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Alert, Badge, SectionCard } from "@/components/ui";
+import { Alert, Loading, Marca, SectionCard } from "@/components/ui";
 import { Campo } from "@/components/Campo";
 import { SugestaoResponsavel } from "@/components/tasks/SugestaoResponsavel";
 import { useCapacidade } from "@/components/capacidade/comum";
@@ -37,18 +37,21 @@ interface TarefaVinculada {
   prazoOperacional: string;
 }
 
-export function PedirProposta({ negociacao, produtos, usuarios, aberta, onPedido }: {
+export function PedirProposta({ negociacao, produtos, usuarios, aberta, onPedido, onVinculadas }: {
   negociacao: Negociacao;
   produtos: ProdutoCrm[];
   usuarios: UsuarioOpcao[];
   aberta: boolean;
   onPedido: () => void;
+  /** Avisa a ficha quantos pedidos existem — a confirmação de exclusão os cita. */
+  onVinculadas?: (t: { id: string }[]) => void;
 }) {
   const { config } = useCapacidade();
   const [tarefas, setTarefas] = useState<TarefaCapacidade[]>([]);
   const [vinculadas, setVinculadas] = useState<TarefaVinculada[]>([]);
   const [abrindo, setAbrindo] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
   const [serviceKey, setServiceKey] = useState("");
@@ -63,11 +66,19 @@ export function PedirProposta({ negociacao, produtos, usuarios, aberta, onPedido
       .then((d) => {
         const lista = (d.tasks ?? d.tarefas ?? []) as (TarefaCapacidade & TarefaVinculada & { negociacaoId?: string })[];
         setTarefas(lista);
-        setVinculadas(lista.filter((t) => t.negociacaoId === negociacao.id));
+        const minhas = lista.filter((t) => t.negociacaoId === negociacao.id);
+        setVinculadas(minhas);
+        onVinculadas?.(minhas);
       })
       .catch(() => {
-        /* a fila é insumo da sugestão; sem ela o bloco ainda cria a tarefa */
-      });
+        // A fila alimenta a SUGESTÃO de responsável — sem ela o bloco ainda
+        // cria a tarefa. Mas a lista de pedidos também vem daqui: sem avisar,
+        // a tela diria "nenhuma proposta pedida" havendo três, e alguém pediria
+        // a quarta.
+        setErro("Não foi possível carregar os pedidos já feitos. Recarregue antes de pedir outro.");
+      })
+      .finally(() => setCarregando(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [negociacao.id]);
 
   /*
@@ -171,16 +182,21 @@ export function PedirProposta({ negociacao, produtos, usuarios, aberta, onPedido
               </Link>
               <span className="flex shrink-0 items-center gap-2">
                 {t.prazoOperacional && <span className="hint">{dataCurta(t.prazoOperacional)}</span>}
-                <Badge tone={t.status === "concluida" ? "green" : "slate"}>
+                {/* `Marca`, não `Badge`: isto se repete por linha da lista, e
+                    pílula colorida repetida satura (ver ui.tsx). */}
+                <Marca tone={t.status === "concluida" ? "green" : "slate"} className="text-xs">
                   {t.status === "concluida" ? "Concluída" : "Em Operações"}
-                </Badge>
+                </Marca>
               </span>
             </li>
           ))}
         </ul>
       )}
 
-      {!abrindo && vinculadas.length === 0 && (
+      {/* Enquanto carrega, NÃO afirmar que não há pedido: era mentira até a
+          resposta chegar, e alguém pediria a segunda proposta por isso. */}
+      {carregando && <Loading>Carregando os pedidos…</Loading>}
+      {!carregando && !abrindo && vinculadas.length === 0 && (
         <p className="subtitle">
           {aberta ? "Nenhuma proposta pedida ainda." : "Nenhuma proposta foi pedida nesta negociação."}
         </p>

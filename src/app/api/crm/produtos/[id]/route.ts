@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getProdutoCrmStore } from "@/lib/crm/produtos-store";
 import { atualizarProdutoCrmSchema } from "@/lib/crm/types";
-import { getCurrentUser } from "@/lib/session";
+import { requirePermissaoApi } from "@/lib/rbac/guards";
 
 export const runtime = "nodejs";
 
@@ -12,8 +12,8 @@ type Ctx = { params: Promise<{ id: string }> };
  * (`oculto: true` neste PATCH) — excluir apagaria o passado das negociações.
  */
 export async function PATCH(req: Request, ctx: Ctx) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  const guard = await requirePermissaoApi("crm.configurar");
+  if ("error" in guard) return guard.error;
   const { id } = await ctx.params;
 
   let body: unknown;

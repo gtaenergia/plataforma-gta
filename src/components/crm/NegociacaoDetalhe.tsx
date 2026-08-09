@@ -19,6 +19,7 @@ import {
   type ProdutoCrm,
   type ProdutoNegociado,
 } from "@/lib/crm/types";
+import { enviarJson } from "./buscar";
 import { PedirProposta } from "./PedirProposta";
 import { TarefasDaNegociacao } from "./TarefasDaNegociacao";
 import { dataCurta, dataHora } from "./util";
@@ -56,6 +57,8 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
 
   const [nota, setNota] = useState("");
   const [novoProduto, setNovoProduto] = useState("");
+  /** Pedidos de proposta em Operações — a confirmação de exclusão os menciona. */
+  const [tarefasDeOperacoes, setTarefasDeOperacoes] = useState<{ id: string }[]>([]);
   const edicao = useEdicaoPendente();
 
   useEffect(() => {
@@ -159,10 +162,25 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
 
   async function excluir() {
     if (!n) return;
-    if (!window.confirm(`Excluir a negociação "${n.nome}"? O histórico vai junto.`)) return;
-    const res = await fetch(`/api/crm/negociacoes/${id}`, { method: "DELETE" });
-    if (res.ok) router.push("/crm/negociacoes");
-    else setErro("Falha ao excluir.");
+    /*
+     * A confirmação diz o que se perde, item por item.
+     *
+     * "O histórico vai junto" era abstrato demais para uma ação sem volta:
+     * somem as anotações do que foi combinado, as tarefas da agenda e o pedido
+     * de proposta que talvez esteja na fila de outra pessoa em Operações.
+     */
+    const pedidos = tarefasDeOperacoes.length;
+    const partes = [
+      `${n.anotacoes.length} ${n.anotacoes.length === 1 ? "registro" : "registros"} de histórico`,
+      pedidos > 0 ? `${pedidos} ${pedidos === 1 ? "pedido de proposta" : "pedidos de proposta"} em Operações continuam na fila` : "",
+    ].filter(Boolean);
+    if (!window.confirm(`Excluir "${n.nome}"?\n\nNão há como desfazer. Vai junto:\n· ${partes.join("\n· ")}`)) return;
+    try {
+      await enviarJson(`/api/crm/negociacoes/${id}`, "DELETE");
+      router.push("/crm/negociacoes");
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao excluir.");
+    }
   }
 
   if (loading) return <Loading>Carregando negociação…</Loading>;
@@ -307,6 +325,7 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
             usuarios={usuarios}
             aberta={aberta}
             onPedido={() => void recarregar()}
+            onVinculadas={setTarefasDeOperacoes}
           />
 
           {/* Agenda da negociação */}

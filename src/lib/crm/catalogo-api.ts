@@ -3,6 +3,7 @@ import type { CatalogoStore } from "./catalogo-store";
 import { getNegociacaoStore } from "./negociacoes-store";
 import { atualizarItemCatalogoSchema, criarItemCatalogoSchema, type Negociacao } from "./types";
 import { getSettingsStore } from "../settings/store";
+import { requirePermissaoApi } from "../rbac/guards";
 
 /**
  * "Este catálogo já foi semeado alguma vez?" — e marca que foi.
@@ -65,6 +66,8 @@ export function catalogoHandlers(cfg: ConfigCatalogo) {
   }
 
   async function POST(req: Request) {
+    const guard = await requirePermissaoApi("crm.configurar");
+    if ("error" in guard) return guard.error;
     let body: unknown;
     try {
       body = await req.json();
@@ -80,6 +83,8 @@ export function catalogoHandlers(cfg: ConfigCatalogo) {
   }
 
   async function PATCH(req: Request, id: string) {
+    const guard = await requirePermissaoApi("crm.configurar");
+    if ("error" in guard) return guard.error;
     let body: unknown;
     try {
       body = await req.json();
@@ -96,6 +101,8 @@ export function catalogoHandlers(cfg: ConfigCatalogo) {
   }
 
   async function DELETE(id: string) {
+    const guard = await requirePermissaoApi("crm.configurar");
+    if ("error" in guard) return guard.error;
     // Item referenciado por negociação não sai: o nome denormalizado seguiria
     // nas fichas, mas o filtro e o relatório perderiam a chave.
     const negociacoes = await getNegociacaoStore().list();
