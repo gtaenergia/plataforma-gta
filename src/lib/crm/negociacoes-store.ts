@@ -21,6 +21,18 @@ type CreateInput = Omit<Negociacao, "id" | "criadoEm" | "atualizadoEm">;
 type UpdatePatch = Partial<Omit<Negociacao, "id" | "criadoEm" | "criadoPor" | "anotacoes">>;
 
 export interface NegociacaoStore {
+  /**
+   * Listagem SEM as anotações.
+   *
+   * Nenhuma tela de lista mostra histórico — só a ficha —, e o jsonb de
+   * anotações é de longe o campo mais pesado da linha: uma negociação de seis
+   * meses acumula dezenas de registros. Trazê-lo em toda listagem fazia o
+   * funil, a lista, o painel e os relatórios carregarem megabytes que nenhum
+   * deles desenha.
+   *
+   * `anotacoes` vem `[]` aqui de propósito — quem precisa do histórico chama
+   * `get()`.
+   */
   list(): Promise<Negociacao[]>;
   get(id: string): Promise<Negociacao | null>;
   create(data: CreateInput): Promise<Negociacao>;
@@ -66,7 +78,11 @@ class JsonNegociacaoStore implements NegociacaoStore {
 
   async list() {
     // Mais recentes primeiro — a lista abre no que está acontecendo agora.
-    return this.readAll().sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
+    // `anotacoes: []` para o contrato bater com o do Postgres: uma tela que
+    // dependesse do histórico aqui funcionaria em dev e quebraria em produção.
+    return this.readAll()
+      .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))
+      .map((n) => ({ ...n, anotacoes: [] }));
   }
   async get(id: string) {
     return this.readAll().find((n) => n.id === id) ?? null;
@@ -227,7 +243,16 @@ class PostgresNegociacaoStore implements NegociacaoStore {
   }
   async list() {
     await this.ensureSchema();
-    const { rows } = await this.pool.sql<Row>`SELECT * FROM crm_negociacoes ORDER BY criado_em DESC`;
+    // Tudo MENOS `anotacoes` — ver o contrato na interface. `'[]'::jsonb` no
+    // lugar dela mantém a forma da linha idêntica para o `rowTo`.
+    const { rows } = await this.pool.sql<Row>`
+      SELECT id, nome, funil_id, etapa_id, valor, empresa_id, empresa_nome, contato_ids,
+             responsavel, responsavel_nome, fonte_id, fonte_nome, situacao, motivo_perda_id,
+             motivo_perda_nome, previsao, qualificacao, produtos, '[]'::jsonb AS anotacoes,
+             fechado_em, fechado_por, criado_por, criado_por_nome, criado_em, atualizado_em
+      FROM crm_negociacoes
+      ORDER BY criado_em DESC
+    `;
     return rows.map(rowTo);
   }
   async get(id: string) {

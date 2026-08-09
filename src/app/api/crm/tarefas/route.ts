@@ -11,8 +11,8 @@ export async function GET(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   const negociacaoId = new URL(req.url).searchParams.get("negociacao");
-  let tarefas = await getTarefaCrmStore().list();
-  if (negociacaoId) tarefas = tarefas.filter((t) => t.negociacaoId === negociacaoId);
+  const store = getTarefaCrmStore();
+  const tarefas = negociacaoId ? await store.listDaNegociacao(negociacaoId) : await store.list();
   return NextResponse.json({ tarefas });
 }
 

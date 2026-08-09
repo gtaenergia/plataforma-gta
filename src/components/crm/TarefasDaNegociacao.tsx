@@ -32,7 +32,7 @@ export function TarefasDaNegociacao({ negociacaoId, aberta, onHistoricoMudou }: 
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/crm/tarefas?negociacao=${negociacaoId}`)
+    fetch(`/api/crm/tarefas?negociacao=${encodeURIComponent(negociacaoId)}`)
       .then((r) => r.json())
       .then((d) => setTarefas(d.tarefas ?? []))
       .catch(() => setErro("Falha ao carregar as tarefas."))

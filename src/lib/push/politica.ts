@@ -26,6 +26,20 @@ export const TIPOS_COM_PUSH: readonly string[] = [
   "orcamento_rejeitado",
   "orcamento_reaberto",
   "capacidade_estourada",
+  /*
+   * Do CRM, só o que exige AÇÃO de quem recebe:
+   *
+   * - o pedido de proposta é trabalho novo caindo na fila de alguém;
+   * - a proposta aprovada libera o comercial a enviá-la ao cliente;
+   * - a cobrança da manhã é um recado por pessoa, por dia útil — e é
+   *   justamente para quem está em campo e não abre a plataforma.
+   *
+   * `crm_proposta_gerada` fica de fora: ela é intermediária (a revisão ainda
+   * vem), e vibrar duas vezes pela mesma proposta gasta a atenção à toa.
+   */
+  "crm_pedido_proposta",
+  "crm_proposta_aprovada",
+  "crm_cobranca_diaria",
 ];
 
 export function merecePush(tipo: string): boolean {

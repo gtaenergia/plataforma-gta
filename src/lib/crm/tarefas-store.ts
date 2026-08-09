@@ -19,6 +19,14 @@ type UpdatePatch = Partial<Omit<TarefaCrm, "id" | "criadoEm" | "criadoPor" | "ne
 
 export interface TarefaCrmStore {
   list(): Promise<TarefaCrm[]>;
+  /**
+   * As tarefas de UMA negociação.
+   *
+   * Existe porque a ficha só precisa dessas, e filtrar em JavaScript depois de
+   * ler a tabela inteira desperdiça justamente o índice
+   * `crm_tarefas_negociacao_idx` que foi criado para isto.
+   */
+  listDaNegociacao(negociacaoId: string): Promise<TarefaCrm[]>;
   get(id: string): Promise<TarefaCrm | null>;
   create(data: CreateInput): Promise<TarefaCrm>;
   update(id: string, patch: UpdatePatch): Promise<TarefaCrm | null>;
@@ -58,6 +66,9 @@ class JsonTarefaCrmStore implements TarefaCrmStore {
   async list() {
     // Ordem de agenda: o compromisso mais próximo primeiro.
     return this.readAll().sort((a, b) => `${a.data} ${a.hora}`.localeCompare(`${b.data} ${b.hora}`));
+  }
+  async listDaNegociacao(negociacaoId: string) {
+    return (await this.list()).filter((t) => t.negociacaoId === negociacaoId);
   }
   async get(id: string) {
     return this.readAll().find((t) => t.id === id) ?? null;
@@ -164,6 +175,15 @@ class PostgresTarefaCrmStore implements TarefaCrmStore {
   async list() {
     await this.ensureSchema();
     const { rows } = await this.pool.sql<Row>`SELECT * FROM crm_tarefas ORDER BY data ASC, hora ASC`;
+    return rows.map(rowTo);
+  }
+  async listDaNegociacao(negociacaoId: string) {
+    await this.ensureSchema();
+    // `WHERE`, e não filtro em JavaScript: é para isto que existe o índice
+    // `crm_tarefas_negociacao_idx`.
+    const { rows } = await this.pool.sql<Row>`
+      SELECT * FROM crm_tarefas WHERE negociacao_id = ${negociacaoId} ORDER BY data ASC, hora ASC
+    `;
     return rows.map(rowTo);
   }
   async get(id: string) {

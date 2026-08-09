@@ -20,6 +20,13 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "crm-cobranca-diaria-2026-08",
+    titulo: "CRM: o aviso da manhã",
+    mensagem:
+      "Todo dia útil, às 7h, quem tiver tarefa atrasada ou negociação em aberto sem próximo passo agendado recebe um aviso — um só, com o resumo, no sino e no celular. É a disciplina que faz o funil andar: negociação sem próxima tarefa é negociação esquecendo de existir.",
+    link: "/crm/tarefas",
+  },
+  {
     slug: "crm-relatorios-2026-08",
     titulo: "CRM: relatórios no ar",
     mensagem:
