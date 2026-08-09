@@ -12,6 +12,7 @@ import {
   SITUACAO_LABEL,
   SITUACAO_TONE,
   valorDaNegociacao,
+  valoresDaNegociacao,
   type Contato,
   type Funil,
   type ItemCatalogo,
@@ -203,6 +204,7 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
 
   const aberta = n.situacao === "aberta" || n.situacao === "pausada";
   const acoes = acoesDisponiveis(n.situacao);
+  const valores = valoresDaNegociacao(n);
 
   return (
     <div className="space-y-4">
@@ -276,7 +278,18 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
           </Alert>
         )}
         <KpiGrid>
-          <Kpi destaque label="Valor da negociação" value={formatBRL(valorDaNegociacao(n))} />
+          {/* Recorrente ao lado, com a unidade escrita: "R$ 5.000/mês" não é a
+              mesma quantia que "R$ 5.000", e somá-los inflaria o funil. */}
+          <Kpi
+            destaque
+            label="Valor da negociação"
+            value={
+              <>
+                {formatBRL(valores.unico)}
+                {valores.mensal > 0 && <span className="block text-sm font-normal">+ {formatBRL(valores.mensal)}/mês</span>}
+              </>
+            }
+          />
           <Kpi label="Etapa" value={funil?.etapas.find((e) => e.id === n.etapaId)?.nome ?? "—"} />
           <Kpi label="Previsão" value={n.previsao ? dataCurta(n.previsao) : "—"} />
           {n.situacao === "perdida" ? (

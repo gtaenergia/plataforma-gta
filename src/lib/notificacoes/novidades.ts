@@ -20,6 +20,13 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "crm-relatorios-2026-08",
+    titulo: "CRM: relatórios no ar",
+    mensagem:
+      "Pipeline por etapa, conversões com os motivos de perda, negociações por origem, desempenho por responsável, produtos e atividades — com filtro de período, funil e responsável. Em Relatórios, dentro do CRM. Duas mudanças junto: mexer em funil, fontes, motivos e produtos passou a exigir a permissão “Configurar o CRM”, e só o responsável (ou um administrador) pode excluir uma negociação, porque a exclusão leva o histórico junto.",
+    link: "/crm/relatorios",
+  },
+  {
     slug: "crm-ponte-operacoes-2026-08",
     titulo: "CRM e Operações conversando: pedido de proposta com retorno automático",
     mensagem:

@@ -146,7 +146,23 @@ describe("porProduto", () => {
       ],
       AGOSTO,
     );
-    expect(r).toEqual([{ nome: "Projeto", quantidade: 3, valor: 280, emGanhas: 1 }]);
+    expect(r).toEqual([{ nome: "Projeto", quantidade: 3, valor: 280, valorMensal: 0, emGanhas: 1 }]);
+  });
+
+  it("mensalidade fica em coluna própria — somá-la ao único faria R$ dizer duas coisas", () => {
+    const r = porProduto(
+      [
+        neg({
+          produtos: [
+            { produtoId: "p1", nome: "Instalação", preco: 8000, quantidade: 1, desconto: 0, tipoDesconto: "valor", recorrencia: "unico" },
+            { produtoId: "p2", nome: "Manutenção", preco: 900, quantidade: 1, desconto: 0, tipoDesconto: "valor", recorrencia: "mensal" },
+          ],
+        }),
+      ],
+      AGOSTO,
+    );
+    expect(r.find((l) => l.nome === "Instalação")).toMatchObject({ valor: 8000, valorMensal: 0 });
+    expect(r.find((l) => l.nome === "Manutenção")).toMatchObject({ valor: 0, valorMensal: 900 });
   });
 });
 

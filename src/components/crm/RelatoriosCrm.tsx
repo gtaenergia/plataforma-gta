@@ -16,7 +16,14 @@ import {
   type Periodo,
 } from "@/lib/crm/relatorios";
 import { PERIODOS, periodoDe, rotuloPeriodo, type ChavePeriodo } from "@/lib/crm/periodos";
-import { TIPO_TAREFA_LABEL, type Funil, type Negociacao, type TarefaCrm } from "@/lib/crm/types";
+import {
+  TIPO_TAREFA_LABEL,
+  valorDaNegociacao,
+  valoresDaNegociacao,
+  type Funil,
+  type Negociacao,
+  type TarefaCrm,
+} from "@/lib/crm/types";
 import { buscarJson } from "./buscar";
 import { hojeISO } from "./util";
 
@@ -85,7 +92,11 @@ export function RelatoriosCrm() {
   const emJogo = useMemo(() => {
     const base = cortar(negociacoes, filtro);
     const abertas = base.filter((n) => n.situacao === "aberta" || n.situacao === "pausada");
-    return { quantidade: abertas.length, valor: abertas.reduce((s, n) => s + valor(n), 0) };
+    return {
+      quantidade: abertas.length,
+      valor: abertas.reduce((s, n) => s + valorDaNegociacao(n), 0),
+      mensal: abertas.reduce((s, n) => s + valoresDaNegociacao(n).mensal, 0),
+    };
   }, [negociacoes, filtro]);
 
   if (loading) return <Loading>Carregando os relatórios…</Loading>;
@@ -130,7 +141,16 @@ export function RelatoriosCrm() {
 
       {/* O resumo fica sempre à vista — é a pergunta que não precisa de escolha. */}
       <KpiGrid>
-        <Kpi destaque label="Em jogo agora" value={formatBRL(emJogo.valor)} />
+        <Kpi
+          destaque
+          label="Em jogo agora"
+          value={
+            <>
+              {formatBRL(emJogo.valor)}
+              {emJogo.mensal > 0 && <span className="block text-sm font-normal">+ {formatBRL(emJogo.mensal)}/mês</span>}
+            </>
+          }
+        />
         <Kpi label="Negociações abertas" value={emJogo.quantidade} />
         <Kpi tone="green" label={`Ganho — ${rotuloPeriodo(periodo)}`} value={`${formatBRL(conv.valorGanho)} (${conv.ganhas})`} />
         <Kpi
@@ -158,15 +178,6 @@ export function RelatoriosCrm() {
   );
 }
 
-/** Repetido do motor para o KPI de "em jogo" — mesma regra de `valorDaNegociacao`. */
-function valor(n: Negociacao): number {
-  if (!n.produtos.length) return n.valor;
-  return n.produtos.reduce((s, p) => {
-    const bruto = p.preco * p.quantidade;
-    const desc = p.tipoDesconto === "percentual" ? bruto * (p.desconto / 100) : p.desconto;
-    return s + Math.max(0, bruto - desc);
-  }, 0);
-}
 
 // ----------------------------------------------------------------- Tabelas
 
@@ -357,7 +368,8 @@ function Produtos({ linhas }: { linhas: ReturnType<typeof porProduto> }) {
             <th>Produto ou serviço</th>
             <th className="text-right">Quantidade</th>
             <th className="text-right">Em negociações ganhas</th>
-            <th className="text-right">Valor negociado</th>
+            <th className="text-right">Valor único</th>
+            <th className="text-right">Recorrente</th>
           </tr>
         </thead>
         <tbody>
@@ -366,7 +378,10 @@ function Produtos({ linhas }: { linhas: ReturnType<typeof porProduto> }) {
               <td className="px-4 py-2 text-gta-navy dark:text-slate-100">{l.nome}</td>
               <td className="px-4 py-2 text-right tabular-nums">{l.quantidade.toLocaleString("pt-BR")}</td>
               <td className="px-4 py-2 text-right tabular-nums text-slate-600 dark:text-slate-300">{l.emGanhas.toLocaleString("pt-BR")}</td>
-              <td className="px-4 py-2 text-right tabular-nums font-medium">{formatBRL(l.valor)}</td>
+              <td className="px-4 py-2 text-right tabular-nums font-medium">{l.valor > 0 ? formatBRL(l.valor) : <span className="sem-valor">—</span>}</td>
+              <td className="px-4 py-2 text-right tabular-nums text-slate-600 dark:text-slate-300">
+                {l.valorMensal > 0 ? `${formatBRL(l.valorMensal)}/mês` : <span className="sem-valor">—</span>}
+              </td>
             </tr>
           ))}
         </tbody>

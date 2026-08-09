@@ -124,14 +124,48 @@ export interface Negociacao {
   atualizadoEm: string;
 }
 
-/** Valor efetivo: soma dos produtos (com desconto) quando existem; senão o valor livre. */
+/** Preço de um item já com o desconto aplicado, nunca negativo. */
+export function totalDoItem(p: ProdutoNegociado): number {
+  const bruto = p.preco * p.quantidade;
+  const desconto = p.tipoDesconto === "percentual" ? bruto * (p.desconto / 100) : p.desconto;
+  return Math.max(0, bruto - desconto);
+}
+
+/**
+ * O que a negociação vale, separado por natureza.
+ *
+ * `recorrencia` era coletada em cada item e ignorada por todas as contas: uma
+ * manutenção de R$ 5.000 POR MÊS pesava no funil exatamente como um projeto de
+ * R$ 5.000 entregue uma vez. Não era feature faltando — era número errado na
+ * tela, e crescia a cada mês somado ao "Vendido".
+ *
+ * `unico` é o que o funil e os relatórios somam: é dinheiro comparável entre
+ * negociações. `mensal` aparece ao lado, com a unidade escrita, porque somar
+ * as duas naturezas num número só volta a mentir.
+ */
+export function valoresDaNegociacao(n: Pick<Negociacao, "valor" | "produtos">): { unico: number; mensal: number } {
+  // Sem produtos, o campo livre é o valor — e é sempre pontual: não há onde
+  // dizer que aquele número se repete.
+  if (!n.produtos.length) return { unico: n.valor, mensal: 0 };
+  return n.produtos.reduce(
+    (acc, p) => {
+      const total = totalDoItem(p);
+      if (p.recorrencia === "mensal") acc.mensal += total;
+      else acc.unico += total;
+      return acc;
+    },
+    { unico: 0, mensal: 0 },
+  );
+}
+
+/**
+ * O valor comparável da negociação — o que entra no funil e nos relatórios.
+ *
+ * Deliberadamente NÃO inclui a recorrência: R$ 5.000/mês e R$ 5.000 à vista
+ * não são a mesma quantia, e tratá-los como iguais inflava o funil.
+ */
 export function valorDaNegociacao(n: Pick<Negociacao, "valor" | "produtos">): number {
-  if (!n.produtos.length) return n.valor;
-  return n.produtos.reduce((soma, p) => {
-    const bruto = p.preco * p.quantidade;
-    const desconto = p.tipoDesconto === "percentual" ? bruto * (p.desconto / 100) : p.desconto;
-    return soma + Math.max(0, bruto - desconto);
-  }, 0);
+  return valoresDaNegociacao(n).unico;
 }
 
 const texto = (max: number) => z.string().trim().max(max).default("");

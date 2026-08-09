@@ -320,7 +320,9 @@ describe("CRM — ciclo comercial completo pelas rotas", () => {
 
     expect(porFonte(negs, doDia)[0]).toMatchObject({ chave: "Indicação", criadas: 4, ganhas: 1 });
     expect(porResponsavel(negs, doDia)[0]).toMatchObject({ responsavel: ANA.name, ganhas: 1, valorGanho: 21600, ticketMedio: 21600 });
-    expect(porProduto(negs, doDia)).toEqual([{ nome: "Projeto de subestação", quantidade: 2, valor: 21600, emGanhas: 2 }]);
+    expect(porProduto(negs, doDia)).toEqual([
+      { nome: "Projeto de subestação", quantidade: 2, valor: 21600, valorMensal: 0, emGanhas: 2 },
+    ]);
 
     // Filtro por responsável isola de verdade.
     expect(conversoes(negs, { ...doDia, responsavel: BETO.email }).criadas).toBe(0);

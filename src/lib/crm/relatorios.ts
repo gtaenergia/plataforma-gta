@@ -1,5 +1,5 @@
 import type { Funil, Negociacao, TarefaCrm, TipoTarefa } from "./types";
-import { valorDaNegociacao } from "./types";
+import { totalDoItem, valorDaNegociacao } from "./types";
 
 /**
  * Agregações dos relatórios do CRM — puras, sem I/O, para valerem teste.
@@ -155,7 +155,10 @@ export interface LinhaProduto {
   nome: string;
   /** Soma das quantidades nos itens das negociações. */
   quantidade: number;
+  /** Valor pontual (itens de recorrência única). */
   valor: number;
+  /** Valor por mês (itens recorrentes) — contado à parte, não somado ao acima. */
+  valorMensal: number;
   emGanhas: number;
 }
 
@@ -165,16 +168,17 @@ export function porProduto(negs: Negociacao[], f: FiltroRelatorio): LinhaProduto
   const mapa = new Map<string, LinhaProduto>();
   for (const n of base) {
     for (const p of n.produtos) {
-      const bruto = p.preco * p.quantidade;
-      const desconto = p.tipoDesconto === "percentual" ? bruto * (p.desconto / 100) : p.desconto;
-      const atual = mapa.get(p.nome) ?? { nome: p.nome, quantidade: 0, valor: 0, emGanhas: 0 };
+      const atual = mapa.get(p.nome) ?? { nome: p.nome, quantidade: 0, valor: 0, valorMensal: 0, emGanhas: 0 };
       atual.quantidade += p.quantidade;
-      atual.valor += Math.max(0, bruto - desconto);
+      // Único e mensal em colunas distintas: juntá-los faria "R$ 5.000" querer
+      // dizer duas coisas diferentes na mesma linha.
+      if (p.recorrencia === "mensal") atual.valorMensal += totalDoItem(p);
+      else atual.valor += totalDoItem(p);
       if (n.situacao === "ganha") atual.emGanhas += p.quantidade;
       mapa.set(p.nome, atual);
     }
   }
-  return Array.from(mapa.values()).sort((a, b) => b.valor - a.valor);
+  return Array.from(mapa.values()).sort((a, b) => b.valor + b.valorMensal - (a.valor + a.valorMensal));
 }
 
 // ------------------------------------------------------------- Atividades
