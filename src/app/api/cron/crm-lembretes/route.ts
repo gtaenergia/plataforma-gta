@@ -15,8 +15,12 @@ export const runtime = "nodejs";
  * agendada". Sem isto, a tarefa vencia e ficava vermelha esperando alguém
  * abrir a tela — e quem vende passa o dia em campo.
  *
- * A Vercel Cron chama esta rota 1x/dia (ver vercel.json) com
- * `Authorization: Bearer <CRON_SECRET>`.
+ * A Vercel Cron chama esta rota 1x/dia com `Authorization: Bearer <CRON_SECRET>`,
+ * no horário `0 10 * * 1-5` do vercel.json: 10h UTC = 7h em São Paulo, para o
+ * recado chegar antes do dia começar, e só em dia útil. Esta explicação mora
+ * aqui, e não ao lado do horário, porque o schema do vercel.json REJEITA
+ * qualquer campo que ele não conheça — um `comment` ali derruba o build inteiro
+ * na validação, antes de compilar (foi o que aconteceu uma vez).
  *
  * UM recado por pessoa, com os dois sinais somados (tarefas atrasadas e
  * negociações sem próximo passo). Dez notificações às 7h ensinam a ignorar o

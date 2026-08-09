@@ -5,7 +5,6 @@
       "schedule": "0 3 * * *"
     },
     {
-      "comment": "10h UTC = 7h em São Paulo: o recado chega antes do dia começar, não no meio dele.",
       "path": "/api/cron/crm-lembretes",
       "schedule": "0 10 * * 1-5"
     }
