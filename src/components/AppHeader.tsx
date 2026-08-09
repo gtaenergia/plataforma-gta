@@ -5,9 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Moon, Settings, Sun } from "lucide-react";
 import { NotificacoesSino } from "./NotificacoesSino";
-import { SeletorProduto, SeletorProdutoLista } from "./SeletorProduto";
+import { SeletorProdutoLista } from "./SeletorProduto";
 import { Avatar } from "./ui";
-import { itemAtivo, produtoDaRota } from "@/lib/produtos/registry";
+import { PRODUTOS, itemAtivo, produtoDaRota } from "@/lib/produtos/registry";
 
 /**
  * `avatarUrl` chega por prop, e não por fetch. A versão anterior buscava
@@ -132,11 +132,6 @@ export function AppHeader({ userName, avatarUrl, isAdmin }: { userName?: string;
               </Link>
             )}
             <NotificacoesSino />
-            {/* Entre o sino e o perfil: trocar de ferramenta é ação de conta,
-                e mora com as outras — não colado na marca, que é destino. */}
-            <div className="hidden shrink-0 md:block">
-              <SeletorProduto ativo={produto} />
-            </div>
             <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuAberto((v) => !v)}
@@ -160,6 +155,21 @@ export function AppHeader({ userName, avatarUrl, isAdmin }: { userName?: string;
                   <div className="hint">Sessão</div>
                   <div className="truncate text-sm font-semibold text-gta-navy dark:text-slate-100">{userName}</div>
                 </div>
+                {/* Trocar de ferramenta mora aqui, no menu da sessão — um botão
+                    a menos no cabeçalho. Com duas ferramentas, o item único
+                    "Trocar para X" diz o destino sem pedir um submenu. No
+                    celular a gaveta continua listando as duas à vista. */}
+                {(() => {
+                  const outra = PRODUTOS.find((p) => p.key !== produto.key);
+                  if (!outra) return null;
+                  return (
+                    <div className="border-b border-slate-100 dark:border-slate-700">
+                      <MenuLink href={outra.home} onNavigate={() => setMenuAberto(false)}>
+                        <span className="font-medium">Trocar para {outra.label}</span>
+                      </MenuLink>
+                    </div>
+                  );
+                })()}
                 <MenuLink href="/conta" onNavigate={() => setMenuAberto(false)}>
                   Minha conta
                 </MenuLink>
