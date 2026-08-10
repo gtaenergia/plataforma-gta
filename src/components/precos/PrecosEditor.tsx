@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { useAvisoNaoSalvo } from "@/components/useAvisoNaoSalvo";
+import { Paginacao, usePaginacao } from "@/components/Paginacao";
 import { Alert, Loading, SectionCard } from "@/components/ui";
 import { DIAS_PARA_REVISAO, diasRestantes, type MaterialPreco } from "@/lib/precos/catalogo";
 
@@ -95,6 +96,17 @@ export function PrecosEditor({ podeEditar }: { podeEditar: boolean }) {
     if (!q) return tabela.itens;
     return tabela.itens.filter((i) => `${i.descricao} ${i.categoria} ${i.unidade}`.toLowerCase().includes(q));
   }, [tabela, busca]);
+
+  /* Mesma paginação das outras listas da plataforma. Com o catálogo passando
+     de trezentos materiais, a tabela inteira numa página só vira um paredão
+     de rolagem — e o rodapé com "Salvar" some da vista de quem está no meio. */
+  const { paginados, controles } = usePaginacao(visiveis, 20);
+
+  /* O rascunho vive fora da página: quem edita na página 1 e navega para a 3
+     leva as alterações junto, e "Salvar 5" conta as cinco. Sem dizer isso, o
+     número no botão não bate com os selos "alterado" que estão à vista. */
+  const naPagina = useMemo(() => new Set(paginados.map((i) => i.id)), [paginados]);
+  const alteradosForaDaPagina = alterados.filter((a) => !naPagina.has(a.id)).length;
 
   async function salvar() {
     if (alterados.length === 0) return;
@@ -264,7 +276,7 @@ export function PrecosEditor({ podeEditar }: { podeEditar: boolean }) {
               </tr>
             </thead>
             <tbody>
-              {visiveis.map((i) => {
+              {paginados.map((i) => {
                 const mudou = alterados.some((a) => a.id === i.id);
                 return (
                   <tr key={i.id}>
@@ -309,6 +321,19 @@ export function PrecosEditor({ podeEditar }: { podeEditar: boolean }) {
           </table>
         </div>
         {visiveis.length === 0 && <p className="mt-4 subtitle">Nenhum material corresponde à busca.</p>}
+
+        {alteradosForaDaPagina > 0 && (
+          <p className="hint mt-3">
+            {alteradosForaDaPagina === 1
+              ? "1 preço alterado está em outra página"
+              : `${alteradosForaDaPagina} preços alterados estão em outras páginas`}{" "}
+            e serão salvos junto.
+          </p>
+        )}
+
+        <div className="mt-4">
+          <Paginacao {...controles} />
+        </div>
       </SectionCard>
     </div>
   );
