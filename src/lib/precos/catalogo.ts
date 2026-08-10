@@ -9,9 +9,14 @@
  * Aqui o catálogo é uma LISTA achatada, com id estável: o motor continua com
  * suas tabelas como padrão de fábrica, e o que estiver salvo no registro vence.
  *
- * Hoje só o carregador tem material com preço unitário — os demais serviços
- * recebem o custo já digitado pelo usuário. A estrutura tem `servico` desde o
- * começo para os outros entrarem sem reescrever nada.
+ * Dois serviços consomem esta lista, de formas diferentes:
+ *
+ * - **Carregador**: o motor monta a lista de materiais sozinho e busca cada
+ *   preço por id. O `servico` de cada item diz de que motor ele saiu.
+ * - **Mão de obra**: a pessoa ESCOLHE o material no campo Descrição, e o preço
+ *   unitário vem daqui. Ali a lista não é filtrada por `servico` — material
+ *   elétrico é o mesmo, quem leva para a obra é que muda. Itens fora da lista
+ *   continuam aceitos, avulsos, sem vínculo com o catálogo.
  */
 
 export type ServicoComPrecos = "carregador";

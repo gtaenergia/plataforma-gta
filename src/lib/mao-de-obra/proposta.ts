@@ -28,6 +28,38 @@ export interface LinhaMaterial {
   valorUnitario: number;
 }
 
+/**
+ * O que preencher ao escolher um material no campo Descrição.
+ *
+ * Duas origens, e a diferença importa: escolhido NA LISTA de Preços de
+ * materiais, o preço unitário e a unidade vêm de lá e não se digitam aqui —
+ * é o motivo de a lista existir, e digitar por cima devolveria o problema que
+ * ela resolve (proposta saindo com custo de um ano atrás). Escrito à mão, o
+ * item é avulso: sem `precoId`, sem vínculo nenhum, preço só desta proposta.
+ *
+ * Trocar um item da lista por um nome livre LIMPA o preço herdado. Sem isso o
+ * valor do material anterior ficaria na linha, parecendo cotação do novo.
+ */
+export function escolherMaterial(
+  nome: string,
+  doCatalogo: { id: string; descricao: string; unidade: string; preco: number } | undefined,
+  eraVinculado: boolean,
+): { descricao: string; unidade?: string; valorUnitario?: string; precoId?: string } {
+  if (doCatalogo) {
+    return {
+      descricao: doCatalogo.descricao,
+      unidade: doCatalogo.unidade,
+      valorUnitario: doCatalogo.preco.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      precoId: doCatalogo.id,
+    };
+  }
+  return {
+    descricao: nome,
+    precoId: undefined,
+    ...(eraVinculado ? { valorUnitario: "" } : {}),
+  };
+}
+
 /** Custo total dos materiais em centavos — linha a linha, como o motor faz. */
 export function custoMateriaisCent(linhas: readonly LinhaMaterial[]): number {
   return linhas.reduce((s, l) => {

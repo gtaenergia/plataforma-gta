@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { custoMateriaisCent, repartirPreco, resumoEquipe, type LinhaMaterial } from "@/lib/mao-de-obra/proposta";
+import {
+  custoMateriaisCent,
+  escolherMaterial,
+  repartirPreco,
+  resumoEquipe,
+  type LinhaMaterial,
+} from "@/lib/mao-de-obra/proposta";
 import { custoDeLinhas } from "@/lib/mao-de-obra/motor";
 import type { Funcao } from "@/lib/mao-de-obra/types";
 
@@ -66,5 +72,49 @@ describe("repartirPreco", () => {
     expect(repartirPreco(5000, 1000, 0)).toEqual({ maoDeObraCent: 5000, materiaisCent: 0 });
     expect(repartirPreco(5000, 0, 1000)).toEqual({ maoDeObraCent: 0, materiaisCent: 5000 });
     expect(repartirPreco(5000, 0, 0)).toEqual({ maoDeObraCent: 5000, materiaisCent: 0 });
+  });
+});
+
+/**
+ * Escolher o material: da lista ou à mão.
+ *
+ * O erro aqui é silencioso e caro. Herdar o preço de um item e trocar o nome
+ * para outro material deixa a linha com uma cotação que nunca foi daquele
+ * item — e a proposta fecha com um número que parece certo, porque a soma
+ * está certa.
+ */
+describe("escolherMaterial", () => {
+  const cabo = { id: "carregador.cabo.10", descricao: "Cabo flexível HEPR 10 mm²", unidade: "m", preco: 12 };
+
+  it("da lista: traz unidade, preço e o vínculo", () => {
+    expect(escolherMaterial(cabo.descricao, cabo, false)).toEqual({
+      descricao: "Cabo flexível HEPR 10 mm²",
+      unidade: "m",
+      valorUnitario: "12,00",
+      precoId: "carregador.cabo.10",
+    });
+  });
+
+  it("preço da lista sai formatado em pt-BR, que é como o campo lê", () => {
+    const r = escolherMaterial("x", { ...cabo, preco: 1234.5 }, false);
+    expect(r.valorUnitario).toBe("1.234,50");
+  });
+
+  it("fora da lista: sem vínculo e sem mexer no que já foi digitado", () => {
+    expect(escolherMaterial("Disco de corte 4.1/2\"", undefined, false)).toEqual({
+      descricao: 'Disco de corte 4.1/2"',
+      precoId: undefined,
+    });
+  });
+
+  it("trocar item da lista por nome livre LIMPA o preço herdado", () => {
+    const r = escolherMaterial("Luva de raspa", undefined, true);
+    expect(r.precoId).toBeUndefined();
+    expect(r.valorUnitario).toBe("");
+  });
+
+  it("o vínculo é pelo id do catálogo, não pela descrição digitada", () => {
+    // Mesmo nome escrito diferente não vira vínculo: quem casa é a lista.
+    expect(escolherMaterial("cabo flexível hepr 10 mm2", undefined, false).precoId).toBeUndefined();
   });
 });

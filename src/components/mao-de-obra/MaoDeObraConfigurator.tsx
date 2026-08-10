@@ -10,9 +10,11 @@ import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } f
 import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { lerHoras } from "@/lib/custo-equipe/sugestao";
 import { Combobox } from "@/components/Combobox";
+import { DIAS_PARA_REVISAO, precisaRevisao, type MaterialPreco } from "@/lib/precos/catalogo";
 import { aplicarMarkup, calcularComposicao, markupDe } from "@/lib/mao-de-obra/motor";
 import {
   custoMateriaisCent,
+  escolherMaterial,
   repartirPreco,
   resumoEquipe,
   TIPO_MATERIAL_LABEL,
@@ -58,6 +60,12 @@ interface LinhaMaterialForm {
   quantidade: string;
   unidade: string;
   valorUnitario: string;
+  /**
+   * Id no catálogo de Preços de materiais. Presente = o preço unitário vem de
+   * lá e não se digita aqui; ausente = item avulso, sem vínculo nenhum com a
+   * lista (o preço é desta proposta e só).
+   */
+  precoId?: string;
 }
 
 const LINHA_EQUIPE_VAZIA: LinhaEquipeForm = { funcaoId: "", pessoas: "1", horas: "" };
@@ -99,6 +107,8 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor, podeConfigurar }:
   // As duas pernas do custo
   const [linhas, setLinhas] = useState<LinhaEquipeForm[]>([{ ...LINHA_EQUIPE_VAZIA }]);
   const [materiais, setMateriais] = useState<LinhaMaterialForm[]>([]);
+  /** Catálogo de Preços de materiais — a lista que alimenta o campo Descrição. */
+  const [precos, setPrecos] = useState<MaterialPreco[]>([]);
 
   // Taxas (só com financeiro.ver) e valor final
   const [imposto, setImposto] = useState("");
@@ -158,6 +168,21 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor, podeConfigurar }:
         setEstado("erro");
       }
     })();
+  }, []);
+
+  /*
+   * O catálogo de preços é BEST-EFFORT, em efeito separado.
+   *
+   * Ele enriquece o campo de materiais, mas a proposta de mão de obra existe
+   * sem ele — juntar esta busca à do catálogo de funções faria a tela inteira
+   * falhar por causa da parte opcional. Sem a lista, o campo continua aceitando
+   * texto livre, que é o comportamento de antes.
+   */
+  useEffect(() => {
+    fetch("/api/precos")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setPrecos(Array.isArray(d?.itens) ? (d.itens as MaterialPreco[]) : []))
+      .catch(() => setPrecos([]));
   }, []);
 
   // Retomar proposta salva, ou buscar a próxima referência
@@ -283,6 +308,19 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor, podeConfigurar }:
     [materiais],
   );
   const custoMatCent = useMemo(() => custoMateriaisCent(materiaisNum), [materiaisNum]);
+
+  /* Índice por DESCRIÇÃO, que é o que a pessoa vê e escolhe no campo. Duas
+     descrições iguais no catálogo colidiriam aqui — mas elas também seriam
+     indistinguíveis na lista, então o problema seria da lista, não do índice. */
+  const porDescricao = useMemo(() => new Map(precos.map((p) => [p.descricao, p])), [precos]);
+  const descricoesDoCatalogo = useMemo(() => precos.map((p) => p.descricao), [precos]);
+  /* Itens desta proposta cujo preço na lista passou do prazo de revisão. É o
+     mesmo alerta que o carregador já dá — sem ele, a proposta sairia com custo
+     velho e a conta pareceria certa, porque a fórmula está certa. */
+  const precosVencidos = useMemo(() => {
+    const ids = new Set(materiais.map((m) => m.precoId).filter(Boolean));
+    return precos.filter((p) => ids.has(p.id) && precisaRevisao(p.atualizadoEm));
+  }, [materiais, precos]);
 
   /** Preço sugerido: markup sobre a SOMA das duas pernas — a conta da calculadora. */
   const sugestao = useMemo(
@@ -533,7 +571,12 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor, podeConfigurar }:
       {/* Materiais e ferramentas — a segunda perna do custo */}
       <section className="section-card">
         <h2 className="section-title">Materiais e ferramentas</h2>
-        <p className="mt-1 subtitle">Tudo que a equipe leva para a obra: material de consumo, ferramentas e equipamentos. Entra no custo antes do markup e sai como relação na proposta.</p>
+        <p className="mt-1 subtitle">
+          Tudo que a equipe leva para a obra: material de consumo, ferramentas e equipamentos. Entra no custo antes do
+          markup e sai como relação na proposta. Escolhendo da lista de <a href="/precos" className="btn-link">Preços de
+          materiais</a>, o valor unitário vem de lá — você informa só a quantidade. O que não estiver na lista, escreva:
+          entra como item avulso, com preço só desta proposta.
+        </p>
         <div className="mt-4 space-y-3">
           {materiais.length === 0 && <p className="hint">Nenhum item — proposta só de mão de obra.</p>}
           {materiais.map((m, i) => (
@@ -544,16 +587,42 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor, podeConfigurar }:
                 </select>
               </Campo>
               <Campo className="col-span-2 sm:col-span-4" label={i === 0 ? "Descrição" : ""}>
-                <input className="field-input" value={m.descricao} placeholder="Ex.: Cabo flexível 2,5 mm²" onChange={(e) => setMaterial(i, { descricao: e.target.value })} />
+                <Combobox
+                  value={m.descricao}
+                  options={descricoesDoCatalogo}
+                  placeholder="Escolher da lista ou escrever"
+                  rotuloNovo="Fora da lista: “{v}”"
+                  aria-label={`Descrição do item ${i + 1}`}
+                  onChange={(v) => setMaterial(i, escolherMaterial(v, porDescricao.get(v), !!m.precoId))}
+                />
               </Campo>
               <Campo className="sm:col-span-2" label={i === 0 ? "Quantidade" : ""}>
                 <input className="field-input tabular-nums" inputMode="decimal" value={m.quantidade} onChange={(e) => setMaterial(i, { quantidade: e.target.value })} />
               </Campo>
               <Campo className="sm:col-span-1" label={i === 0 ? "Unidade" : ""}>
-                <input className="field-input" value={m.unidade} placeholder="un" onChange={(e) => setMaterial(i, { unidade: e.target.value })} />
+                <input
+                  className="field-input"
+                  value={m.unidade}
+                  placeholder="un"
+                  disabled={!!m.precoId}
+                  onChange={(e) => setMaterial(i, { unidade: e.target.value })}
+                />
               </Campo>
-              <Campo className="sm:col-span-2" label={i === 0 ? "Valor unitário (R$)" : ""}>
-                <input className="field-input tabular-nums" inputMode="decimal" value={m.valorUnitario} placeholder="0,00" onChange={(e) => setMaterial(i, { valorUnitario: e.target.value })} />
+              {/* Vindo da lista, o preço unitário é DELA: digitar por cima aqui
+                  devolveria o problema que a lista existe para resolver. */}
+              <Campo
+                className="sm:col-span-2"
+                label={i === 0 ? "Valor unitário (R$)" : ""}
+                hint={m.precoId ? <p className="hint mt-1">Da lista de preços</p> : undefined}
+              >
+                <input
+                  className="field-input tabular-nums"
+                  inputMode="decimal"
+                  value={m.valorUnitario}
+                  placeholder="0,00"
+                  disabled={!!m.precoId}
+                  onChange={(e) => setMaterial(i, { valorUnitario: e.target.value })}
+                />
               </Campo>
               <div className="flex items-end sm:col-span-1">
                 <button type="button" className="icon-btn" onClick={() => editar(setMateriais)(materiais.filter((_, j) => j !== i))} aria-label={`Remover item ${i + 1}`}>
@@ -569,6 +638,17 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor, podeConfigurar }:
           </button>
           {custoMatCent > 0 && <span className="text-sm text-slate-600 dark:text-slate-300">Custo dos itens: <strong className="text-gta-navy dark:text-slate-100">{moeda(custoMatCent)}</strong></span>}
         </div>
+        {precosVencidos.length > 0 && (
+          <div className="mt-3">
+            <Alert tone="amber" titulo="Preço vencido na lista.">
+              {precosVencidos.length === 1
+                ? `“${precosVencidos[0].descricao}” está sem revisão`
+                : `${precosVencidos.length} itens desta proposta estão sem revisão`}{" "}
+              há mais de {DIAS_PARA_REVISAO} dias. Revise em{" "}
+              <a href="/precos" className="btn-link">Preços de materiais</a> antes de fechar.
+            </Alert>
+          </div>
+        )}
       </section>
 
       {/* Preço — a conta da calculadora, com as duas pernas somadas */}
