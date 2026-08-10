@@ -210,9 +210,15 @@ export function gerarBomEV(
   const tri = s.polos === 4;
   const eletroduto = selecionarEletroduto(s.secaoMm2, s.nCondutores);
   const barras = Math.ceil(L / 3);
-  /** Preço do registro central, com o padrão do motor como reserva. */
+  /**
+   * Preço do registro central, com o padrão do motor como reserva.
+   *
+   * O id NÃO leva prefixo de serviço. Ele já levou (`carregador.cabo.10`), e
+   * era mentira: o mesmo cabo entra numa proposta de mão de obra, onde nada
+   * tem a ver com carregador — quem escolhia da lista via a origem errada.
+   */
   const P = (id: string, padrao: number) => {
-    const v = precos?.[`carregador.${id}`];
+    const v = precos?.[id];
     return v != null && Number.isFinite(v) && v >= 0 ? v : padrao;
   };
   const ed = chaveEletroduto(eletroduto.nome);
@@ -234,22 +240,22 @@ export function gerarBomEV(
   // DR e DPS multiplicavam: uma obra de 4 pontos era orçada com o cabo e o
   // eletroduto de UM, subfaturando a instalação.
   const itens: BomItemEV[] = [
-    item("Infraestrutura", `Eletroduto galvanizado pesado ${eletroduto.nome} (barra 3 m)`, "barra", barras * n, P(`eletroduto.${ed}.barra`, eletroduto.barra), `carregador.eletroduto.${ed}.barra`),
-    item("Infraestrutura", `Luva galvanizada ${eletroduto.nome}`, "un", barras * n, P(`eletroduto.${ed}.luva`, eletroduto.luva), `carregador.eletroduto.${ed}.luva`),
-    item("Infraestrutura", `Curva galvanizada ${eletroduto.nome} 90º`, "un", 4 * n, P(`eletroduto.${ed}.curva`, eletroduto.curva), `carregador.eletroduto.${ed}.curva`),
-    item("Infraestrutura", `Abraçadeira tipo D / Unistrut ${eletroduto.nome}`, "un", Math.ceil(L * 0.75) * n, P("abracadeira", PRECOS_BASE.abracadeira), "carregador.abracadeira"),
-    item("Infraestrutura", `Bucha e arruela de alumínio ${eletroduto.nome}`, "par", 4 * n, P("buchaArruela", PRECOS_BASE.buchaArruela), "carregador.buchaArruela"),
-    item("Cabeamento", `Cabo flexível HEPR ${secFmt(s.secaoMm2)} mm² (${tri ? "3F+N+T" : "F+N+T"})`, "m", L * s.nCondutores * n, P(`cabo.${chaveDe(CABO_PRECO, s.secaoMm2)}`, precoDe(CABO_PRECO, s.secaoMm2)), `carregador.cabo.${chaveDe(CABO_PRECO, s.secaoMm2)}`),
-    item("Proteção", `Quadro de distribuição IP65 (${tri ? "12 DIN" : "6 a 8 DIN"})`, "un", n, tri ? P("quadro.tri", QUADRO_PRECO.tri) : P("quadro.mono", QUADRO_PRECO.mono), tri ? "carregador.quadro.tri" : "carregador.quadro.mono"),
-    item("Proteção", `Disjuntor termomagnético ${s.disjuntorA} A curva C (${s.polos}P)`, "un", n, precoDisj, `carregador.disjuntor.${chaveDe(DISJ_PRECO, s.disjuntorA)}`),
-    item("Proteção", drDescricao, "un", n, precoDr, `carregador.dr.${chaveDe(DR_PRECO, s.disjuntorA)}`),
-    item("Proteção", `Protetor de surto (DPS) Classe II 275 V / 40 kA`, "un", s.nDps * n, P("dps", PRECOS_BASE.dps), "carregador.dps"),
-    item("Aterramento", 'Haste de aterramento cobreada 5/8" x 2,40 m', "un", n, P("haste", PRECOS_BASE.haste), "carregador.haste"),
-    item("Aterramento", "Caixa de inspeção de solo", "un", n, P("caixaInspecao", PRECOS_BASE.caixaInspecao), "carregador.caixaInspecao"),
-    item("Aterramento", "Conector tipo cunha / grampo", "un", n, P("conectorAterr", PRECOS_BASE.conectorAterr), "carregador.conectorAterr"),
-    item("Acessórios", `Terminal tubular (ilhós) ${secFmt(s.secaoMm2)} mm²`, "un", s.nCondutores * 2 * n, P("terminal", PRECOS_BASE.terminal), "carregador.terminal"),
-    item("Acessórios", "Fita isolante alta qualidade (rolo 20 m)", "un", n, P("fitaIsolante", PRECOS_BASE.fitaIsolante), "carregador.fitaIsolante"),
-    item("Acessórios", "Fita de autofusão (emendas externas)", "un", n, P("fitaAutofusao", PRECOS_BASE.fitaAutofusao), "carregador.fitaAutofusao"),
+    item("Infraestrutura", `Eletroduto galvanizado pesado ${eletroduto.nome} (barra 3 m)`, "barra", barras * n, P(`eletroduto.${ed}.barra`, eletroduto.barra), `eletroduto.${ed}.barra`),
+    item("Infraestrutura", `Luva galvanizada ${eletroduto.nome}`, "un", barras * n, P(`eletroduto.${ed}.luva`, eletroduto.luva), `eletroduto.${ed}.luva`),
+    item("Infraestrutura", `Curva galvanizada ${eletroduto.nome} 90º`, "un", 4 * n, P(`eletroduto.${ed}.curva`, eletroduto.curva), `eletroduto.${ed}.curva`),
+    item("Infraestrutura", `Abraçadeira tipo D / Unistrut ${eletroduto.nome}`, "un", Math.ceil(L * 0.75) * n, P("abracadeira", PRECOS_BASE.abracadeira), "abracadeira"),
+    item("Infraestrutura", `Bucha e arruela de alumínio ${eletroduto.nome}`, "par", 4 * n, P("buchaArruela", PRECOS_BASE.buchaArruela), "buchaArruela"),
+    item("Cabeamento", `Cabo flexível HEPR ${secFmt(s.secaoMm2)} mm² (${tri ? "3F+N+T" : "F+N+T"})`, "m", L * s.nCondutores * n, P(`cabo.${chaveDe(CABO_PRECO, s.secaoMm2)}`, precoDe(CABO_PRECO, s.secaoMm2)), `cabo.${chaveDe(CABO_PRECO, s.secaoMm2)}`),
+    item("Proteção", `Quadro de distribuição IP65 (${tri ? "12 DIN" : "6 a 8 DIN"})`, "un", n, tri ? P("quadro.tri", QUADRO_PRECO.tri) : P("quadro.mono", QUADRO_PRECO.mono), tri ? "quadro.tri" : "quadro.mono"),
+    item("Proteção", `Disjuntor termomagnético ${s.disjuntorA} A curva C (${s.polos}P)`, "un", n, precoDisj, `disjuntor.${chaveDe(DISJ_PRECO, s.disjuntorA)}`),
+    item("Proteção", drDescricao, "un", n, precoDr, `dr.${chaveDe(DR_PRECO, s.disjuntorA)}`),
+    item("Proteção", `Protetor de surto (DPS) Classe II 275 V / 40 kA`, "un", s.nDps * n, P("dps", PRECOS_BASE.dps), "dps"),
+    item("Aterramento", 'Haste de aterramento cobreada 5/8" x 2,40 m', "un", n, P("haste", PRECOS_BASE.haste), "haste"),
+    item("Aterramento", "Caixa de inspeção de solo", "un", n, P("caixaInspecao", PRECOS_BASE.caixaInspecao), "caixaInspecao"),
+    item("Aterramento", "Conector tipo cunha / grampo", "un", n, P("conectorAterr", PRECOS_BASE.conectorAterr), "conectorAterr"),
+    item("Acessórios", `Terminal tubular (ilhós) ${secFmt(s.secaoMm2)} mm²`, "un", s.nCondutores * 2 * n, P("terminal", PRECOS_BASE.terminal), "terminal"),
+    item("Acessórios", "Fita isolante alta qualidade (rolo 20 m)", "un", n, P("fitaIsolante", PRECOS_BASE.fitaIsolante), "fitaIsolante"),
+    item("Acessórios", "Fita de autofusão (emendas externas)", "un", n, P("fitaAutofusao", PRECOS_BASE.fitaAutofusao), "fitaAutofusao"),
   ];
   const custoMateriais = itens.reduce((sum, it) => sum + it.precoTotal, 0);
   return { itens, custoMateriais };

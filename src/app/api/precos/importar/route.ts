@@ -13,6 +13,9 @@ const MAX_BYTES = 512 * 1024;
  * Importa a planilha preenchida. Linhas com "PREÇO NOVO" em branco são
  * ignoradas de propósito: a pessoa revisa o que conseguiu cotar e o resto
  * continua valendo, em vez de zerar.
+ *
+ * Linha com o id em branco e descrição preenchida CRIA o material — é como a
+ * lista cresce sem passar pelo código.
  */
 export async function POST(req: Request) {
   const guard = await requireApi();
@@ -45,7 +48,9 @@ export async function POST(req: Request) {
   const r = await salvarPrecos(precos, guard.me.name || guard.me.email);
   return NextResponse.json({
     atualizados: r.atualizados,
-    // Id que não existe no catálogo: normalmente linha de outra versão da planilha.
+    criados: r.criados,
+    // Id que não existe no catálogo e sem descrição para criar: normalmente
+    // linha de uma versão antiga da planilha, cujo item saiu do código.
     naoReconhecidos: r.ignorados,
     emBranco,
     problemas,

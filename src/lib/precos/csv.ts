@@ -1,12 +1,20 @@
-import type { MaterialPreco } from "./catalogo";
+import { validadeDe, type MaterialPreco } from "./catalogo";
 
 /**
- * Planilha de revisão de preços — ida e volta.
+ * Planilha de materiais — ida e volta.
  *
  * A plataforma gera o arquivo já preenchido com o que está valendo, e a pessoa
- * só digita a coluna "PREÇO NOVO". Quem manda é o `id`, não a linha nem a
+ * digita a coluna "PREÇO NOVO". Quem manda é o `id`, não a linha nem a
  * descrição: a planilha pode ser reordenada, filtrada ou ter linhas apagadas
  * que a importação continua acertando o item.
+ *
+ * ## Acrescentar material
+ *
+ * A planilha não serve só para corrigir preço. Uma linha nova, com o **id em
+ * branco** e categoria/descrição/unidade preenchidas, CRIA o material — é o
+ * caminho para o que a lista ainda não tem (luva de raspa, disco de corte)
+ * sem depender de alguém mexer no código. O id é gerado a partir da descrição,
+ * então reimportar a mesma planilha atualiza em vez de duplicar.
  *
  * Ponto e vírgula porque o Excel em pt-BR usa vírgula como decimal; BOM para
  * ele reconhecer os acentos como UTF-8.
@@ -18,17 +26,41 @@ const BOM = "﻿";
 const escapar = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 const brl = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export const CABECALHO = ["id", "categoria", "descricao", "unidade", "preco_atual", "PRECO_NOVO"];
+/**
+ * VALIDADE_DIAS entra no FIM de propósito: uma planilha baixada antes desta
+ * coluna existir continua importando certo, porque as posições anteriores não
+ * se mexeram. Coluna nova no meio inutilizaria todo arquivo já em circulação.
+ */
+export const CABECALHO = ["id", "categoria", "descricao", "unidade", "preco_atual", "PRECO_NOVO", "VALIDADE_DIAS"];
 
 export function gerarCsv(itens: MaterialPreco[]): string {
   const linhas = itens.map((i) =>
-    [i.id, i.categoria, i.descricao, i.unidade, brl(i.preco), ""].map(escapar).join(SEP),
+    [i.id, i.categoria, i.descricao, i.unidade, brl(i.preco), "", String(validadeDe(i))]
+      .map(escapar)
+      .join(SEP),
   );
-  return BOM + [CABECALHO.map(escapar).join(SEP), ...linhas].join("\r\n") + "\r\n";
+  /* Uma linha de exemplo, comentada pelo próprio conteúdo: sem ela, ninguém
+     descobre que dá para acrescentar material — a planilha parece só de leitura
+     do id para baixo. Ela é ignorada na volta, porque não tem PREÇO NOVO. */
+  const exemplo = ["", "Ferramentas", "← id em branco cria material novo: preencha esta linha", "un", "", "", ""]
+    .map(escapar)
+    .join(SEP);
+  return BOM + [CABECALHO.map(escapar).join(SEP), ...linhas, exemplo].join("\r\n") + "\r\n";
+}
+
+export interface LinhaPlanilha {
+  /** Vazio = material novo; o id sai da descrição na hora de gravar. */
+  id?: string;
+  preco: number;
+  categoria?: string;
+  descricao?: string;
+  unidade?: string;
+  /** Prazo próprio; ausente na planilha = não mexe no que já vale. */
+  validadeDias?: number;
 }
 
 export interface ResultadoLeitura {
-  precos: { id: string; preco: number }[];
+  precos: LinhaPlanilha[];
   /** Linhas que não puderam ser lidas, com o motivo — mostradas ao usuário. */
   problemas: { linha: number; motivo: string }[];
   /** Linhas com PREÇO NOVO em branco: ignoradas de propósito, não são erro. */
@@ -64,7 +96,7 @@ function dividir(linha: string): string[] {
 }
 
 export function lerCsv(texto: string): ResultadoLeitura {
-  const precos: { id: string; preco: number }[] = [];
+  const precos: LinhaPlanilha[] = [];
   const problemas: { linha: number; motivo: string }[] = [];
   let emBranco = 0;
 
@@ -73,17 +105,33 @@ export function lerCsv(texto: string): ResultadoLeitura {
 
   // Descarta o cabeçalho só se ele for mesmo um cabeçalho — quem colar apenas
   // os dados não perde a primeira linha.
-  const primeiro = dividir(linhas[0]).map((c) => c.replace(/^"|"$/g, "").trim().toLowerCase());
+  /*
+   * `dividir` já devolve o campo SEM as aspas que o delimitam. Havia um
+   * `.replace(/^"|"$/g, "")` a mais aqui, e ele comia aspa de CONTEÚDO: a
+   * polegada no fim da descrição ("Luva galvanizada 1"") voltava como
+   * "Luva galvanizada 1". Não incomodava enquanto a planilha só lia id e
+   * preço; passou a incomodar quando a descrição virou dado que cria material.
+   */
+  const primeiro = dividir(linhas[0]).map((c) => c.trim().toLowerCase());
   const inicio = primeiro[0] === "id" ? 1 : 0;
 
   for (let n = inicio; n < linhas.length; n++) {
-    const col = dividir(linhas[n]).map((c) => c.replace(/^"|"$/g, "").trim());
+    const col = dividir(linhas[n]).map((c) => c.trim());
     const numeroDaLinha = n + 1;
     const id = col[0];
-    if (!id) { problemas.push({ linha: numeroDaLinha, motivo: "Sem id." }); continue; }
+    const categoria = col[1];
+    const descricao = col[2];
+    const unidade = col[3];
 
+    // Sem PREÇO NOVO a linha não pede nada: nem revisão, nem material. É o
+    // caso da esmagadora maioria e não é erro — inclusive o da linha de
+    // exemplo que a planilha traz.
     const bruto = col[5] ?? "";
     if (!bruto.trim()) { emBranco++; continue; }
+
+    // Id em branco só faz sentido acompanhado de descrição: é assim que se
+    // acrescenta material. Sem os dois não há o que gravar.
+    if (!id && !descricao) { problemas.push({ linha: numeroDaLinha, motivo: "Sem id e sem descrição." }); continue; }
 
     const preco = parseBR(bruto);
     if (!Number.isFinite(preco)) {
@@ -94,7 +142,16 @@ export function lerCsv(texto: string): ResultadoLeitura {
       problemas.push({ linha: numeroDaLinha, motivo: "Preço negativo." });
       continue;
     }
-    precos.push({ id, preco });
+    // Coluna ausente (planilha antiga) ou em branco: o prazo fica como está.
+    const validade = Number(String(col[6] ?? "").trim().replace(",", "."));
+    precos.push({
+      id: id || undefined,
+      preco,
+      categoria,
+      descricao,
+      unidade,
+      ...(Number.isFinite(validade) && validade > 0 ? { validadeDias: validade } : {}),
+    });
   }
 
   return { precos, problemas, emBranco };

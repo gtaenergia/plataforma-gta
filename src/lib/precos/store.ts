@@ -2,19 +2,30 @@ import { getSettingsStore } from "@/lib/settings/store";
 import {
   CATALOGO_PADRAO,
   DATA_CALIBRACAO_PADRAO,
+  gerarIdMaterial,
+  idCanonico,
   indicePorId,
   mesclarCatalogo,
   precisaRevisao,
+  VALIDADE_MAX_DIAS,
+  VALIDADE_MIN_DIAS,
   type MaterialPreco,
+  type PrecoSalvo,
   type TabelaPrecos,
 } from "./catalogo";
 
-/** Chave no store de configurações. Só o preço é salvo — o resto vem do código. */
+/**
+ * Chave no store de configurações.
+ *
+ * Guarda o PREÇO dos itens de fábrica (o resto vem do código) e a definição
+ * INTEIRA dos materiais que a equipe acrescentou pela planilha — esses não
+ * existem em lugar nenhum senão aqui.
+ */
 export const PRECOS_KEY = "precos:materiais";
 
 interface Salvo {
   /** `atualizadoEm` é opcional para ler o que foi salvo antes do carimbo por item. */
-  precos: { id: string; preco: number; atualizadoEm?: string }[];
+  precos: PrecoSalvo[];
   atualizadoEm: string;
   atualizadoPor: string;
 }
@@ -37,8 +48,8 @@ export async function getPrecos(): Promise<TabelaPrecos & { revisaoPendente: boo
     atualizadoPor: salvo?.atualizadoPor ?? "levantamento inicial",
     // Pendente quando QUALQUER item está vencido — o card geral chama para a
     // revisão ampla; o aviso dentro da proposta é que olha só o que ela usa.
-    revisaoPendente: itens.some((i) => precisaRevisao(i.atualizadoEm)),
-    totalPendentes: itens.filter((i) => precisaRevisao(i.atualizadoEm)).length,
+    revisaoPendente: itens.some((i) => precisaRevisao(i)),
+    totalPendentes: itens.filter((i) => precisaRevisao(i)).length,
   };
 }
 
@@ -47,43 +58,112 @@ export async function getIndicePrecos(): Promise<Record<string, number>> {
   return indicePorId((await getPrecos()).itens);
 }
 
+/** Prazo dentro dos limites — vem de planilha digitada à mão. */
+const saneiaValidade = (v: number) =>
+  Math.min(VALIDADE_MAX_DIAS, Math.max(VALIDADE_MIN_DIAS, Math.round(v)));
+
+/** O que entra pela tela ou pela planilha. Sem `id` = material novo. */
+export interface EntradaPreco {
+  id?: string;
+  preco: number;
+  /** Prazo próprio deste preço, em dias. Ausente = não mexe no que já vale. */
+  validadeDias?: number;
+  /** Só nos materiais novos — é a presença da descrição que os identifica. */
+  categoria?: string;
+  descricao?: string;
+  unidade?: string;
+}
+
 /**
  * Grava a revisão. Aceita atualização PARCIAL: só os ids enviados mudam, o
  * resto fica como está — é o que permite a importação de uma planilha
  * preenchida pela metade sem zerar o que não foi mexido.
+ *
+ * Três casos, e a diferença entre eles é o que faz a planilha servir para
+ * CRIAR material, não só para corrigir preço:
+ *
+ * 1. **Id conhecido** (de fábrica ou já criado): muda o preço.
+ * 2. **Sem id, com descrição**: material novo. O id sai da descrição, para
+ *    reimportar a mesma planilha atualizar o item em vez de duplicá-lo.
+ * 3. **Id desconhecido e sem descrição**: ignorado. Sozinho ele seria uma
+ *    linha vazia na lista de todo mundo, e é o que sobra de uma planilha
+ *    antiga cujo item saiu do código.
+ *
+ * Ao gravar, todo id passa por `idCanonico`: o formato antigo, com prefixo de
+ * serviço, se cura sozinho na primeira revisão em vez de conviver para sempre.
  */
 export async function salvarPrecos(
-  novos: { id: string; preco: number }[],
+  entradas: EntradaPreco[],
   usuario: string,
-): Promise<{ atualizados: number; ignorados: string[] }> {
+  /** Ids a remover — só valem para material criado pela equipe. */
+  remover: string[] = [],
+): Promise<{ atualizados: number; criados: number; removidos: number; ignorados: string[] }> {
   const store = getSettingsStore();
   const salvo = await store.get<Salvo>(PRECOS_KEY);
   const herdada = salvo?.atualizadoEm;
-  const atual = new Map(
-    (salvo?.precos ?? []).map((p) => [p.id, { preco: p.preco, atualizadoEm: p.atualizadoEm ?? herdada }]),
+  const atual = new Map<string, PrecoSalvo>(
+    (salvo?.precos ?? []).map((p) => [
+      idCanonico(p.id),
+      { ...p, id: idCanonico(p.id), atualizadoEm: p.atualizadoEm ?? herdada },
+    ]),
   );
   const agora = new Date().toISOString();
-  const validos = new Set(CATALOGO_PADRAO.map((p) => p.id));
+  const deFabrica = new Set(CATALOGO_PADRAO.map((p) => p.id));
 
   const ignorados: string[] = [];
   let atualizados = 0;
-  for (const n of novos) {
-    // Id fora do catálogo entraria como lixo permanente no banco.
-    if (!validos.has(n.id)) { ignorados.push(n.id); continue; }
-    if (!Number.isFinite(n.preco) || n.preco < 0) { ignorados.push(n.id); continue; }
-    // Carimbo por item: revisar o cabo não rejuvenesce o DR.
-    atual.set(n.id, { preco: n.preco, atualizadoEm: agora });
-    atualizados++;
+  let criados = 0;
+
+  for (const e of entradas) {
+    if (!Number.isFinite(e.preco) || e.preco < 0) { ignorados.push(e.id ?? e.descricao ?? "?"); continue; }
+    const id = idCanonico(e.id ?? "");
+    const conhecido = !!id && (deFabrica.has(id) || atual.has(id));
+
+    if (conhecido) {
+      const anterior = atual.get(id);
+      // Carimbo por item: revisar o cabo não rejuvenesce o DR. O prazo só muda
+      // quando vier na entrada — omiti-lo preserva o que já estava definido.
+      atual.set(id, {
+        ...anterior,
+        id,
+        preco: e.preco,
+        atualizadoEm: agora,
+        ...(e.validadeDias != null ? { validadeDias: saneiaValidade(e.validadeDias) } : {}),
+      });
+      atualizados++;
+      continue;
+    }
+
+    const descricao = e.descricao?.trim();
+    if (!descricao) { ignorados.push(e.id ?? "?"); continue; }
+
+    // Id explícito e inédito é respeitado; sem id, deriva-se da descrição.
+    const novoId = id || gerarIdMaterial(descricao, [...deFabrica, ...atual.keys()]);
+    atual.set(novoId, {
+      id: novoId,
+      preco: e.preco,
+      atualizadoEm: agora,
+      ...(e.validadeDias != null ? { validadeDias: saneiaValidade(e.validadeDias) } : {}),
+      categoria: e.categoria?.trim() || "Outros",
+      descricao,
+      unidade: e.unidade?.trim() || "un",
+    });
+    criados++;
+  }
+
+  // Só sai o que a equipe criou. Item de fábrica tem motor dependendo dele:
+  // removê-lo do banco não o tiraria da lista, só devolveria o preço padrão.
+  let removidos = 0;
+  for (const bruto of remover) {
+    const id = idCanonico(bruto);
+    if (deFabrica.has(id)) { ignorados.push(bruto); continue; }
+    if (atual.delete(id)) removidos++;
   }
 
   await store.set(
     PRECOS_KEY,
-    {
-      precos: [...atual.entries()].map(([id, v]) => ({ id, preco: v.preco, atualizadoEm: v.atualizadoEm })),
-      atualizadoEm: agora,
-      atualizadoPor: usuario,
-    } satisfies Salvo,
+    { precos: [...atual.values()], atualizadoEm: agora, atualizadoPor: usuario } satisfies Salvo,
     usuario,
   );
-  return { atualizados, ignorados };
+  return { atualizados, criados, removidos, ignorados };
 }

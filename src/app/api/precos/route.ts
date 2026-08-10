@@ -17,11 +17,28 @@ export async function GET() {
   return NextResponse.json(await getPrecos());
 }
 
-const schema = z.object({
-  precos: z
-    .array(z.object({ id: z.string().min(1), preco: z.coerce.number().min(0) }))
-    .min(1, "Envie ao menos um preço."),
-});
+const schema = z
+  .object({
+    precos: z
+      .array(
+        z.object({
+          id: z.string().min(1).optional(),
+          preco: z.coerce.number().min(0),
+          validadeDias: z.coerce.number().int().positive().max(3650).optional(),
+          // Presentes só ao acrescentar material pela tela.
+          categoria: z.string().trim().max(60).optional(),
+          descricao: z.string().trim().max(200).optional(),
+          unidade: z.string().trim().max(20).optional(),
+        }),
+      )
+      .default([]),
+    /** Ids a remover — só valem para material criado pela equipe. */
+    remover: z.array(z.string().min(1)).default([]),
+  })
+  .refine((b) => b.precos.length > 0 || b.remover.length > 0, {
+    message: "Envie ao menos um preço ou uma remoção.",
+    path: ["precos"],
+  });
 
 export async function PUT(req: Request) {
   const guard = await requireApi();
@@ -41,6 +58,6 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "Dados inválidos.", issues: parsed.error.flatten() }, { status: 422 });
   }
 
-  const r = await salvarPrecos(parsed.data.precos, guard.me.name || guard.me.email);
+  const r = await salvarPrecos(parsed.data.precos, guard.me.name || guard.me.email, parsed.data.remover);
   return NextResponse.json({ ...r, tabela: await getPrecos() });
 }

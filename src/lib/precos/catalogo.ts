@@ -12,19 +12,26 @@
  * Dois serviços consomem esta lista, de formas diferentes:
  *
  * - **Carregador**: o motor monta a lista de materiais sozinho e busca cada
- *   preço por id. O `servico` de cada item diz de que motor ele saiu.
+ *   preço por id.
  * - **Mão de obra**: a pessoa ESCOLHE o material no campo Descrição, e o preço
- *   unitário vem daqui. Ali a lista não é filtrada por `servico` — material
- *   elétrico é o mesmo, quem leva para a obra é que muda. Itens fora da lista
- *   continuam aceitos, avulsos, sem vínculo com o catálogo.
+ *   unitário vem daqui.
+ *
+ * ## Os ids não têm dono
+ *
+ * Eles nasceram como `carregador.cabo.10`, porque o carregador era o único
+ * serviço a consumir a lista. Isso virou mentira assim que a proposta de mão de
+ * obra passou a escolher daqui: um cabo de 10 mm² não é material "de
+ * carregador" — é material elétrico, e vai para qualquer obra. O prefixo dizia
+ * a quem o item pertencia, e a resposta certa é "a ninguém".
+ *
+ * Hoje o id é só o material (`cabo.10`), e `idCanonico` traduz o formato antigo
+ * — sem ela, toda revisão de preço já feita voltaria calada ao padrão de
+ * fábrica no primeiro carregamento.
  */
-
-export type ServicoComPrecos = "carregador";
 
 export interface MaterialPreco {
   /** Chave estável: sobrevive a mudanças de descrição. */
   id: string;
-  servico: ServicoComPrecos;
   categoria: string;
   descricao: string;
   unidade: string;
@@ -35,10 +42,68 @@ export interface MaterialPreco {
    * material que não será usado treina o usuário a ignorar o aviso.
    */
   atualizadoEm: string;
+  /**
+   * Criado pela equipe (pela planilha), e não pelo código.
+   *
+   * Muda duas coisas: ele pode ser removido — item de fábrica não pode, porque
+   * um motor depende dele — e a tela o identifica, para ninguém procurar num
+   * cálculo o material que alguém acrescentou à mão.
+   */
+  personalizado?: boolean;
+  /**
+   * Prazo de validade DESTE preço, em dias. Ausente = usa `DIAS_PARA_REVISAO`.
+   *
+   * Existe porque os materiais não envelhecem no mesmo ritmo: cobre oscila com
+   * a commodity e fica velho em semanas, enquanto uma haste de aterramento
+   * atravessa o ano. Um prazo único obrigava a escolher entre cobrar revisão
+   * do que não mudou (e treinar a equipe a ignorar o aviso) ou deixar passar o
+   * que mudou.
+   */
+  validadeDias?: number;
 }
 
-/** Quanto tempo até a lista pedir revisão. */
+/** Prazo padrão até um preço pedir revisão, quando o item não define o seu. */
 export const DIAS_PARA_REVISAO = 120;
+/** Limites do prazo por item — uma semana a cinco anos. */
+export const VALIDADE_MIN_DIAS = 7;
+export const VALIDADE_MAX_DIAS = 1825;
+
+/**
+ * O id como ele é hoje.
+ *
+ * Os ids de fábrica já foram `carregador.<material>`. Quem revisou um preço
+ * antes da mudança tem o formato antigo gravado no banco, e `mesclarCatalogo`
+ * casa POR ID: sem esta tradução, todas essas revisões deixariam de casar e a
+ * lista voltaria ao padrão de fábrica sem uma linha de aviso.
+ */
+export function idCanonico(id: string): string {
+  return String(id ?? "").trim().replace(/^carregador\./, "");
+}
+
+/**
+ * Id de um material criado pela equipe, derivado da descrição.
+ *
+ * Derivado, e não sorteado, para a planilha ser idempotente: reimportar a mesma
+ * linha atualiza o item em vez de criar um segundo igual. `existentes` evita
+ * que uma descrição nova roube o id de um material que já existe.
+ */
+export function gerarIdMaterial(descricao: string, existentes: Iterable<string> = []): string {
+  const base =
+    String(descricao ?? "")
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "material";
+  const usados = new Set(existentes);
+  if (!usados.has(base)) return base;
+  for (let n = 2; n < 1000; n++) {
+    const tentativa = `${base}-${n}`;
+    if (!usados.has(tentativa)) return tentativa;
+  }
+  return `${base}-${Date.now()}`;
+}
 
 export interface TabelaPrecos {
   itens: MaterialPreco[];
@@ -65,30 +130,30 @@ export const DATA_CALIBRACAO_PADRAO = "2026-07-03T00:00:00.000Z";
  * o usuário salvar tem precedência.
  */
 const cabo = (mm2: number, preco: number): MaterialPreco => ({
-  id: `carregador.cabo.${mm2}`, servico: "carregador", categoria: "Cabeamento",
+  id: `cabo.${mm2}`, categoria: "Cabeamento",
   descricao: `Cabo flexível HEPR ${mm2.toLocaleString("pt-BR")} mm²`, unidade: "m", preco,
   atualizadoEm: DATA_CALIBRACAO_PADRAO,
 });
 const disjuntor = (a: number, preco: number): MaterialPreco => ({
-  id: `carregador.disjuntor.${a}`, servico: "carregador", categoria: "Proteção",
+  id: `disjuntor.${a}`, categoria: "Proteção",
   descricao: `Disjuntor termomagnético ${a} A curva C (bipolar)`, unidade: "un", preco,
   atualizadoEm: DATA_CALIBRACAO_PADRAO,
 });
 const dr = (a: number, preco: number): MaterialPreco => ({
-  id: `carregador.dr.${a}`, servico: "carregador", categoria: "Proteção",
+  id: `dr.${a}`, categoria: "Proteção",
   descricao: `Interruptor DR Tipo A ${a} A / 30 mA (bipolar)`, unidade: "un", preco,
   atualizadoEm: DATA_CALIBRACAO_PADRAO,
 });
 const eletroduto = (bitola: string, chave: string, o: { barra: number; luva: number; curva: number }): MaterialPreco[] => [
-  { id: `carregador.eletroduto.${chave}.barra`, servico: "carregador", categoria: "Infraestrutura",
+  { id: `eletroduto.${chave}.barra`, categoria: "Infraestrutura",
     descricao: `Eletroduto galvanizado pesado ${bitola} (barra 3 m)`, unidade: "barra", preco: o.barra, atualizadoEm: DATA_CALIBRACAO_PADRAO },
-  { id: `carregador.eletroduto.${chave}.luva`, servico: "carregador", categoria: "Infraestrutura",
+  { id: `eletroduto.${chave}.luva`, categoria: "Infraestrutura",
     descricao: `Luva galvanizada ${bitola}`, unidade: "un", preco: o.luva, atualizadoEm: DATA_CALIBRACAO_PADRAO },
-  { id: `carregador.eletroduto.${chave}.curva`, servico: "carregador", categoria: "Infraestrutura",
+  { id: `eletroduto.${chave}.curva`, categoria: "Infraestrutura",
     descricao: `Curva galvanizada ${bitola} 90º`, unidade: "un", preco: o.curva, atualizadoEm: DATA_CALIBRACAO_PADRAO },
 ];
 const avulso = (id: string, categoria: string, descricao: string, unidade: string, preco: number): MaterialPreco =>
-  ({ id: `carregador.${id}`, servico: "carregador", categoria, descricao, unidade, preco, atualizadoEm: DATA_CALIBRACAO_PADRAO });
+  ({ id, categoria, descricao, unidade, preco, atualizadoEm: DATA_CALIBRACAO_PADRAO });
 
 export const CATALOGO_PADRAO: MaterialPreco[] = [
   ...eletroduto('1"', "1", { barra: 45, luva: 5, curva: 15 }),
@@ -131,35 +196,97 @@ export function diasDesde(iso: string): number {
   return Math.floor((Date.now() - t) / 86_400_000);
 }
 
-export function precisaRevisao(atualizadoEm: string): boolean {
-  return diasDesde(atualizadoEm) >= DIAS_PARA_REVISAO;
+/** Prazo efetivo do item, já saneado contra lixo vindo do banco. */
+export function validadeDe(item: { validadeDias?: number }): number {
+  const v = item.validadeDias;
+  if (!Number.isFinite(v) || v == null) return DIAS_PARA_REVISAO;
+  return Math.min(VALIDADE_MAX_DIAS, Math.max(VALIDADE_MIN_DIAS, Math.round(v)));
+}
+
+/**
+ * Recebe o ITEM, e não a data.
+ *
+ * Assinatura escolhida de propósito: com a data solta, cada chamada precisava
+ * lembrar de buscar o prazo do item ao lado — e esquecer não daria erro, só
+ * voltaria calada ao prazo padrão.
+ */
+export function precisaRevisao(item: { atualizadoEm: string; validadeDias?: number }): boolean {
+  return diasDesde(item.atualizadoEm) >= validadeDe(item);
+}
+
+/**
+ * O que o banco guarda. Só o preço, para os itens de fábrica; a definição
+ * inteira, para os que a equipe criou pela planilha.
+ */
+export interface PrecoSalvo {
+  id: string;
+  preco: number;
+  atualizadoEm?: string;
+  /** Prazo próprio deste preço; ausente = o padrão da conta. */
+  validadeDias?: number;
+  /** Presentes só nos itens criados pela equipe — é o que os distingue. */
+  categoria?: string;
+  descricao?: string;
+  unidade?: string;
 }
 
 /**
  * Mescla o que está salvo sobre o padrão, POR ID.
  *
- * O padrão manda na estrutura (descrição, unidade, categoria) e o salvo manda
- * no preço. Assim um item novo no código aparece para todo mundo sem apagar as
- * revisões de preço já feitas, e um item removido do código some da lista em
- * vez de ficar de fantasma.
+ * Duas origens convivem na lista final:
+ *
+ * - **Fábrica**: o código manda na estrutura (descrição, unidade, categoria) e
+ *   o salvo manda no preço. Item novo no código aparece para todo mundo sem
+ *   apagar revisões já feitas; item removido do código some, em vez de ficar
+ *   de fantasma.
+ * - **Da equipe**: id que não existe no código e traz descrição própria. Vem
+ *   inteiro do banco, marcado com `personalizado`.
+ *
+ * Ids salvos passam por `idCanonico` — as revisões feitas quando o id ainda
+ * carregava o prefixo do serviço continuam valendo.
  */
 export function mesclarCatalogo(
-  salvos: { id: string; preco: number; atualizadoEm?: string }[] | null | undefined,
+  salvos: PrecoSalvo[] | null | undefined,
   /** Data de quem foi salvo antes de existir carimbo por item. */
   fallbackData = DATA_CALIBRACAO_PADRAO,
 ): MaterialPreco[] {
-  const porId = new Map((salvos ?? []).map((s) => [s.id, s]));
-  return CATALOGO_PADRAO.map((p) => {
+  const porId = new Map((salvos ?? []).map((s) => [idCanonico(s.id), s]));
+  const deFabrica = new Set(CATALOGO_PADRAO.map((p) => p.id));
+
+  const base = CATALOGO_PADRAO.map((p) => {
     const s = porId.get(p.id);
-    if (!s || !Number.isFinite(s.preco) || s.preco < 0) return p;
-    return { ...p, preco: s.preco, atualizadoEm: s.atualizadoEm ?? fallbackData };
+    // O prazo é do REGISTRO, não do preço: ele vale mesmo quando o preço
+    // salvo é inválido e o item cai de volta no padrão de fábrica.
+    const comPrazo = s?.validadeDias != null ? { ...p, validadeDias: s.validadeDias } : p;
+    if (!s || !Number.isFinite(s.preco) || s.preco < 0) return comPrazo;
+    return { ...comPrazo, preco: s.preco, atualizadoEm: s.atualizadoEm ?? fallbackData };
   });
+
+  const daEquipe = (salvos ?? [])
+    .filter((s) => {
+      const id = idCanonico(s.id);
+      // Sem descrição não há o que mostrar: seria uma linha vazia na lista, e
+      // um id órfão de item que o código já removeu cai exatamente aqui.
+      return id && !deFabrica.has(id) && !!s.descricao?.trim() && Number.isFinite(s.preco) && s.preco >= 0;
+    })
+    .map((s) => ({
+      id: idCanonico(s.id),
+      categoria: s.categoria?.trim() || "Outros",
+      descricao: s.descricao!.trim(),
+      unidade: s.unidade?.trim() || "un",
+      preco: s.preco,
+      atualizadoEm: s.atualizadoEm ?? fallbackData,
+      ...(s.validadeDias != null ? { validadeDias: s.validadeDias } : {}),
+      personalizado: true,
+    }));
+
+  return [...base, ...daEquipe];
 }
 
 /** Os itens (de uma lista de ids) cujo preço passou do prazo de revisão. */
 export function pendentesEntre(itens: MaterialPreco[], ids: string[]): MaterialPreco[] {
   const usados = new Set(ids);
-  return itens.filter((i) => usados.has(i.id) && precisaRevisao(i.atualizadoEm));
+  return itens.filter((i) => usados.has(i.id) && precisaRevisao(i));
 }
 
 /** Índice id → preço, que é o formato que os motores consomem. */
