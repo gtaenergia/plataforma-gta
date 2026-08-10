@@ -6,13 +6,11 @@ const SEP_TESTE = ";";
 import {
   CATALOGO_PADRAO,
   DIAS_PARA_REVISAO,
-  VALIDADE_MAX_DIAS,
-  VALIDADE_MIN_DIAS,
+  diasRestantes,
   indicePorId,
   mesclarCatalogo,
   pendentesEntre,
   precisaRevisao,
-  validadeDe,
 } from "@/lib/precos/catalogo";
 import { dimensionarEV, gerarBomEV } from "@/services/carregador/engine";
 
@@ -72,57 +70,77 @@ describe("catálogo de preços", () => {
     }
   });
 
-  it("a revisão vence pela idade", () => {
+  /**
+   * O prazo é o MESMO para todo material; o relógio é que é individual.
+   *
+   * Cada item conta a partir da própria revisão, então atualizar um reinicia
+   * só o dele — é o que mantém o preço justo sem obrigar a revisar a lista
+   * inteira de uma vez.
+   */
+  describe("validade", () => {
     const dia = 86_400_000;
-    const ha = (d: number) => ({ atualizadoEm: new Date(Date.now() - d * dia).toISOString() });
-    expect(precisaRevisao(ha(DIAS_PARA_REVISAO + 1))).toBe(true);
-    expect(precisaRevisao(ha(0))).toBe(false);
+    const ha = (d: number) => new Date(Date.now() - d * dia).toISOString();
+
+    it("são três meses para todos", () => {
+      expect(DIAS_PARA_REVISAO).toBe(90);
+    });
+
+    it("vence pela idade do próprio preço", () => {
+      expect(precisaRevisao(ha(DIAS_PARA_REVISAO + 1))).toBe(true);
+      expect(precisaRevisao(ha(DIAS_PARA_REVISAO - 1))).toBe(false);
+      expect(precisaRevisao(ha(0))).toBe(false);
+    });
+
+    it("a tela mostra quanto FALTA, não quanto passou", () => {
+      expect(diasRestantes(ha(0))).toBe(DIAS_PARA_REVISAO);
+      expect(diasRestantes(ha(30))).toBe(DIAS_PARA_REVISAO - 30);
+    });
+
+    it("vencido devolve negativo, que é o tamanho do atraso", () => {
+      expect(diasRestantes(ha(DIAS_PARA_REVISAO + 12))).toBe(-12);
+    });
+
+    it("data ilegível conta como vencida, nunca como nova", () => {
+      expect(precisaRevisao("não é data")).toBe(true);
+      expect(diasRestantes("não é data")).toBeLessThan(0);
+    });
+
+    it("revisar um material reinicia só o relógio dele", () => {
+      const [revisado, esquecido] = CATALOGO_PADRAO;
+      const itens = mesclarCatalogo([
+        { id: revisado.id, preco: 10, atualizadoEm: ha(0) },
+        { id: esquecido.id, preco: 20, atualizadoEm: ha(DIAS_PARA_REVISAO + 30) },
+      ]);
+      const de = (id: string) => itens.find((i) => i.id === id)!.atualizadoEm;
+      expect(precisaRevisao(de(revisado.id))).toBe(false);
+      expect(precisaRevisao(de(esquecido.id))).toBe(true);
+    });
   });
 
   /**
-   * Prazo por item.
+   * Excluir vale para QUALQUER material — todos são tratados igual.
    *
-   * Os materiais não envelhecem no mesmo ritmo: cobre acompanha a commodity e
-   * fica velho em semanas; haste de aterramento atravessa o ano. Com prazo
-   * único era preciso escolher entre cobrar revisão do que não mudou — e
-   * treinar a equipe a ignorar o aviso — ou deixar passar o que mudou.
+   * Para os que o código define, apagar o registro não basta: a definição
+   * segue no `CATALOGO_PADRAO` e o item voltaria na leitura seguinte. Daí a
+   * lápide.
    */
-  describe("prazo por item", () => {
-    const dia = 86_400_000;
-    const ha = (d: number, validadeDias?: number) => ({
-      atualizadoEm: new Date(Date.now() - d * dia).toISOString(),
-      ...(validadeDias != null ? { validadeDias } : {}),
-    });
-
-    it("prazo curto vence antes do padrão", () => {
-      expect(precisaRevisao(ha(45, 30))).toBe(true);
-      expect(precisaRevisao(ha(45))).toBe(false);
-    });
-
-    it("prazo longo sobrevive ao padrão", () => {
-      expect(precisaRevisao(ha(150, 365))).toBe(false);
-      expect(precisaRevisao(ha(150))).toBe(true);
-    });
-
-    it("sem prazo próprio, vale o da conta", () => {
-      expect(validadeDe({})).toBe(DIAS_PARA_REVISAO);
-    });
-
-    it("prazo fora dos limites é contido, não aceito às cegas", () => {
-      // Vem de planilha digitada à mão: 0 dia venceria tudo todo dia, e um
-      // número absurdo desligaria o aviso para sempre.
-      expect(validadeDe({ validadeDias: 0 })).toBe(VALIDADE_MIN_DIAS);
-      expect(validadeDe({ validadeDias: -10 })).toBe(VALIDADE_MIN_DIAS);
-      expect(validadeDe({ validadeDias: 999_999 })).toBe(VALIDADE_MAX_DIAS);
-      expect(validadeDe({ validadeDias: Number.NaN })).toBe(DIAS_PARA_REVISAO);
-    });
-
-    it("o prazo salvo sobrevive à mescla, mesmo com o preço no padrão", () => {
+  describe("exclusão", () => {
+    it("material do código sai da lista quando enterrado", () => {
       const alvo = CATALOGO_PADRAO[0];
-      const item = mesclarCatalogo([{ id: alvo.id, preco: Number.NaN, validadeDias: 30 }])
-        .find((i) => i.id === alvo.id)!;
-      expect(item.preco).toBe(alvo.preco);
-      expect(item.validadeDias).toBe(30);
+      const r = mesclarCatalogo([], undefined, [alvo.id]);
+      expect(r.some((i) => i.id === alvo.id)).toBe(false);
+      expect(r).toHaveLength(CATALOGO_PADRAO.length - 1);
+    });
+
+    it("a lápide entende o id no formato antigo", () => {
+      const r = mesclarCatalogo([], undefined, ["carregador.cabo.10"]);
+      expect(r.some((i) => i.id === "cabo.10")).toBe(false);
+    });
+
+    it("material da equipe também sai", () => {
+      const salvo = [{ id: "luva-de-raspa", preco: 12, descricao: "Luva de raspa", categoria: "EPI", unidade: "par" }];
+      expect(mesclarCatalogo(salvo).some((i) => i.id === "luva-de-raspa")).toBe(true);
+      expect(mesclarCatalogo(salvo, undefined, ["luva-de-raspa"]).some((i) => i.id === "luva-de-raspa")).toBe(false);
     });
   });
 });

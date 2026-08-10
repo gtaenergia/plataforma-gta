@@ -319,7 +319,7 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor, podeConfigurar }:
      velho e a conta pareceria certa, porque a fórmula está certa. */
   const precosVencidos = useMemo(() => {
     const ids = new Set(materiais.map((m) => m.precoId).filter(Boolean));
-    return precos.filter((p) => ids.has(p.id) && precisaRevisao(p));
+    return precos.filter((p) => ids.has(p.id) && precisaRevisao(p.atualizadoEm));
   }, [materiais, precos]);
 
   /** Preço sugerido: markup sobre a SOMA das duas pernas — a conta da calculadora. */

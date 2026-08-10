@@ -42,31 +42,17 @@ export interface MaterialPreco {
    * material que não será usado treina o usuário a ignorar o aviso.
    */
   atualizadoEm: string;
-  /**
-   * Criado pela equipe (pela planilha), e não pelo código.
-   *
-   * Muda duas coisas: ele pode ser removido — item de fábrica não pode, porque
-   * um motor depende dele — e a tela o identifica, para ninguém procurar num
-   * cálculo o material que alguém acrescentou à mão.
-   */
-  personalizado?: boolean;
-  /**
-   * Prazo de validade DESTE preço, em dias. Ausente = usa `DIAS_PARA_REVISAO`.
-   *
-   * Existe porque os materiais não envelhecem no mesmo ritmo: cobre oscila com
-   * a commodity e fica velho em semanas, enquanto uma haste de aterramento
-   * atravessa o ano. Um prazo único obrigava a escolher entre cobrar revisão
-   * do que não mudou (e treinar a equipe a ignorar o aviso) ou deixar passar o
-   * que mudou.
-   */
-  validadeDias?: number;
 }
 
-/** Prazo padrão até um preço pedir revisão, quando o item não define o seu. */
-export const DIAS_PARA_REVISAO = 120;
-/** Limites do prazo por item — uma semana a cinco anos. */
-export const VALIDADE_MIN_DIAS = 7;
-export const VALIDADE_MAX_DIAS = 1825;
+/**
+ * Três meses. O prazo é o MESMO para todo material.
+ *
+ * O que é individual é o relógio, não o prazo: cada item conta a partir da
+ * própria revisão, então atualizar ou acrescentar um material reinicia só o
+ * dele. É o que mantém o preço justo sem obrigar a revisar a lista inteira
+ * de uma vez.
+ */
+export const DIAS_PARA_REVISAO = 90;
 
 /**
  * O id como ele é hoje.
@@ -196,35 +182,31 @@ export function diasDesde(iso: string): number {
   return Math.floor((Date.now() - t) / 86_400_000);
 }
 
-/** Prazo efetivo do item, já saneado contra lixo vindo do banco. */
-export function validadeDe(item: { validadeDias?: number }): number {
-  const v = item.validadeDias;
-  if (!Number.isFinite(v) || v == null) return DIAS_PARA_REVISAO;
-  return Math.min(VALIDADE_MAX_DIAS, Math.max(VALIDADE_MIN_DIAS, Math.round(v)));
-}
-
 /**
- * Recebe o ITEM, e não a data.
+ * Quantos dias FALTAM até este preço vencer. Negativo = já venceu, e o quanto.
  *
- * Assinatura escolhida de propósito: com a data solta, cada chamada precisava
- * lembrar de buscar o prazo do item ao lado — e esquecer não daria erro, só
- * voltaria calada ao prazo padrão.
+ * É este número que a tela mostra: "revisado há 40 dias" obriga cada um a
+ * fazer a subtração de cabeça para saber se ainda dá tempo.
  */
-export function precisaRevisao(item: { atualizadoEm: string; validadeDias?: number }): boolean {
-  return diasDesde(item.atualizadoEm) >= validadeDe(item);
+export function diasRestantes(atualizadoEm: string): number {
+  const passados = diasDesde(atualizadoEm);
+  if (!Number.isFinite(passados)) return -DIAS_PARA_REVISAO;
+  return DIAS_PARA_REVISAO - passados;
+}
+
+export function precisaRevisao(atualizadoEm: string): boolean {
+  return diasDesde(atualizadoEm) >= DIAS_PARA_REVISAO;
 }
 
 /**
- * O que o banco guarda. Só o preço, para os itens de fábrica; a definição
- * inteira, para os que a equipe criou pela planilha.
+ * O que o banco guarda. Só o preço, para os itens que o código define; a
+ * definição inteira, para os que a equipe acrescentou pela planilha.
  */
 export interface PrecoSalvo {
   id: string;
   preco: number;
   atualizadoEm?: string;
-  /** Prazo próprio deste preço; ausente = o padrão da conta. */
-  validadeDias?: number;
-  /** Presentes só nos itens criados pela equipe — é o que os distingue. */
+  /** Presentes só nos itens que a equipe acrescentou — é o que os distingue. */
   categoria?: string;
   descricao?: string;
   unidade?: string;
@@ -233,14 +215,18 @@ export interface PrecoSalvo {
 /**
  * Mescla o que está salvo sobre o padrão, POR ID.
  *
- * Duas origens convivem na lista final:
+ * Duas origens convivem na lista final, e a diferença entre elas é de onde a
+ * DEFINIÇÃO vem — não de quanto valem na tela, onde todo material é igual:
  *
- * - **Fábrica**: o código manda na estrutura (descrição, unidade, categoria) e
- *   o salvo manda no preço. Item novo no código aparece para todo mundo sem
- *   apagar revisões já feitas; item removido do código some, em vez de ficar
- *   de fantasma.
+ * - **Do código**: a estrutura (descrição, unidade, categoria) vem do
+ *   `CATALOGO_PADRAO` e o salvo manda no preço. Item novo no código aparece
+ *   para todo mundo sem apagar revisões já feitas.
  * - **Da equipe**: id que não existe no código e traz descrição própria. Vem
- *   inteiro do banco, marcado com `personalizado`.
+ *   inteiro do banco.
+ *
+ * `removidos` é a LÁPIDE do que foi excluído. Ela é necessária só para os
+ * itens do código: apagar o registro não bastaria, porque a definição continua
+ * no `CATALOGO_PADRAO` e ele voltaria na leitura seguinte.
  *
  * Ids salvos passam por `idCanonico` — as revisões feitas quando o id ainda
  * carregava o prefixo do serviço continuam valendo.
@@ -249,17 +235,16 @@ export function mesclarCatalogo(
   salvos: PrecoSalvo[] | null | undefined,
   /** Data de quem foi salvo antes de existir carimbo por item. */
   fallbackData = DATA_CALIBRACAO_PADRAO,
+  removidos: string[] = [],
 ): MaterialPreco[] {
   const porId = new Map((salvos ?? []).map((s) => [idCanonico(s.id), s]));
   const deFabrica = new Set(CATALOGO_PADRAO.map((p) => p.id));
+  const enterrados = new Set(removidos.map(idCanonico));
 
-  const base = CATALOGO_PADRAO.map((p) => {
+  const base = CATALOGO_PADRAO.filter((p) => !enterrados.has(p.id)).map((p) => {
     const s = porId.get(p.id);
-    // O prazo é do REGISTRO, não do preço: ele vale mesmo quando o preço
-    // salvo é inválido e o item cai de volta no padrão de fábrica.
-    const comPrazo = s?.validadeDias != null ? { ...p, validadeDias: s.validadeDias } : p;
-    if (!s || !Number.isFinite(s.preco) || s.preco < 0) return comPrazo;
-    return { ...comPrazo, preco: s.preco, atualizadoEm: s.atualizadoEm ?? fallbackData };
+    if (!s || !Number.isFinite(s.preco) || s.preco < 0) return p;
+    return { ...p, preco: s.preco, atualizadoEm: s.atualizadoEm ?? fallbackData };
   });
 
   const daEquipe = (salvos ?? [])
@@ -267,7 +252,8 @@ export function mesclarCatalogo(
       const id = idCanonico(s.id);
       // Sem descrição não há o que mostrar: seria uma linha vazia na lista, e
       // um id órfão de item que o código já removeu cai exatamente aqui.
-      return id && !deFabrica.has(id) && !!s.descricao?.trim() && Number.isFinite(s.preco) && s.preco >= 0;
+      return id && !deFabrica.has(id) && !enterrados.has(id)
+        && !!s.descricao?.trim() && Number.isFinite(s.preco) && s.preco >= 0;
     })
     .map((s) => ({
       id: idCanonico(s.id),
@@ -276,8 +262,6 @@ export function mesclarCatalogo(
       unidade: s.unidade?.trim() || "un",
       preco: s.preco,
       atualizadoEm: s.atualizadoEm ?? fallbackData,
-      ...(s.validadeDias != null ? { validadeDias: s.validadeDias } : {}),
-      personalizado: true,
     }));
 
   return [...base, ...daEquipe];
@@ -286,7 +270,7 @@ export function mesclarCatalogo(
 /** Os itens (de uma lista de ids) cujo preço passou do prazo de revisão. */
 export function pendentesEntre(itens: MaterialPreco[], ids: string[]): MaterialPreco[] {
   const usados = new Set(ids);
-  return itens.filter((i) => usados.has(i.id) && precisaRevisao(i));
+  return itens.filter((i) => usados.has(i.id) && precisaRevisao(i.atualizadoEm));
 }
 
 /** Índice id → preço, que é o formato que os motores consomem. */

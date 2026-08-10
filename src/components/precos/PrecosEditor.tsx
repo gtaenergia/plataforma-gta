@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { useAvisoNaoSalvo } from "@/components/useAvisoNaoSalvo";
 import { Alert, Loading, SectionCard } from "@/components/ui";
-import { DIAS_PARA_REVISAO, type MaterialPreco } from "@/lib/precos/catalogo";
+import { DIAS_PARA_REVISAO, diasRestantes, type MaterialPreco } from "@/lib/precos/catalogo";
 
 /**
  * Revisão dos preços de materiais.
@@ -13,6 +13,24 @@ import { DIAS_PARA_REVISAO, type MaterialPreco } from "@/lib/precos/catalogo";
  * são elas que amarram o item ao cálculo. Deixar a descrição livre criaria uma
  * lista bonita e desconectada do que a proposta realmente usa.
  */
+
+/**
+ * Quanto falta para este preço vencer.
+ *
+ * Vencido aparece em vermelho com o atraso — "há 12 dias" é mais acionável do
+ * que um "vencido" sem tamanho, porque diz se é um esquecimento ou um abandono.
+ */
+function Restam({ dias }: { dias: number }) {
+  if (dias < 0) {
+    return <span className="text-red-600 dark:text-red-400">vencido há {Math.abs(dias)}</span>;
+  }
+  const perto = dias <= 15;
+  return (
+    <span className={perto ? "text-amber-600 dark:text-amber-400" : "text-slate-600 dark:text-slate-400"}>
+      {dias}
+    </span>
+  );
+}
 
 const nf = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const parseBR = (s: string) => {
@@ -31,8 +49,6 @@ interface Tabela {
 export function PrecosEditor({ podeEditar }: { podeEditar: boolean }) {
   const [tabela, setTabela] = useState<Tabela | null>(null);
   const [rascunho, setRascunho] = useState<Record<string, string>>({});
-  /** Prazo digitado por item. Vazio = herda o padrão da conta. */
-  const [validades, setValidades] = useState<Record<string, string>>({});
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -46,10 +62,6 @@ export function PrecosEditor({ podeEditar }: { podeEditar: boolean }) {
   function aplicar(t: Tabela) {
     setTabela(t);
     setRascunho(Object.fromEntries(t.itens.map((i) => [i.id, nf(i.preco)])));
-    // Só o prazo EXPLÍCITO aparece no campo: em branco significa "o padrão da
-    // conta", e preencher com 120 faria o item passar a ter prazo próprio de
-    // 120 — que deixaria de acompanhar uma futura mudança do padrão.
-    setValidades(Object.fromEntries(t.itens.map((i) => [i.id, i.validadeDias != null ? String(i.validadeDias) : ""])));
   }
 
   useEffect(() => {
@@ -64,32 +76,13 @@ export function PrecosEditor({ podeEditar }: { podeEditar: boolean }) {
       .finally(() => setCarregando(false));
   }, []);
 
-  /**
-   * Só o que mudou vai para o servidor.
-   *
-   * Preço OU prazo: mexer só no prazo também precisa poder ser salvo, e o
-   * preço vai junto porque é ele que a rota exige — reenviar o mesmo valor não
-   * muda nada além do carimbo.
-   */
+  /** Só o que mudou vai para o servidor. */
   const alterados = useMemo(() => {
     if (!tabela) return [];
     return tabela.itens
-      .map((i) => {
-        const preco = parseBR(rascunho[i.id] ?? "");
-        const bruto = (validades[i.id] ?? "").trim();
-        const validadeDias = bruto === "" ? undefined : Number(bruto);
-        const precoMudou = Number.isFinite(preco) && preco >= 0 && Math.abs(preco - i.preco) > 0.001;
-        const prazoMudou =
-          (i.validadeDias ?? undefined) !== (Number.isFinite(validadeDias) ? validadeDias : undefined);
-        if (!precoMudou && !prazoMudou) return null;
-        return {
-          id: i.id,
-          preco: precoMudou ? preco : i.preco,
-          ...(validadeDias != null && Number.isFinite(validadeDias) ? { validadeDias } : {}),
-        };
-      })
-      .filter((x): x is { id: string; preco: number; validadeDias?: number } => x !== null);
-  }, [tabela, rascunho, validades]);
+      .map((i) => ({ id: i.id, preco: parseBR(rascunho[i.id] ?? "") }))
+      .filter((x, idx) => Number.isFinite(x.preco) && x.preco >= 0 && Math.abs(x.preco - tabela.itens[idx].preco) > 0.001);
+  }, [tabela, rascunho]);
 
   const invalidos = useMemo(
     () => Object.entries(rascunho).filter(([, v]) => v.trim() !== "" && !Number.isFinite(parseBR(v))).map(([id]) => id),
@@ -132,7 +125,7 @@ export function PrecosEditor({ podeEditar }: { podeEditar: boolean }) {
    * que valia no dia.
    */
   async function remover(id: string, descricao: string) {
-    if (!window.confirm(`Remover “${descricao}” da lista de materiais?\n\nAs propostas já geradas não mudam. O que se perde é a opção nas próximas.`)) {
+    if (!window.confirm(`Remover “${descricao}” da lista de materiais?\n\nEle sai da lista de toda a conta. As propostas já geradas não mudam — elas guardam o preço do dia. Para trazê-lo de volta, acrescente-o outra vez pela planilha.`)) {
       return;
     }
     setSalvando(true);
@@ -238,7 +231,7 @@ export function PrecosEditor({ podeEditar }: { podeEditar: boolean }) {
 
       <SectionCard
         title={`Materiais (${tabela.itens.length})`}
-        subtitle="Nos materiais de fábrica só o preço é editável — descrição e unidade vêm do cálculo e não podem divergir dele. Os acrescentados pela planilha podem ser removidos."
+        subtitle={`Só o preço é editável aqui — descrição e unidade vêm da planilha. Cada material vale ${DIAS_PARA_REVISAO} dias a partir da própria revisão: atualizar o preço de um reinicia a contagem só dele.`}
         actions={
           podeEditar ? (
             <button type="button" className="btn-primary" onClick={salvar} disabled={salvando || alterados.length === 0 || invalidos.length > 0}>
@@ -266,7 +259,7 @@ export function PrecosEditor({ podeEditar }: { podeEditar: boolean }) {
                 <th className="hidden sm:table-cell">Categoria</th>
                 <th>Un.</th>
                 <th className="text-right">Preço (R$)</th>
-                <th className="text-right whitespace-nowrap">Validade (dias)</th>
+                <th className="text-right whitespace-nowrap">Vence em (dias)</th>
                 {podeEditar && <th className="w-10" aria-label="Ações" />}
               </tr>
             </thead>
@@ -278,10 +271,6 @@ export function PrecosEditor({ podeEditar }: { podeEditar: boolean }) {
                     <td>
                       <span className="text-gta-navy dark:text-slate-100">{i.descricao}</span>
                       {mudou && <span className="ml-2 badge badge-amber">alterado</span>}
-                      {/* Sem esta marca, ninguém distingue o material que um
-                          motor calcula do que alguém acrescentou pela planilha
-                          — e só o segundo pode ser removido. */}
-                      {i.personalizado && <span className="ml-2 badge badge-slate">acrescentado</span>}
                     </td>
                     <td className="hidden sm:table-cell text-slate-600 dark:text-slate-400">{i.categoria}</td>
                     <td className="text-slate-600 dark:text-slate-400">{i.unidade}</td>
@@ -295,34 +284,22 @@ export function PrecosEditor({ podeEditar }: { podeEditar: boolean }) {
                         onChange={(e) => setRascunho((r) => ({ ...r, [i.id]: e.target.value }))}
                       />
                     </td>
-                    {/* O prazo é por item porque cobre e haste de aterramento
-                        não envelhecem no mesmo ritmo. Em branco = o padrão. */}
-                    <td className="text-right">
-                      <input
-                        className="field-input w-20 text-right tabular-nums"
-                        inputMode="numeric"
-                        placeholder={String(DIAS_PARA_REVISAO)}
-                        aria-label={`Validade em dias de ${i.descricao}`}
-                        value={validades[i.id] ?? ""}
-                        disabled={!podeEditar}
-                        onChange={(e) => setValidades((v) => ({ ...v, [i.id]: e.target.value }))}
-                      />
+                    {/* Quanto FALTA, não quanto passou: "revisado há 40 dias"
+                        obriga cada um a fazer a subtração de cabeça. */}
+                    <td className="text-right tabular-nums">
+                      <Restam dias={diasRestantes(i.atualizadoEm)} />
                     </td>
                     {podeEditar && (
                       <td className="text-right">
-                        {/* Item de fábrica não sai: um motor depende dele, e
-                            removê-lo do banco só devolveria o preço padrão. */}
-                        {i.personalizado && (
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            aria-label={`Remover ${i.descricao}`}
-                            disabled={salvando}
-                            onClick={() => remover(i.id, i.descricao)}
-                          >
-                            <Trash2 className="h-4 w-4" aria-hidden />
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          aria-label={`Remover ${i.descricao}`}
+                          disabled={salvando}
+                          onClick={() => remover(i.id, i.descricao)}
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden />
+                        </button>
                       </td>
                     )}
                   </tr>

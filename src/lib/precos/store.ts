@@ -7,8 +7,6 @@ import {
   indicePorId,
   mesclarCatalogo,
   precisaRevisao,
-  VALIDADE_MAX_DIAS,
-  VALIDADE_MIN_DIAS,
   type MaterialPreco,
   type PrecoSalvo,
   type TabelaPrecos,
@@ -26,6 +24,14 @@ export const PRECOS_KEY = "precos:materiais";
 interface Salvo {
   /** `atualizadoEm` é opcional para ler o que foi salvo antes do carimbo por item. */
   precos: PrecoSalvo[];
+  /**
+   * Lápides dos materiais excluídos.
+   *
+   * Necessária só para os que o código define: apagar o registro não bastaria,
+   * porque a definição segue no `CATALOGO_PADRAO` e o item voltaria na leitura
+   * seguinte. Acrescentar o mesmo id de novo desfaz a lápide.
+   */
+  removidos?: string[];
   atualizadoEm: string;
   atualizadoPor: string;
 }
@@ -41,15 +47,15 @@ interface Salvo {
 export async function getPrecos(): Promise<TabelaPrecos & { revisaoPendente: boolean; totalPendentes: number }> {
   const salvo = await getSettingsStore().get<Salvo>(PRECOS_KEY);
   const atualizadoEm = salvo?.atualizadoEm ?? DATA_CALIBRACAO_PADRAO;
-  const itens = mesclarCatalogo(salvo?.precos, atualizadoEm);
+  const itens = mesclarCatalogo(salvo?.precos, atualizadoEm, salvo?.removidos ?? []);
   return {
     itens,
     atualizadoEm,
     atualizadoPor: salvo?.atualizadoPor ?? "levantamento inicial",
     // Pendente quando QUALQUER item está vencido — o card geral chama para a
     // revisão ampla; o aviso dentro da proposta é que olha só o que ela usa.
-    revisaoPendente: itens.some((i) => precisaRevisao(i)),
-    totalPendentes: itens.filter((i) => precisaRevisao(i)).length,
+    revisaoPendente: itens.some((i) => precisaRevisao(i.atualizadoEm)),
+    totalPendentes: itens.filter((i) => precisaRevisao(i.atualizadoEm)).length,
   };
 }
 
@@ -58,16 +64,10 @@ export async function getIndicePrecos(): Promise<Record<string, number>> {
   return indicePorId((await getPrecos()).itens);
 }
 
-/** Prazo dentro dos limites — vem de planilha digitada à mão. */
-const saneiaValidade = (v: number) =>
-  Math.min(VALIDADE_MAX_DIAS, Math.max(VALIDADE_MIN_DIAS, Math.round(v)));
-
 /** O que entra pela tela ou pela planilha. Sem `id` = material novo. */
 export interface EntradaPreco {
   id?: string;
   preco: number;
-  /** Prazo próprio deste preço, em dias. Ausente = não mexe no que já vale. */
-  validadeDias?: number;
   /** Só nos materiais novos — é a presença da descrição que os identifica. */
   categoria?: string;
   descricao?: string;
@@ -95,7 +95,7 @@ export interface EntradaPreco {
 export async function salvarPrecos(
   entradas: EntradaPreco[],
   usuario: string,
-  /** Ids a remover — só valem para material criado pela equipe. */
+  /** Ids a remover. Vale para QUALQUER material — todos são tratados igual. */
   remover: string[] = [],
 ): Promise<{ atualizados: number; criados: number; removidos: number; ignorados: string[] }> {
   const store = getSettingsStore();
@@ -107,6 +107,7 @@ export async function salvarPrecos(
       { ...p, id: idCanonico(p.id), atualizadoEm: p.atualizadoEm ?? herdada },
     ]),
   );
+  const enterrados = new Set((salvo?.removidos ?? []).map(idCanonico));
   const agora = new Date().toISOString();
   const deFabrica = new Set(CATALOGO_PADRAO.map((p) => p.id));
 
@@ -121,15 +122,11 @@ export async function salvarPrecos(
 
     if (conhecido) {
       const anterior = atual.get(id);
-      // Carimbo por item: revisar o cabo não rejuvenesce o DR. O prazo só muda
-      // quando vier na entrada — omiti-lo preserva o que já estava definido.
-      atual.set(id, {
-        ...anterior,
-        id,
-        preco: e.preco,
-        atualizadoEm: agora,
-        ...(e.validadeDias != null ? { validadeDias: saneiaValidade(e.validadeDias) } : {}),
-      });
+      // Carimbo por item: revisar o cabo não rejuvenesce o DR — cada material
+      // reinicia o próprio prazo de 3 meses ao ser atualizado.
+      atual.set(id, { ...anterior, id, preco: e.preco, atualizadoEm: agora });
+      // Gravar de novo um material excluído o traz de volta.
+      enterrados.delete(id);
       atualizados++;
       continue;
     }
@@ -143,26 +140,46 @@ export async function salvarPrecos(
       id: novoId,
       preco: e.preco,
       atualizadoEm: agora,
-      ...(e.validadeDias != null ? { validadeDias: saneiaValidade(e.validadeDias) } : {}),
       categoria: e.categoria?.trim() || "Outros",
       descricao,
       unidade: e.unidade?.trim() || "un",
     });
+    enterrados.delete(novoId);
     criados++;
   }
 
-  // Só sai o que a equipe criou. Item de fábrica tem motor dependendo dele:
-  // removê-lo do banco não o tiraria da lista, só devolveria o preço padrão.
+  /*
+   * Qualquer material sai — os do código e os da equipe. Para os do código o
+   * registro não basta: a definição segue no `CATALOGO_PADRAO`, então vai uma
+   * lápide junto, senão o item voltaria na leitura seguinte.
+   *
+   * Excluir da lista não quebra o cálculo do carregador: o motor tem a própria
+   * tabela de reserva (`PRECOS_BASE`) e cai nela quando o id some. O que se
+   * perde é o material aparecer para revisão de preço.
+   */
   let removidos = 0;
   for (const bruto of remover) {
     const id = idCanonico(bruto);
-    if (deFabrica.has(id)) { ignorados.push(bruto); continue; }
-    if (atual.delete(id)) removidos++;
+    if (!id) { ignorados.push(bruto); continue; }
+    const existia = atual.delete(id);
+    if (deFabrica.has(id)) {
+      enterrados.add(id);
+      removidos++;
+    } else if (existia) {
+      removidos++;
+    } else {
+      ignorados.push(bruto);
+    }
   }
 
   await store.set(
     PRECOS_KEY,
-    { precos: [...atual.values()], atualizadoEm: agora, atualizadoPor: usuario } satisfies Salvo,
+    {
+      precos: [...atual.values()],
+      removidos: [...enterrados],
+      atualizadoEm: agora,
+      atualizadoPor: usuario,
+    } satisfies Salvo,
     usuario,
   );
   return { atualizados, criados, removidos, ignorados };

@@ -1,4 +1,4 @@
-import { validadeDe, type MaterialPreco } from "./catalogo";
+import { diasRestantes, type MaterialPreco } from "./catalogo";
 
 /**
  * Planilha de materiais — ida e volta.
@@ -27,15 +27,17 @@ const escapar = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 const brl = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /**
- * VALIDADE_DIAS entra no FIM de propósito: uma planilha baixada antes desta
- * coluna existir continua importando certo, porque as posições anteriores não
- * se mexeram. Coluna nova no meio inutilizaria todo arquivo já em circulação.
+ * `dias_restantes` é INFORMATIVO, como `preco_atual`: diz quanto falta para
+ * aquele preço vencer, e é ignorado na volta. O prazo é o mesmo para todo
+ * material (3 meses) e não se digita — o que reinicia a contagem é revisar o
+ * preço. A coluna fica no FIM para não deslocar as anteriores: planilha
+ * baixada antes dela continua importando certo.
  */
-export const CABECALHO = ["id", "categoria", "descricao", "unidade", "preco_atual", "PRECO_NOVO", "VALIDADE_DIAS"];
+export const CABECALHO = ["id", "categoria", "descricao", "unidade", "preco_atual", "PRECO_NOVO", "dias_restantes"];
 
 export function gerarCsv(itens: MaterialPreco[]): string {
   const linhas = itens.map((i) =>
-    [i.id, i.categoria, i.descricao, i.unidade, brl(i.preco), "", String(validadeDe(i))]
+    [i.id, i.categoria, i.descricao, i.unidade, brl(i.preco), "", String(diasRestantes(i.atualizadoEm))]
       .map(escapar)
       .join(SEP),
   );
@@ -55,8 +57,6 @@ export interface LinhaPlanilha {
   categoria?: string;
   descricao?: string;
   unidade?: string;
-  /** Prazo próprio; ausente na planilha = não mexe no que já vale. */
-  validadeDias?: number;
 }
 
 export interface ResultadoLeitura {
@@ -142,16 +142,9 @@ export function lerCsv(texto: string): ResultadoLeitura {
       problemas.push({ linha: numeroDaLinha, motivo: "Preço negativo." });
       continue;
     }
-    // Coluna ausente (planilha antiga) ou em branco: o prazo fica como está.
-    const validade = Number(String(col[6] ?? "").trim().replace(",", "."));
-    precos.push({
-      id: id || undefined,
-      preco,
-      categoria,
-      descricao,
-      unidade,
-      ...(Number.isFinite(validade) && validade > 0 ? { validadeDias: validade } : {}),
-    });
+    // `dias_restantes` (col[6]) é informativo e não volta: o prazo é o mesmo
+    // para todo material, e quem reinicia a contagem é a revisão do preço.
+    precos.push({ id: id || undefined, preco, categoria, descricao, unidade });
   }
 
   return { precos, problemas, emBranco };
