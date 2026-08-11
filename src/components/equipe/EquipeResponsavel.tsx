@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Alert, Badge, Kpi, KpiGrid, Loading } from "@/components/ui";
 import { Campo } from "@/components/Campo";
+import { Combobox } from "@/components/Combobox";
 import { comporProposta, equipeFormaPreco } from "@/lib/custo-equipe/composicao";
 import { lerHoras, sugerirCustoInterno } from "@/lib/custo-equipe/sugestao";
 import { tipoSugeridoDoServico, type Escopo } from "@/lib/custo-equipe/servico-demanda";
@@ -43,7 +44,22 @@ import type { LinhaEquipe } from "@/lib/mao-de-obra/types";
 /** O que a proposta guarda para reabrir igual. */
 export interface EquipeSalva {
   tipoId: string;
+  /**
+   * Tipo escrito à mão, válido SÓ nesta proposta.
+   *
+   * Trabalho que não tem equivalente no catálogo é rotina — e antes disso
+   * existir a tela dizia "não há tipo equivalente" e parava ali, deixando a
+   * pessoa sem saída a não ser escolher um tipo errado. O avulso não entra no
+   * catálogo de propósito: cadastrar um tipo é decisão de planejamento, não
+   * efeito colateral de escrever numa proposta.
+   */
+  tipoLivre?: string;
   linhas: { email: string; horas: string }[];
+}
+
+/** Como o tipo do catálogo aparece na lista e fica guardado. */
+export function rotuloDoTipo(t: { categoria: string; nome: string }): string {
+  return `${t.categoria} · ${t.nome}`;
 }
 
 interface LinhaTexto {
@@ -62,6 +78,10 @@ export interface EstadoEquipe {
   setLinhas: (l: LinhaTexto[]) => void;
   tipoId: string;
   escolherTipo: (id: string) => void;
+  /** O rótulo no campo: do catálogo ou o avulso escrito à mão. */
+  tipoEscolhido: string;
+  /** Escolhe pelo rótulo; o que não estiver no catálogo vira avulso. */
+  escolherPorRotulo: (rotulo: string) => void;
   /** O que somar na base de custo do engine, em REAIS. Zero quando invisível. */
   custoEquipe: number;
   linhasDominio: LinhaEquipe[];
@@ -96,6 +116,8 @@ export function useEquipeResponsavel(opcoes: {
   const [custos, setCustos] = useState<Record<string, number>>({});
   const [linhas, setLinhas] = useState<LinhaTexto[]>([]);
   const [tipoId, setTipoId] = useState("");
+  /** Tipo escrito à mão — vale só nesta proposta e não vai ao catálogo. */
+  const [tipoLivre, setTipoLivre] = useState("");
   const [avisoTipo, setAvisoTipo] = useState<string | null>(null);
   const [impostoPadrao, setImpostoPadrao] = useState(0);
 
@@ -146,12 +168,11 @@ export function useEquipeResponsavel(opcoes: {
     if (!capacidade || !visivel || linhas.length > 0) return;
     const sugerido = tipoSugeridoDoServico(servicoKey, escopo);
     if (!sugerido) {
-      // Sem tipo natural: linha vazia e a pessoa escolhe. Ver o comentário em
-      // servico-demanda.ts sobre por que não chutamos.
+      /* Sem tipo natural, a pessoa escolhe na lista ou escreve o dela. Aqui
+         havia um aviso em âmbar dizendo que o catálogo não tinha equivalente —
+         uma parede onde devia haver saída, porque não oferecia nenhuma. Quem o
+         lia ou escolhia um tipo errado ou deixava em branco. */
       setLinhas([{ email: criadoPor ?? "", horas: "" }]);
-      setAvisoTipo(
-        "Este serviço não tem um tipo equivalente no catálogo para este trabalho. Escolha o que representa, ou informe as horas à mão.",
-      );
       return;
     }
     const tipo = acharTipo(capacidade, sugerido.categoria, sugerido.nome);
@@ -164,6 +185,7 @@ export function useEquipeResponsavel(opcoes: {
 
   function aplicar(id: string, cfg: ConfigCapacidade) {
     setTipoId(id);
+    setTipoLivre("");
     if (!id) {
       setLinhas([{ email: criadoPor ?? "", horas: "" }]);
       setAvisoTipo(null);
@@ -177,6 +199,40 @@ export function useEquipeResponsavel(opcoes: {
     );
     setLinhas(s.linhas.map((l) => ({ email: l.email, horas: l.horas > 0 ? String(l.horas).replace(".", ",") : "" })));
   }
+
+  /**
+   * Escolha pelo RÓTULO, que é o que a pessoa vê e digita.
+   *
+   * Casa com o catálogo pelo texto; o que não casar é avulso desta proposta —
+   * sem duração para sugerir, então as horas vão à mão. Não vira item do
+   * catálogo: cadastrar tipo é decisão de planejamento, e um catálogo que
+   * cresce a cada proposta deixa de servir para estimar prazo.
+   */
+  function escolherPorRotulo(rotulo: string) {
+    const texto = rotulo.trim();
+    if (!capacidade || !texto) {
+      setTipoId("");
+      setTipoLivre("");
+      setAvisoTipo(null);
+      if (!texto) setLinhas([{ email: criadoPor ?? "", horas: "" }]);
+      return;
+    }
+    const doCatalogo = capacidade.tipos.find((t) => rotuloDoTipo(t) === texto);
+    if (doCatalogo) {
+      aplicar(doCatalogo.id, capacidade);
+      return;
+    }
+    setTipoId("");
+    setTipoLivre(texto);
+    setAvisoTipo(null);
+    if (linhas.length === 0) setLinhas([{ email: criadoPor ?? "", horas: "" }]);
+  }
+
+  /** O que aparece no campo: o rótulo do catálogo ou o texto avulso. */
+  const tipoEscolhido = tipoLivre || (() => {
+    const t = capacidade?.tipos.find((x) => x.id === tipoId);
+    return t ? rotuloDoTipo(t) : "";
+  })();
 
   const linhasDominio = useMemo(
     () => linhas.filter((l) => l.email && lerHoras(l.horas) > 0).map((l) => ({ email: l.email, horas: lerHoras(l.horas) })),
@@ -198,16 +254,21 @@ export function useEquipeResponsavel(opcoes: {
     setLinhas,
     tipoId,
     escolherTipo: (id) => capacidade && aplicar(id, capacidade),
+    tipoEscolhido,
+    escolherPorRotulo,
     custoEquipe,
     linhasDominio,
     avisoTipo,
     servicoKey,
     escopo,
     impostoPadrao,
-    serializar: () => ({ tipoId, linhas }),
+    serializar: () => ({ tipoId, tipoLivre, linhas }),
     restaurar: (v) => {
       if (!v || !Array.isArray(v.linhas)) return;
       setTipoId(v.tipoId ?? "");
+      // Proposta salva antes de o avulso existir não traz o campo: fica vazio,
+      // e o tipo continua vindo do catálogo como sempre veio.
+      setTipoLivre(v.tipoLivre ?? "");
       // Sem passar por `aplicar`: o catálogo pode ter mudado de duração desde
       // que a proposta foi salva, e a proposta vale pelas horas que ELA
       // guardou, não pelas de hoje.
@@ -246,6 +307,16 @@ export function EquipeResponsavelCard({ estado }: { estado: EstadoEquipe }) {
 
   const t = TEXTO[estado.escopo];
   const nomeDe = (email: string) => estado.usuarios.find((u) => u.email === email)?.name || email;
+  /* A duração fica fora do rótulo para o texto escolhido ser estável: ela muda
+     em Planejamento, e um rótulo com "(4 h)" dentro deixaria de casar com o
+     que a proposta guardou. Ela aparece na dica abaixo do campo. */
+  const tiposDoCatalogo = (estado.capacidade?.tipos ?? []).map(rotuloDoTipo);
+  const avulso = !!estado.tipoEscolhido && !tiposDoCatalogo.includes(estado.tipoEscolhido);
+  const duracaoDoEscolhido = (() => {
+    const tipo = estado.capacidade?.tipos.find((x) => x.id === estado.tipoId);
+    if (!tipo || tipo.minutos <= 0) return "";
+    return `${String(tipo.minutos / 60).replace(".", ",")} h`;
+  })();
   const semCusto = estado.linhasDominio.filter((l) => !(estado.custos[l.email] > 0)).map((l) => nomeDe(l.email));
   const total = estado.linhasDominio.reduce((s, l) => s + Math.round(l.horas * (estado.custos[l.email] ?? 0) * 100), 0);
 
@@ -270,16 +341,29 @@ export function EquipeResponsavelCard({ estado }: { estado: EstadoEquipe }) {
       )}
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Campo label="Tipo de demanda" hint={<p className="hint mt-1">Preenche as horas pelo catálogo</p>}>
-          <select className="field-input" value={estado.tipoId} onChange={(e) => estado.escolherTipo(e.target.value)}>
-            <option value="">Escolher…</option>
-            {(estado.capacidade?.tipos ?? []).map((tipo) => (
-              <option key={tipo.id} value={tipo.id}>
-                {tipo.categoria} · {tipo.nome}
-                {tipo.minutos > 0 ? ` (${String(tipo.minutos / 60).replace(".", ",")} h)` : " — sem duração"}
-              </option>
-            ))}
-          </select>
+        {/* Aceita valor fora da lista: trabalho sem equivalente no catálogo é
+            rotina, e antes disso a tela só avisava que não havia — sem oferecer
+            saída. O que se escreve aqui vale só nesta proposta. */}
+        <Campo
+          label="Tipo de demanda"
+          hint={
+            <p className="hint mt-1">
+              {avulso
+                ? "Tipo desta proposta — informe as horas à mão. Não entra no catálogo."
+                : duracaoDoEscolhido
+                  ? `Catálogo: ${duracaoDoEscolhido}. As horas vieram daí e podem ser ajustadas.`
+                  : "Escolha da lista e as horas vêm do catálogo, ou escreva um tipo só para esta proposta."}
+            </p>
+          }
+        >
+          <Combobox
+            value={estado.tipoEscolhido}
+            options={tiposDoCatalogo}
+            placeholder="Escolher ou escrever…"
+            rotuloNovo="Só nesta proposta: “{v}”"
+            aria-label="Tipo de demanda"
+            onChange={estado.escolherPorRotulo}
+          />
         </Campo>
       </div>
 
