@@ -138,7 +138,7 @@ export function CustoEquipeTabela({
   return (
     <SectionCard
       title="Custo por hora da equipe"
-      subtitle="Quanto custa para a GTA cada hora trabalhada. Alimenta o custo administrativo dos orçamentos e não aparece para quem não tem permissão financeira."
+      subtitle="Quanto custa para a GTA cada hora trabalhada. Alimenta o custo de elaboração e o da equipe responsável nas propostas, e não aparece para quem não tem permissão financeira."
     >
       {estado.erroCarga && <Alert tone="red" className="mb-4">{estado.erroCarga}</Alert>}
 

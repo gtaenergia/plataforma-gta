@@ -10,6 +10,7 @@ import { CondicoesPagamento, montarFormaPagamento, COND_PADRAO, type CondPag } f
 import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { lerHoras } from "@/lib/custo-equipe/sugestao";
 import { Combobox } from "@/components/Combobox";
+import { EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
 import { DIAS_PARA_REVISAO, precisaRevisao, type MaterialPreco } from "@/lib/precos/catalogo";
 import { aplicarMarkup, calcularComposicao, markupDe } from "@/lib/mao-de-obra/motor";
 import {
@@ -82,8 +83,17 @@ const PRAZO_PADRAO = "A combinar, conforme programação da obra";
 const TITULO_DOC = "PROPOSTA TÉCNICA E COMERCIAL — FORNECIMENTO DE MÃO DE OBRA";
 
 export function MaoDeObraConfigurator({ propostaId, criadoPor, podeConfigurar }: { propostaId?: string; criadoPor?: string; podeConfigurar?: boolean }) {
-  void criadoPor; // assinatura padrão dos configuradores; a autoria vem da sessão no servidor
   const router = useRouter();
+
+  /*
+   * O tempo de MONTAR esta proposta, como nos demais configuradores.
+   *
+   * Aqui não existe o par "equipe responsável": a equipe desta proposta é a
+   * que se VENDE (funções × horas × R$/h), e já tem seção própria. O que
+   * faltava era o outro custo — as horas de quem elabora, que existem mesmo
+   * quando o cliente não fecha.
+   */
+  const equipeOrc = useEquipeResponsavel({ servicoKey: "mao-de-obra", criadoPor, escopo: "orcamento" });
 
   const [funcoes, setFuncoes] = useState<Funcao[]>([]);
   const [podeVerFinanceiro, setPodeVerFinanceiro] = useState(false);
@@ -201,6 +211,7 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor, podeConfigurar }:
           if (typeof dados.validadeDias === "string") setValidadeDias(dados.validadeDias);
           if (Array.isArray(dados.linhas)) setLinhas(dados.linhas as LinhaEquipeForm[]);
           if (Array.isArray(dados.materiais)) setMateriais(dados.materiais as LinhaMaterialForm[]);
+          if (dados.equipeOrcamento) equipeOrc.restaurar(dados.equipeOrcamento as EquipeSalva);
           if (typeof dados.imposto === "string") setImposto(dados.imposto);
           if (typeof dados.margem === "string") setMargem(dados.margem);
           if (typeof dados.valorServico === "string" && dados.valorServico) {
@@ -322,10 +333,20 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor, podeConfigurar }:
     return precos.filter((p) => ids.has(p.id) && precisaRevisao(p.atualizadoEm));
   }, [materiais, precos]);
 
-  /** Preço sugerido: markup sobre a SOMA das duas pernas — a conta da calculadora. */
+  /** As horas de quem elaborou, em centavos. Zero sem permissão financeira. */
+  const custoElaboracaoCent = Math.round(equipeOrc.custoEquipe * 100);
+
+  /**
+   * Preço sugerido: markup sobre a soma das TRÊS pernas.
+   *
+   * A elaboração entra na base antes do markup, como nos serviços de Fator K —
+   * é custo da GTA neste trabalho, e deixá-la de fora faria a margem parecer
+   * maior do que é. Quem não tem permissão financeira não vê o cartão e a
+   * parcela vale zero, então a conta não muda para essa pessoa.
+   */
   const sugestao = useMemo(
-    () => aplicarMarkup(composicao.custoCent + custoMatCent, taxas),
-    [composicao.custoCent, custoMatCent, taxas],
+    () => aplicarMarkup(composicao.custoCent + custoMatCent + custoElaboracaoCent, taxas),
+    [composicao.custoCent, custoMatCent, custoElaboracaoCent, taxas],
   );
   const precoSugerido = podeVerFinanceiro && !sugestao.impedimento ? sugestao.precoCent / 100 : 0;
 
@@ -384,6 +405,7 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor, podeConfigurar }:
         dados: {
           clienteNome, cidadeUf, localAtividade, referenciaSeq, dataEmissao, validadeDias,
           linhas, materiais, imposto, margem, valorServico, objeto, observacoesExtra, prazoExecucao, cond,
+          equipeOrcamento: equipeOrc.serializar(),
         },
       };
       const res = savedId
@@ -651,7 +673,10 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor, podeConfigurar }:
         )}
       </section>
 
-      {/* Preço — a conta da calculadora, com as duas pernas somadas */}
+      {/* O custo de montar esta proposta — some inteiro sem financeiro.ver */}
+      <EquipeResponsavelCard estado={equipeOrc} />
+
+      {/* Preço — a conta da calculadora, com as três pernas somadas */}
       <section className="section-card">
         <div className="flex items-center justify-between">
           <h2 className="section-title">Preço</h2>
@@ -694,6 +719,7 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor, podeConfigurar }:
               <KpiGrid>
                 <Kpi label="Custo da equipe" value={moeda(composicao.custoCent)} />
                 <Kpi label="Materiais e ferramentas" value={moeda(custoMatCent)} />
+                {custoElaboracaoCent > 0 && <Kpi label="Elaboração da proposta" value={moeda(custoElaboracaoCent)} />}
                 <Kpi label="Imposto + lucro" value={moeda(sugestao.impostoCent + sugestao.lucroCent)} />
                 <Kpi label="Preço sugerido" value={moeda(sugestao.precoCent)} destaque />
               </KpiGrid>

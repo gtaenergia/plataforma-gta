@@ -49,13 +49,15 @@ export interface FichaExterna {
   /**
    * Detalhamento do `custoBase`, quando conhecido.
    *
-   * O dono pede para ver, por atividade, "os custos administrativos" e "os
-   * custos de terceirização" — separados. Um total não responde isso.
-   *
-   * Opcionais porque a ficha já existe em produção: sem eles, uma ficha antiga
+   * Opcional porque a ficha já existe em produção: sem ele, uma ficha antiga
    * continua válida, e `custoBase` segue sendo a verdade.
+   *
+   * `custoAdministrativo` viveu aqui e saiu junto com a seção que o preenchia.
+   * O tempo da própria equipe passou a ser apontado UMA vez, no configurador
+   * ("Custo de elaboração da proposta"), em vez de de novo na aprovação —
+   * dois lugares para o mesmo custo davam dois números e nenhuma resposta.
+   * Fichas antigas que gravaram o campo continuam legíveis; ele é ignorado.
    */
-  custoAdministrativo?: number;
   custoTerceirizado?: number;
   observacoes?: string;
 }
@@ -186,7 +188,6 @@ export const fichaExternaSchema = z.object({
   faturamento: z.number().positive(),
   impostosPct: z.number().min(0).max(1),
   margemLiquida: z.number().min(-1).max(1),
-  custoAdministrativo: z.number().nonnegative().optional(),
   custoTerceirizado: z.number().nonnegative().optional(),
   observacoes: z.string().trim().max(2000).optional(),
 });

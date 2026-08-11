@@ -26,6 +26,9 @@ const ORCAMENTO = {
     impostosPct: 0.07,
     margemLiquida: 0.3,
     custoTerceirizado: 900,
+    // Campo APOSENTADO, de propósito no fixture: fichas gravadas em produção
+    // antes de a seção "Custo administrativo" sair ainda o carregam, e a
+    // redação precisa continuar escondendo o que não é mais contrato.
     custoAdministrativo: 303,
   },
   comentarios: [],
@@ -68,8 +71,6 @@ describe("redigirOrcamento", () => {
     const r = redigirOrcamento(ORCAMENTO, true)!;
     expect(r.ficha?.custoBase).toBe(1203);
     expect(r.ficha?.fator).toBeCloseTo(1.5873, 4);
-    // O detalhamento que o dono pede por atividade.
-    expect(r.ficha?.custoAdministrativo).toBe(303);
     expect(r.ficha?.custoTerceirizado).toBe(900);
   });
 
