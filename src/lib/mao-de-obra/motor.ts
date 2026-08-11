@@ -53,6 +53,25 @@ export function markupDe(imposto: number, margem: number): number {
 }
 
 /**
+ * O caminho de volta: do markup para a margem, com o imposto fixo.
+ *
+ * `markup = 1 / (1 − imposto − margem)`, então `margem = 1 − imposto − 1/markup`.
+ *
+ * Existe porque quem negocia pensa dos dois jeitos: às vezes a conversa é
+ * "quero 30% de margem", às vezes é "trabalhamos com 1,6 de markup". Ter só
+ * um dos campos editável obrigava a fazer a inversa de cabeça — e a errar.
+ *
+ * Devolve `null` quando o markup não descreve um negócio possível: abaixo de 1
+ * o preço seria menor que o custo, e a margem resultante ficaria negativa por
+ * construção. Zero e negativo entram no mesmo caso.
+ */
+export function margemDeMarkup(imposto: number, markup: number): number | null {
+  if (!Number.isFinite(markup) || markup < 1) return null;
+  const margem = 1 - imposto - 1 / markup;
+  return Number.isFinite(margem) ? margem : null;
+}
+
+/**
  * Custo da mão de obra TERCEIRIZADA.
  *
  * O custo é arredondado LINHA A LINHA, e não só no total. A recomendação usual

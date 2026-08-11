@@ -12,7 +12,7 @@ import { lerHoras } from "@/lib/custo-equipe/sugestao";
 import { Combobox } from "@/components/Combobox";
 import { EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
 import { DIAS_PARA_REVISAO, precisaRevisao, type MaterialPreco } from "@/lib/precos/catalogo";
-import { aplicarMarkup, calcularComposicao, markupDe } from "@/lib/mao-de-obra/motor";
+import { aplicarMarkup, calcularComposicao, margemDeMarkup, markupDe } from "@/lib/mao-de-obra/motor";
 import {
   custoMateriaisCent,
   escolherMaterial,
@@ -292,6 +292,38 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor, podeConfigurar }:
   }
 
   const taxas = useMemo(() => ({ imposto: pctParaFracao(imposto), margem: pctParaFracao(margem) }), [imposto, margem]);
+
+  /*
+   * Markup e margem são o MESMO número dito de dois jeitos, e os dois se
+   * editam. Quem negocia pensa ora em "30% de margem", ora em "1,6 de markup".
+   *
+   * O cuidado é o vaivém: se o texto do markup fosse sempre derivado da
+   * margem, digitar "1,6" viraria margem, que voltaria a formatar o markup —
+   * e o campo se reescreveria embaixo do dedo, a cada tecla. Por isso o texto
+   * do markup é estado próprio, e o efeito abaixo só o reformata quando a
+   * mudança NÃO veio dele.
+   */
+  const [markupTexto, setMarkupTexto] = useState("");
+  const veioDoMarkup = useRef(false);
+
+  useEffect(() => {
+    if (veioDoMarkup.current) {
+      veioDoMarkup.current = false;
+      return;
+    }
+    const m = markupDe(taxas.imposto, taxas.margem);
+    setMarkupTexto(m > 0 ? nf(m, 3) : "");
+  }, [taxas.imposto, taxas.margem]);
+
+  /** Digitar no markup reescreve a margem — o imposto fica como está. */
+  function aoDigitarMarkup(texto: string) {
+    edicao.marcarEditado();
+    setMarkupTexto(texto);
+    const nova = margemDeMarkup(taxas.imposto, parseBR(texto));
+    if (nova === null) return; // markup abaixo de 1: sem margem que o descreva
+    veioDoMarkup.current = true;
+    setMargem(nf(nova * 100, 2));
+  }
 
   const composicao = useMemo(
     () =>
@@ -703,12 +735,19 @@ export function MaoDeObraConfigurator({ propostaId, criadoPor, podeConfigurar }:
               <Campo label="Margem (%)">
                 <input className="field-input tabular-nums" inputMode="decimal" value={margem} onChange={(e) => editar(setMargem)(e.target.value)} />
               </Campo>
-              <div>
-                <span className="field-label">Markup</span>
-                <p className="mt-1 text-lg font-semibold tabular-nums text-gta-navy dark:text-slate-100">
-                  {semSolucao ? "—" : markupDe(taxas.imposto, taxas.margem).toLocaleString("pt-BR", { maximumFractionDigits: 3 })}
-                </p>
-              </div>
+              {/* Editável, e ligado à margem nos dois sentidos. */}
+              <Campo
+                label="Markup"
+                hint={<p className="hint mt-1">Quantas vezes o preço supera o custo</p>}
+              >
+                <input
+                  className="field-input tabular-nums"
+                  inputMode="decimal"
+                  value={markupTexto}
+                  placeholder="1,588"
+                  onChange={(e) => aoDigitarMarkup(e.target.value)}
+                />
+              </Campo>
             </div>
 
             {semSolucao ? (

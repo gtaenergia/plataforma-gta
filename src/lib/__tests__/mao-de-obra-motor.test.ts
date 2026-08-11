@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calcularComposicao, divisorDe, markupDe } from "@/lib/mao-de-obra/motor";
+import { calcularComposicao, divisorDe, margemDeMarkup, markupDe } from "@/lib/mao-de-obra/motor";
 import type { ConfigMaoDeObra, LinhaMaoDeObra } from "@/lib/mao-de-obra/types";
 
 const FUNCOES: Pick<ConfigMaoDeObra, "funcoes"> = {
@@ -181,5 +181,47 @@ describe("markupDe", () => {
   it("devolve 0 em vez de Infinity quando não há divisor", () => {
     expect(markupDe(0.5, 0.5)).toBe(0);
     expect(markupDe(0.9, 0.9)).toBe(0);
+  });
+});
+
+/**
+ * O caminho de volta, para a tela poder editar os dois campos.
+ *
+ * Quem negocia pensa dos dois jeitos — "quero 30% de margem" e "trabalhamos
+ * com 1,6 de markup". O que estes testes seguram é a IDA E VOLTA: se ela não
+ * fechar, digitar num campo mexe no outro e o primeiro muda sozinho de novo,
+ * e os dois números passam a discordar na frente de quem está negociando.
+ */
+describe("margemDeMarkup", () => {
+  it("desfaz exatamente o que markupDe faz", () => {
+    for (const [imposto, margem] of [
+      [0.15, 0.35],
+      [0.07, 0.3],
+      [0.0702, 0.3],
+      [0.0702, 0.35],
+      [0, 0.5],
+    ]) {
+      const volta = margemDeMarkup(imposto, markupDe(imposto, margem));
+      expect(volta, `imposto ${imposto} margem ${margem}`).toBeCloseTo(margem, 10);
+    }
+  });
+
+  it("markup 2 com imposto 15% devolve a margem de 35% da folha", () => {
+    expect(margemDeMarkup(0.15, 2)).toBeCloseTo(0.35, 10);
+  });
+
+  it("markup abaixo de 1 não descreve negócio possível", () => {
+    // Preço menor que o custo: a margem sairia negativa por construção, e
+    // devolver o número faria a tela aceitar como se fosse uma escolha válida.
+    expect(margemDeMarkup(0.07, 0.9)).toBeNull();
+    expect(margemDeMarkup(0.07, 0)).toBeNull();
+    expect(margemDeMarkup(0.07, -2)).toBeNull();
+    expect(margemDeMarkup(0.07, Number.NaN)).toBeNull();
+  });
+
+  it("markup 1 é o ponto em que só o imposto cabe", () => {
+    // Preço igual ao custo: sobra o negativo do imposto, e a tela precisa
+    // mostrar isso em vez de esconder — é prejuízo, não zero.
+    expect(margemDeMarkup(0.07, 1)).toBeCloseTo(-0.07, 10);
   });
 });
