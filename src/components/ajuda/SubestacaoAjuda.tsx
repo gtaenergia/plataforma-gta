@@ -19,7 +19,7 @@ export function SubestacaoAjuda() {
 
       {/* Passo a passo */}
       <AjudaSecao n={1} titulo="Passo a passo (como montar o orçamento)">
-        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo dark:marker:text-indigo-300">
+        <ol className="ml-1 list-inside list-decimal space-y-2">
           <li><strong>Demanda ou carga.</strong> Informe a <strong>demanda (kVA)</strong> direto, ou a <strong>carga instalada (kW)</strong> com o fator de demanda e o fator de potência — o app converte em kVA.</li>
           <li><strong>Tensões da concessionária.</strong> Média tensão (kV, ex. 13,8) e baixa tensão (V, ex. 380). Definem as correntes e a proteção.</li>
           <li><strong>Tipo da subestação.</strong> <Destaque>Aérea</Destaque> (até 300 kVA), <Destaque>Abrigada</Destaque> (cubículo, demanda acima de 330 kVA) ou <Destaque>Pedestal</Destaque>.</li>

@@ -19,7 +19,7 @@ export function AnalisadorAjuda() {
 
       {/* Passo a passo */}
       <AjudaSecao n={1} titulo="Passo a passo (como montar o orçamento)">
-        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo dark:marker:text-indigo-300">
+        <ol className="ml-1 list-inside list-decimal space-y-2">
           <li><strong>Defina as semanas de medição.</strong> Uma semana (7 dias) é a locação básica — o suficiente para um diagnóstico de rotina.</li>
           <li><strong>O app calcula.</strong> Ele multiplica <Destaque>semanas × R$ 1.500</Destaque> e mostra a conta pronta (ex.: “2 semana(s) × R$ 1.500 = R$ 3.000”).</li>
           <li><strong>Análise completa? Ajuste o valor.</strong> Para comparação com a concessionária (ciclo de 30 dias) ou laudo <strong>PRODIST Módulo 8</strong>, o preço é <Destaque>por escopo</Destaque> (~R$ 5.000), não estritamente por semana — edite o “Valor por semana” à mão.</li>

@@ -18,7 +18,7 @@ export function ConexaoAjuda() {
 
       {/* Passo a passo */}
       <AjudaSecao n={1} titulo="Passo a passo (como montar o orçamento)">
-        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo dark:marker:text-indigo-300">
+        <ol className="ml-1 list-inside list-decimal space-y-2">
           <li>
             <strong>Confira o salário mínimo vigente.</strong> É o único campo do configurador. O padrão é{" "}
             <Destaque>R$ 1.630</Destaque>; atualize sempre que o governo reajustar o salário mínimo.

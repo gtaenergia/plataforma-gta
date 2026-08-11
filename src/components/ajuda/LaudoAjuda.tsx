@@ -18,7 +18,7 @@ export function LaudoAjuda() {
 
       {/* Passo a passo */}
       <AjudaSecao n={1} titulo="Passo a passo (como montar o orçamento)">
-        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo dark:marker:text-indigo-300">
+        <ol className="ml-1 list-inside list-decimal space-y-2">
           <li><strong>Nº de unidades.</strong> Quantas torres ou edificações serão vistoriadas e receberão laudo. Cada uma é uma "unidade" de preço.</li>
           <li><strong>Escopo do laudo.</strong> Quais disciplinas o laudo cobre — o padrão é <Destaque>instalações elétricas, SPDA e iluminação de emergência</Destaque>. Quanto mais disciplinas, mais horas de vistoria e mais complexo o laudo.</li>
           <li><strong>Valor por unidade.</strong> Ajuste conforme o porte: uma subestação com termografia vale muito mais que uma torre residencial padrão. O padrão é <Destaque>R$ 2.500</Destaque> (ver seção 3).</li>
@@ -72,7 +72,7 @@ export function LaudoAjuda() {
           Condomínio com <strong>3 torres residenciais</strong>, laudo de conformidade de{" "}
           <em>instalações elétricas, SPDA e iluminação de emergência</em> por torre (caso Avenida Parque):
         </p>
-        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo dark:marker:text-indigo-300">
+        <ol className="ml-1 list-inside list-decimal space-y-2">
           <li>Nº de unidades = <Destaque>3 torres</Destaque>.</li>
           <li>O escopo (3 disciplinas) se repete em cada torre — porte residencial padrão, sem termografia → valor por unidade <Destaque>R$ 2.000</Destaque>.</li>
           <li>O app multiplica e soma.</li>

@@ -20,7 +20,7 @@ export function QgbtAjuda() {
 
       {/* Passo a passo */}
       <AjudaSecao n={1} titulo="Passo a passo (como montar o orçamento)">
-        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo dark:marker:text-indigo-300">
+        <ol className="ml-1 list-inside list-decimal space-y-2">
           <li><strong>Levante o custo do quadro.</strong> Some os componentes (barramento, disjuntor geral, disjuntores de distribuição, DPS, invólucro, medição) + a mão de obra de montagem. Isso é o <Destaque>custo por quadro</Destaque>.</li>
           <li><strong>Informe no configurador.</strong> Preencha a especificação (ex.: <em>350 A / 380 V IP55</em>), o nº de quadros iguais e o custo por quadro.</li>
           <li><strong>O app aplica o Fator K.</strong> Ele calcula o faturamento sugerido e mostra os KPIs: custo total, Fator K, faturamento, impostos/NF, lucro e margem líquida.</li>

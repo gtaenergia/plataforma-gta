@@ -9,29 +9,35 @@ export function MaoDeObraAjuda() {
   return (
     <div className="space-y-5">
       <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-        O <strong>Fornecimento de Mão de Obra</strong> vende equipe <strong>terceirizada</strong> por função e hora —
-        eletricista, ajudante, encarregado — mais os <strong>materiais, ferramentas e equipamentos</strong> que a
-        equipe leva para a obra. A conta é a mesma da calculadora de mão de obra: soma-se o custo das duas pernas e
-        aplica-se o markup, com <strong>imposto e margem como percentuais do preço final</strong>. A diferença é a
-        saída: aqui o resultado é a <strong>proposta .docx</strong> no padrão GTA, não uma planilha.
+        O Fornecimento de Mão de Obra vende equipe terceirizada por função e hora — eletricista, ajudante,
+        encarregado — mais os materiais, ferramentas e equipamentos que a equipe leva para a obra. A conta é a mesma
+        da calculadora de mão de obra: soma-se o custo e aplica-se o markup, com imposto e margem como percentuais do
+        preço final. A diferença é a saída: aqui o resultado é a proposta .docx no padrão GTA, não uma planilha.
       </p>
 
       {/* Passo a passo */}
       <AjudaSecao n={1} titulo="Passo a passo (como montar a proposta)">
-        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo dark:marker:text-indigo-300">
+        <ol className="ml-1 list-inside list-decimal space-y-2">
           <li>
             <strong>Monte a equipe.</strong> Uma linha por função: quantas pessoas, quantas horas cada. O campo de
-            horas aceita <Destaque>5 x 8</Destaque> para 5 dias de 8 horas. O R$/h de cada função vem do catálogo
-            cadastrado na <strong>calculadora de mão de obra</strong> — cadastrou lá, vale aqui.
+            horas aceita <Destaque>5 x 8</Destaque> para 5 dias de 8 horas. O R$/h de cada função vem do catálogo da
+            calculadora de mão de obra — cadastrou lá, vale aqui.
           </li>
           <li>
-            <strong>Relacione materiais e ferramentas.</strong> Uma linha por item: tipo (material, ferramenta,
-            equipamento), descrição, quantidade, unidade e valor unitário. O custo entra na conta <strong>antes</strong> do
-            markup — margem também sobre o material, não só sobre a hora.
+            <strong>Relacione materiais e ferramentas.</strong> No campo de descrição, escolha da lista de{" "}
+            <a href="/precos" className="btn-link">Preços de materiais</a> e o valor unitário vem de lá, travado — você
+            informa só a quantidade. O que não estiver na lista, escreva: entra como item avulso, com preço válido só
+            nesta proposta. O custo dos itens entra na conta antes do markup, então a margem incide também sobre o
+            material.
           </li>
           <li>
-            <strong>Confira imposto e margem.</strong> Vêm preenchidos com o padrão da empresa; mudar aqui vale só
-            para esta proposta.
+            <strong>Aponte quem elaborou.</strong> As horas de montar esta proposta somam ao custo antes do markup,
+            como as duas pernas acima. A seção no fim desta página explica.
+          </li>
+          <li>
+            <strong>Confira imposto, margem e markup.</strong> Vêm com o padrão da empresa. Margem e markup são o
+            mesmo número dito de dois jeitos: mexer num reescreve o outro, então use o que a negociação usar. Mudar
+            aqui vale só para esta proposta.
           </li>
           <li>
             <strong>Confira o preço sugerido.</strong> O valor final é editável — para bater um preço já negociado,
@@ -50,21 +56,28 @@ export function MaoDeObraAjuda() {
 
       {/* Preço */}
       <AjudaSecao n={2} titulo="Como o preço é calculado">
-        <p>O custo soma as duas pernas; imposto e margem são percentuais do <strong>preço</strong>, não do custo:</p>
-        <Formula nota="Ex. com os padrões (7,02% + 30% → divisor 0,6298): custo de R$ 6.298,00 vira preço de R$ 10.000,00.">
-          custo   = equipe (Σ pessoas × horas × R$/h)  +  materiais (Σ quantidade × valor unitário){"\n"}
+        <p>O custo soma as três pernas; imposto e margem são percentuais do preço, não do custo:</p>
+        <Formula nota="Com os padrões (7,02% + 30% → divisor 0,6298), um custo de R$ 6.298,00 vira preço de R$ 10.000,00.">
+          custo   = equipe (Σ pessoas × horas × R$/h){"\n"}
+          {"        "}+ materiais (Σ quantidade × valor unitário){"\n"}
+          {"        "}+ elaboração (Σ horas × R$/h de quem montou){"\n"}
           divisor = 1 − imposto − margem{"\n"}
-          preço   = custo ÷ divisor
+          preço   = custo ÷ divisor{"\n"}
+          markup  = 1 ÷ divisor
         </Formula>
         <p>
-          <strong>Por que dividir, e não multiplicar?</strong> Se a margem fosse aplicada sobre o custo, o imposto —
-          que incide sobre o preço cheio — comeria parte dela. Dividindo, os percentuais saem exatamente do preço
-          final: num preço de R$ 10.000 com 7,02% e 30%, o imposto leva R$ 702, o lucro R$ 3.000 e o custo é coberto
-          pelos R$ 6.298 restantes.
+          Dividir, e não multiplicar, é o que faz os percentuais saírem do preço final. Aplicada sobre o custo, a
+          margem seria comida em parte pelo imposto, que incide sobre o preço cheio. Num preço de R$ 10.000 com 7,02%
+          e 30%, o imposto leva R$ 702, o lucro R$ 3.000, e os R$ 6.298 restantes cobrem o custo.
         </p>
         <p>
-          <strong>Atenção:</strong> imposto + margem chegando a <Destaque>100%</Destaque> não é preço alto — é conta
-          sem solução (divisor zero ou negativo). O configurador trava e avisa em vez de inventar um número.
+          O <strong>markup</strong> é esse mesmo divisor visto ao contrário — quantas vezes o preço supera o custo. Os
+          dois campos são editáveis e andam juntos: com imposto de 7,02%, margem de 30% equivale a markup de 1,588.
+          Markup abaixo de 1 seria preço menor que o custo, e o campo não aceita.
+        </p>
+        <p>
+          Imposto e margem somando 100% não é preço alto: é conta sem solução, com divisor zero ou negativo. O
+          configurador trava e avisa em vez de inventar um número.
         </p>
       </AjudaSecao>
 
@@ -90,22 +103,26 @@ export function MaoDeObraAjuda() {
         <TabelaAjuda
           colunas={["Parâmetro", "Padrão", "De onde vem"]}
           linhas={[
-            ["R$/h por função", "catálogo", "Cadastrado na calculadora de mão de obra (admin); função sem custo é sinalizada"],
-            [<span key="i">Imposto</span>, <Destaque key="iv">7,02%</Destaque>, "O percentual que a GTA tem utilizado (padrão da empresa)"],
-            [<span key="m">Margem</span>, <Destaque key="mv">30%</Destaque>, "Margem padrão sobre o preço; ajuste por proposta quando o caso pedir"],
-            ["Materiais", "por proposta", "Sem catálogo: cada obra leva itens e preços próprios, digitados na hora"],
+            ["R$/h por função", "catálogo", "Cadastrado na calculadora de mão de obra; função sem custo é sinalizada"],
+            [<span key="i">Imposto</span>, "7,02%", "O percentual que a GTA tem utilizado"],
+            [<span key="m">Margem</span>, "30%", "Sobre o preço. Equivale a markup 1,588 com esse imposto"],
+            ["Preço dos materiais", "lista", "De Preços de materiais, com validade de 90 dias por item"],
           ]}
         />
         <ul className="ml-1 list-inside list-disc space-y-1.5">
           <li>
-            <strong>Quem não tem a permissão financeira</strong> monta equipe e materiais normalmente, mas não vê
-            custo por hora, taxas nem sugestão — informa o valor final combinado. O corte é no servidor.
+            Quem não tem a permissão financeira monta equipe e materiais normalmente, mas não vê custo por hora, taxas
+            nem sugestão — informa o valor final combinado. O corte é no servidor.
           </li>
           <li>
-            <strong>Função sem custo cadastrado</strong> faz o preço sugerido sair por baixo — o configurador avisa.
-            Cadastre o R$/h na calculadora antes de confiar na sugestão.
+            Função sem custo cadastrado faz o preço sugerido sair por baixo, e o configurador avisa. Cadastre o R$/h
+            antes de confiar na sugestão.
           </li>
-          <li>Mudou imposto ou margem aqui? Vale só nesta proposta — o padrão da empresa continua o mesmo.</li>
+          <li>
+            Material da lista com preço vencido também rende aviso, com o caminho para revisar. Preço velho não
+            impede gerar a proposta — só a faz nascer com a margem errada.
+          </li>
+          <li>Imposto, margem e markup mudados aqui valem só nesta proposta; o padrão da empresa segue o mesmo.</li>
         </ul>
       </AjudaSecao>
 

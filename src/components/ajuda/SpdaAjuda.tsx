@@ -20,7 +20,7 @@ export function SpdaAjuda() {
 
       {/* Passo a passo */}
       <AjudaSecao n={1} titulo="Passo a passo (como montar o orçamento)">
-        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo dark:marker:text-indigo-300">
+        <ol className="ml-1 list-inside list-decimal space-y-2">
           <li><strong>Nº de blocos/edificações.</strong> Conte cada estrutura independente que precisa de proteção — cada bloco recebe sua própria análise de risco da NBR 5419.</li>
           <li><strong>Área construída (m²).</strong> A área total de cobertura a proteger. É o que dimensiona o esforço do projeto (captação, descidas, malha).</li>
           <li><strong>Custo logístico</strong> (opcional). Deslocamento, hospedagem, diárias, aluguel de terrômetro, estagiário — entra <em>só</em> na conferência da margem, não muda o preço ao cliente.</li>

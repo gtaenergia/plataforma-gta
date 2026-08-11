@@ -19,7 +19,7 @@ export function LimpezaAjuda() {
 
       {/* Passo a passo */}
       <AjudaSecao n={1} titulo="Passo a passo (como montar o orçamento)">
-        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo dark:marker:text-indigo-300">
+        <ol className="ml-1 list-inside list-decimal space-y-2">
           <li><strong>Nº de placas.</strong> Informe a quantidade de módulos a limpar. É o único campo obrigatório — o app já sugere o preço a partir dele.</li>
           <li><strong>Valor por placa (opcional).</strong> Deixe <Destaque>em branco</Destaque> para o app aplicar a faixa automática por volume. Preencha só se quiser <strong>fixar</strong> a taxa (ex.: bater um preço fechado com o cliente).</li>
           <li><strong>Confira contra o piso.</strong> Se nº de placas × taxa ficar abaixo de <Destaque>R$ 900</Destaque>, o app usa o piso. Vale para instalações pequenas.</li>

@@ -18,7 +18,7 @@ export function ExecucaoSubestacaoAjuda() {
 
       {/* Passo a passo */}
       <AjudaSecao n={1} titulo="Passo a passo (como montar o orçamento)">
-        <ol className="ml-1 list-inside list-decimal space-y-2 marker:font-semibold marker:text-gta-indigo dark:marker:text-indigo-300">
+        <ol className="ml-1 list-inside list-decimal space-y-2">
           <li><strong>Levante o custo (BOM).</strong> Some tudo que a obra consome, em três blocos: <Destaque>materiais</Destaque> (cabos, eletrodutos, malha de aterramento, barramento, ferragens, brita, concreto…), <Destaque>mão de obra</Destaque> (equipe de montagem e civil) e <Destaque>projeto/ART/outros</Destaque> (ART, deslocamento, EPI, andaime, aluguel de equipamento).</li>
           <li><strong>Informe os três custos no configurador.</strong> São os únicos campos de entrada — o custo total é a soma deles.</li>
           <li><strong>O app aplica o Fator K.</strong> Multiplica o custo por <Destaque>1,7</Destaque> (padrão) e arredonda para o múltiplo de R$ 10 mais próximo. Esse é o faturamento sugerido ao cliente.</li>
