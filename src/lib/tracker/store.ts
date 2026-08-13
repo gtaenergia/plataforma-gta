@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import type { TimeEntry } from "./types";
+import { sobrepoe } from "./dias";
 import { PostgresTrackerStore } from "./postgres-store";
 import { getDbUrl } from "../tasks/postgres-store";
 
@@ -13,7 +14,11 @@ import { getDbUrl } from "../tasks/postgres-store";
 export interface ListFiltro {
   /** Ausente = todos os usuários (só a rota decide quem pode pedir isso). */
   usuarioEmail?: string;
-  /** Bounds ISO — filtra por `inicio` em [desde, ate). */
+  /**
+   * Bounds ISO — devolve quem SOBREPÕE [desde, ate), não quem começa dentro.
+   * Um turno das 22:00 às 02:00 pertence aos dois dias, e filtrar por `inicio`
+   * o fazia desaparecer inteiro do dia em que a madrugada aconteceu.
+   */
   desde: string;
   ate: string;
 }
@@ -64,7 +69,7 @@ class JsonTrackerStore implements TrackerStore {
 
   async list(filtro: ListFiltro): Promise<TimeEntry[]> {
     return this.readAll()
-      .filter((e) => (!filtro.usuarioEmail || e.usuarioEmail === filtro.usuarioEmail) && e.inicio >= filtro.desde && e.inicio < filtro.ate)
+      .filter((e) => (!filtro.usuarioEmail || e.usuarioEmail === filtro.usuarioEmail) && sobrepoe(e, filtro.desde, filtro.ate))
       .sort((a, b) => (a.inicio < b.inicio ? 1 : -1));
   }
   async get(id: string): Promise<TimeEntry | null> {

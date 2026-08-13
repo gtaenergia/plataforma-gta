@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
 import { getTrackerStore } from "@/lib/tracker/store";
-import { updateTimeEntrySchema } from "@/lib/tracker/types";
+import { ordemPreservada, updateTimeEntrySchema } from "@/lib/tracker/types";
 
 export const runtime = "nodejs";
 
@@ -31,6 +31,12 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const parsed = updateTimeEntrySchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Dados inválidos.", issues: parsed.error.flatten() }, { status: 422 });
+  }
+
+  // A ordem é conferida no ESTADO RESULTANTE, não só no patch — ver
+  // `ordemPreservada`. Vale para qualquer cliente, não só para o formulário.
+  if (!ordemPreservada(atual, parsed.data)) {
+    return NextResponse.json({ error: "O fim precisa ser depois do início." }, { status: 422 });
   }
 
   const entrada = await store.update(id, parsed.data);

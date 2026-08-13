@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { Alert, EmptyState, Kpi, KpiGrid, Loading, SectionCard, Segmented } from "@/components/ui";
-import { duracaoMin, formatarDuracao, type TimeEntry } from "@/lib/tracker/types";
+import { fatiarPorDia, ymdLocal } from "@/lib/tracker/dias";
+import { formatarDuracao, type TimeEntry } from "@/lib/tracker/types";
 import {
   addDias, agruparPor, DIA_SEMANA_CURTO, fmtCurta, horasDecimais, inicioDoMes, segundaDaSemana, useEntradas,
 } from "./comum";
@@ -26,25 +27,53 @@ export function AbaDashboard({ usuarioSelecionado }: { usuarioSelecionado: strin
 
   const { entradas, carregando, erro } = useEntradas(desde, ate, usuarioSelecionado);
   const agora = new Date();
-  const min = (e: TimeEntry) => duracaoMin(e, agora);
 
-  const totalMin = entradas.reduce((s, e) => s + min(e), 0);
+  /** Os dias do período, em `ymd` — define o que é "dentro". */
+  const diasDoPeriodo = useMemo(() => {
+    const lista: Date[] = [];
+    for (let d = new Date(desde); d < ate; d = addDias(d, 1)) lista.push(new Date(d));
+    return lista;
+  }, [desde, ate]);
+
+  /**
+   * Os minutos DESTE período, somados a partir das MESMAS fatias que alimentam
+   * o gráfico. Um turno de 31/08 22:00 a 01/09 02:00 entrega 2 h para agosto e
+   * 2 h para setembro — antes agosto recebia as quatro e setembro nenhuma.
+   *
+   * Vem das fatias, e não de uma medida própria do intervalo, porque as duas
+   * arredondam em pontos diferentes: o KPI "Total" e as barras "Por cliente"
+   * apareciam lado a lado com minutos de diferença, e as porcentagens dos
+   * clientes passavam de 100%.
+   */
+  const min = useMemo(() => {
+    const dentro = new Set(diasDoPeriodo.map(ymdLocal));
+    return (e: TimeEntry) =>
+      fatiarPorDia(e, agora).reduce((s, f) => s + (dentro.has(f.dia) ? f.min : 0), 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `agora` é recriado a cada render de propósito
+  }, [diasDoPeriodo]);
 
   /** Um bucket por dia do período — dias sem lançamento aparecem zerados. */
   const porDia = useMemo(() => {
-    const dias: { data: Date; min: number }[] = [];
-    for (let d = new Date(desde); d < ate; d = addDias(d, 1)) dias.push({ data: new Date(d), min: 0 });
+    const dias = diasDoPeriodo.map((data) => ({ data, min: 0 }));
+    const indice = new Map(diasDoPeriodo.map((d, i) => [ymdLocal(d), i]));
     for (const e of entradas) {
-      const inicio = new Date(e.inicio);
-      const i = dias.findIndex((x) => x.data.toDateString() === inicio.toDateString());
-      if (i >= 0) dias[i].min += min(e);
+      for (const fatia of fatiarPorDia(e, agora)) {
+        const i = indice.get(fatia.dia);
+        if (i !== undefined) dias[i].min += fatia.min;
+      }
     }
     return dias;
-  }, [entradas, desde, ate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `agora` é recriado a cada render de propósito
+  }, [entradas, diasDoPeriodo]);
+
+  /** Soma das mesmas fatias: por construção, fecha com "Por cliente". */
+  const totalMin = porDia.reduce((s, d) => s + d.min, 0);
 
   const maxDia = Math.max(1, ...porDia.map((d) => d.min));
-  const porCliente = useMemo(() => agruparPor(entradas, (e) => e.cliente, min).slice(0, 8), [entradas]);
-  const porCategoria = useMemo(() => agruparPor(entradas, (e) => e.categoria, min).slice(0, 8), [entradas]);
+  const porCliente = useMemo(() => agruparPor(entradas, (e) => e.cliente, min).slice(0, 8), [entradas, min]);
+  const porCategoria = useMemo(() => agruparPor(entradas, (e) => e.categoria, min).slice(0, 8), [entradas, min]);
+  /** Lançamentos com ao menos um minuto dentro do período. */
+  const lancamentos = useMemo(() => entradas.filter((e) => min(e) > 0).length, [entradas, min]);
   const mediaDiaria = porDia.filter((d) => d.min > 0).length > 0
     ? Math.round(totalMin / porDia.filter((d) => d.min > 0).length)
     : 0;
@@ -65,7 +94,7 @@ export function AbaDashboard({ usuarioSelecionado }: { usuarioSelecionado: strin
 
       <KpiGrid>
         <Kpi label="Total" value={formatarDuracao(totalMin)} destaque />
-        <Kpi label="Lançamentos" value={String(entradas.length)} />
+        <Kpi label="Lançamentos" value={String(lancamentos)} />
         <Kpi label="Dias com registro" value={String(porDia.filter((d) => d.min > 0).length)} />
         <Kpi label="Média por dia trabalhado" value={formatarDuracao(mediaDiaria)} />
       </KpiGrid>

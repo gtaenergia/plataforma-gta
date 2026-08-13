@@ -61,6 +61,24 @@ export type CreateTimeEntryInput = z.infer<typeof createTimeEntrySchema>;
 export type StartTimeEntryInput = z.infer<typeof startTimeEntrySchema>;
 export type UpdateTimeEntryInput = z.infer<typeof updateTimeEntrySchema>;
 
+/**
+ * O patch, aplicado sobre o registro atual, deixa início e fim em ordem?
+ *
+ * O schema acima só compara os dois quando ambos vêm no patch — e é comum vir
+ * só um. Um patch apenas com o início, posterior ao fim JÁ GRAVADO, passava na
+ * validação e era persistido: o lançamento continuava existindo, agora com
+ * duração zero, e uma hora de trabalho sumia sem nenhum erro na tela.
+ */
+export function ordemPreservada(
+  atual: Pick<TimeEntry, "inicio" | "fim">,
+  patch: { inicio?: string; fim?: string },
+): boolean {
+  const inicio = patch.inicio ?? atual.inicio;
+  const fim = patch.fim ?? atual.fim;
+  if (!fim) return true; // cronômetro em andamento não tem ordem a violar
+  return new Date(fim) > new Date(inicio);
+}
+
 /** Duração em minutos — usa `agora` como fim quando o lançamento está rodando. */
 export function duracaoMin(e: Pick<TimeEntry, "inicio" | "fim">, agora: Date = new Date()): number {
   const inicio = new Date(e.inicio).getTime();

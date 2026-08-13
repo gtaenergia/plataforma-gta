@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Alert, EmptyState, Loading } from "@/components/ui";
 import { posicionarDia } from "@/lib/calendario/blocos-dia";
 import { coresDaEquipe, corDePessoa } from "@/lib/cor-de-pessoa";
+import { fatiarPorDia, ymdLocal, type Fatia } from "@/lib/tracker/dias";
 import { duracaoMin, formatarDuracao } from "@/lib/tracker/types";
 
 import { addDias, DIA_SEMANA_CURTO, fmtCurta, segundaDaSemana, useEntradas, type Usuario } from "./comum";
@@ -50,18 +51,46 @@ export function AbaCalendario({ usuarioSelecionado, usuarios, nomeDe, mostrarUsu
 
   const dias = useMemo(() => Array.from({ length: 7 }, (_, i) => addDias(semanaBase, i)), [semanaBase]);
 
-  /** Faixa de horas a exibir, ajustada aos lançamentos (mín. 8h–18h). */
+  /**
+   * As fatias da semana, agrupadas por dia local.
+   *
+   * Um turno que vira a meia-noite tem duas fatias e é desenhado nas duas
+   * colunas, cada uma com o seu pedaço. Antes o bloco existia só na coluna do
+   * dia em que o cronômetro tinha sido ligado, e a madrugada sumia da tela.
+   */
+  const porDia = useMemo(() => {
+    const mapa = new Map<string, { entrada: typeof entradas[number]; fatia: Fatia }[]>();
+    for (const e of entradas) {
+      for (const fatia of fatiarPorDia(e, agora)) {
+        if (!mapa.has(fatia.dia)) mapa.set(fatia.dia, []);
+        mapa.get(fatia.dia)!.push({ entrada: e, fatia });
+      }
+    }
+    return mapa;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `agora` é recriado a cada render de propósito (cronômetro ao vivo)
+  }, [entradas]);
+
+  /** As fatias efetivamente desenhadas — só as dos sete dias visíveis. */
+  const fatiasVisiveis = useMemo(
+    () => dias.flatMap((d) => porDia.get(ymdLocal(d)) ?? []),
+    [dias, porDia],
+  );
+
+  /**
+   * Faixa de horas a exibir, ajustada às FATIAS (mín. 8h–18h). Medir pelo
+   * lançamento inteiro era o que fazia a parte de depois da meia-noite ser
+   * desenhada abaixo da última linha da grade: `getHours()` do fim já era do
+   * dia seguinte e nunca empurrava o rodapé para as 24h.
+   */
   const { horaIni, horaFim } = useMemo(() => {
     let min = 8;
     let max = 18;
-    for (const e of entradas) {
-      const ini = new Date(e.inicio);
-      const fim = e.fim ? new Date(e.fim) : agora;
-      min = Math.min(min, ini.getHours());
-      max = Math.max(max, fim.getHours() + (fim.getMinutes() > 0 ? 1 : 0));
+    for (const { fatia } of fatiasVisiveis) {
+      min = Math.min(min, Math.floor(fatia.inicioMin / 60));
+      max = Math.max(max, Math.ceil(fatia.fimMin / 60));
     }
     return { horaIni: Math.max(0, min), horaFim: Math.min(24, Math.max(max, min + 1)) };
-  }, [entradas]);
+  }, [fatiasVisiveis]);
 
   const horas = useMemo(
     () => Array.from({ length: horaFim - horaIni }, (_, i) => horaIni + i),
@@ -81,22 +110,18 @@ export function AbaCalendario({ usuarioSelecionado, usuarios, nomeDe, mostrarUsu
    * que ele durou no relógio.
    */
   function blocosDoDia(dia: Date) {
-    const itens = entradas
-      .filter((e) => new Date(e.inicio).toDateString() === dia.toDateString())
-      .map((e) => {
-        const ini = new Date(e.inicio);
-        const fim = e.fim ? new Date(e.fim) : agora;
-        const inicioMin = ini.getHours() * 60 + ini.getMinutes();
-        // A duração sai dos instantes, não do relógio de parede: é o que
-        // mantém a altura certa em quem atravessa a meia-noite.
-        const duracao = Math.max(1, (fim.getTime() - ini.getTime()) / 60000);
-        return { entrada: e, inicioMin, fimMin: inicioMin + duracao };
-      });
+    const itens = (porDia.get(ymdLocal(dia)) ?? []).map(({ entrada, fatia }) => ({
+      entrada,
+      fatia,
+      inicioMin: fatia.inicioMin,
+      fimMin: fatia.fimMin,
+    }));
 
     return posicionarDia(itens, grade, (a, b) => a.entrada.id.localeCompare(b.entrada.id));
   }
 
-  const totalSemana = entradas.reduce((s, e) => s + duracaoMin(e, agora), 0);
+  /** Só o que foi trabalhado DENTRO da semana visível. */
+  const totalSemana = fatiasVisiveis.reduce((s, it) => s + it.fatia.min, 0);
 
   return (
     <div className="space-y-4">
@@ -143,9 +168,7 @@ export function AbaCalendario({ usuarioSelecionado, usuarios, nomeDe, mostrarUsu
 
               {dias.map((dia, i) => {
                 const ehHoje = dia.toDateString() === new Date().toDateString();
-                const totalDia = entradas
-                  .filter((e) => new Date(e.inicio).toDateString() === dia.toDateString())
-                  .reduce((s, e) => s + duracaoMin(e, agora), 0);
+                const totalDia = (porDia.get(ymdLocal(dia)) ?? []).reduce((s, it) => s + it.fatia.min, 0);
                 return (
                   <div key={i} className="min-w-0 flex-1 border-l border-slate-100 dark:border-slate-800">
                     <div className={`h-8 px-1 text-center ${ehHoje ? "text-gta-indigo dark:text-indigo-300" : "text-slate-600 dark:text-slate-400"}`}>
@@ -157,7 +180,7 @@ export function AbaCalendario({ usuarioSelecionado, usuarios, nomeDe, mostrarUsu
                       {horas.map((h) => (
                         <div key={h} className="border-t border-slate-100 dark:border-slate-800" style={{ height: PX_POR_HORA }} />
                       ))}
-                      {blocosDoDia(dia).map(({ item: { entrada }, top, altura, faixa, faixas }) => (
+                      {blocosDoDia(dia).map(({ item: { entrada, fatia }, top, altura, faixa, faixas }) => (
                         <div
                           key={entrada.id}
                           className={`absolute overflow-hidden rounded border border-white/25 px-1 py-0.5 text-[10px] leading-tight text-white ${!entrada.fim ? "animate-pulse" : ""}`}
@@ -173,7 +196,12 @@ export function AbaCalendario({ usuarioSelecionado, usuarios, nomeDe, mostrarUsu
                             left: `calc(${(faixa / faixas) * 100}% + 2px)`,
                             width: `calc(${100 / faixas}% - 4px)`,
                           }}
-                          title={`${entrada.descricao || "(sem descrição)"}${mostrarUsuario ? ` — ${nomeDe(entrada.usuarioEmail)}` : ""}\n${formatarDuracao(duracaoMin(entrada, agora))}${entrada.cliente ? `\n${entrada.cliente}` : ""}`}
+                          title={
+                            `${entrada.descricao || "(sem descrição)"}${mostrarUsuario ? ` — ${nomeDe(entrada.usuarioEmail)}` : ""}\n` +
+                            `${formatarDuracao(fatia.min)} neste dia` +
+                            (fatia.atravessa ? `\nTurno de ${formatarDuracao(duracaoMin(entrada, agora))}, virando a meia-noite` : "") +
+                            (entrada.cliente ? `\n${entrada.cliente}` : "")
+                          }
                         >
                           <div className="truncate font-medium">{entrada.descricao || "(sem descrição)"}</div>
                           {/* O nome vem antes do cliente: com várias pessoas na
@@ -205,6 +233,9 @@ export function AbaCalendario({ usuarioSelecionado, usuarios, nomeDe, mostrarUsu
                   {nomeDe(email)}
                 </span>
               ))}
+            {fatiasVisiveis.some((it) => it.fatia.atravessa) && (
+              <span>Turno que vira a meia-noite aparece nos dois dias, cada um com a sua parte</span>
+            )}
             <span>Pisca = cronômetro em andamento</span>
           </p>
         </div>

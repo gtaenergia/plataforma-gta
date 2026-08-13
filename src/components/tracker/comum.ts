@@ -27,10 +27,12 @@ export function inicioDoMes(d: Date): Date {
   return r;
 }
 
-/** "2026-08-01" no fuso LOCAL (não UTC — evita o dia "voltar" no Brasil). */
-export function ymdLocal(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+/**
+ * "2026-08-01" no fuso LOCAL. Mora em `lib/tracker/dias.ts` junto com a
+ * repartição por dia — as duas coisas precisam concordar sobre onde o dia
+ * começa, e uma cópia aqui era uma chance a mais de discordarem.
+ */
+export { ymdLocal } from "@/lib/tracker/dias";
 
 /** "01/08" */
 export function fmtCurta(d: Date): string {

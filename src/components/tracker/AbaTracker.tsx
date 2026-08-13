@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play, X } from "lucide-react";
 import { ClienteInput } from "@/components/clientes/ClienteInput";
 import { Combobox } from "@/components/Combobox";
 import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { Alert, Badge, EmptyState, Kpi, KpiGrid, Loading, SectionCard } from "@/components/ui";
 import { CATEGORIAS_PADRAO_TAREFA, type Task } from "@/lib/tasks/types";
+import { fatiarPorDia, type Fatia } from "@/lib/tracker/dias";
 import { duracaoMin, formatarDuracao, type TimeEntry } from "@/lib/tracker/types";
 import {
   addDias, DIA_SEMANA, fmtCurta, formatarHMS, montarPeriodo, segundaDaSemana, useEntradas, ymdLocal, type Usuario,
@@ -41,7 +42,15 @@ export function AbaTracker({
   const [agora, setAgora] = useState(new Date());
   const [processando, setProcessando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
- const [editandoId, setEditandoId] = useState<string | null>(null);
+  /**
+   * Qual FATIA está em edição — não qual lançamento.
+   *
+   * Um turno que vira a meia-noite aparece em dois cartões, e uma chave só com
+   * o id montava o formulário nos dois: dois estados independentes, os mesmos
+   * ids de DOM repetidos e o `autoFocus` roubando o cursor para o cartão que
+   * não foi clicado. Dava para digitar num e salvar o outro, perdendo o texto.
+   */
+  const [editando, setEditando] = useState<{ id: string; dia: string } | null>(null);
   /* O lançamento em preparo (descrição, cliente, categoria) some ao sair. */
   const edicao = useEdicaoPendente();
 
@@ -188,7 +197,7 @@ export function AbaTracker({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Falha ao salvar.");
       setEntradas((es) => es.map((x) => (x.id === id ? data.entrada : x)));
-      setEditandoId(null);
+      setEditando(null);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao salvar edição.");
     }
@@ -217,24 +226,43 @@ export function AbaTracker({
     }
   }
 
-  // agrupamento por dia local, mais recente primeiro
+  /**
+   * Agrupamento por dia local, mais recente primeiro.
+   *
+   * O dia sai das FATIAS do lançamento, não do instante de início: quem
+   * trabalha das 22:00 às 02:00 entrega duas horas para cada dia, e o turno
+   * aparece nos dois cartões. Antes o lançamento inteiro caía na véspera — o
+   * dia da madrugada ficava zerado, e às vezes nem existia na lista.
+   *
+   * A consulta agora devolve também quem começou na semana anterior e invadiu
+   * esta, então as fatias de fora da semana visível são descartadas aqui.
+   */
   const grupos = useMemo(() => {
-    const porDia = new Map<string, TimeEntry[]>();
+    const primeiroDia = ymdLocal(semanaBase);
+    const ultimoDia = ymdLocal(addDias(semanaBase, 6));
+    const porDia = new Map<string, { entrada: TimeEntry; fatia: Fatia }[]>();
     for (const e of entradas) {
-      const chave = ymdLocal(new Date(e.inicio));
-      if (!porDia.has(chave)) porDia.set(chave, []);
-      porDia.get(chave)!.push(e);
+      for (const fatia of fatiarPorDia(e, agora)) {
+        if (fatia.dia < primeiroDia || fatia.dia > ultimoDia) continue;
+        if (!porDia.has(fatia.dia)) porDia.set(fatia.dia, []);
+        porDia.get(fatia.dia)!.push({ entrada: e, fatia });
+      }
     }
     return [...porDia.entries()]
       .sort((a, b) => (a[0] < b[0] ? 1 : -1))
       .map(([dia, itens]) => ({
         dia,
-        itens: itens.sort((a, b) => (a.inicio < b.inicio ? 1 : -1)),
-        totalMin: itens.reduce((s, it) => s + duracaoMin(it, agora), 0),
+        itens: itens.sort((a, b) => b.fatia.inicio.getTime() - a.fatia.inicio.getTime()),
+        totalMin: itens.reduce((s, it) => s + it.fatia.min, 0),
       }));
-  }, [entradas, agora]);
+  }, [entradas, agora, semanaBase]);
 
   const totalSemanaMin = grupos.reduce((s, g) => s + g.totalMin, 0);
+  /** Lançamentos distintos com ao menos uma fatia nesta semana. */
+  const lancamentosNaSemana = useMemo(
+    () => new Set(grupos.flatMap((g) => g.itens.map((it) => it.entrada.id))).size,
+    [grupos],
+  );
 
   return (
     <div className="space-y-6">
@@ -391,7 +419,7 @@ export function AbaTracker({
       <KpiGrid>
         <Kpi label="Total da semana" value={formatarDuracao(totalSemanaMin)} destaque />
         <Kpi label="Média por dia" value={formatarDuracao(grupos.length ? Math.round(totalSemanaMin / grupos.length) : 0)} />
-        <Kpi label="Lançamentos" value={String(entradas.length)} />
+        <Kpi label="Lançamentos" value={String(lancamentosNaSemana)} />
         <Kpi label="Dias com registro" value={String(grupos.length)} />
       </KpiGrid>
 
@@ -410,15 +438,16 @@ export function AbaTracker({
                 actions={<span className="text-sm font-medium text-slate-600 dark:text-slate-400">{formatarDuracao(g.totalMin)}</span>}
               >
                 <div className="space-y-2">
-                  {g.itens.map((it) => (
+                  {g.itens.map(({ entrada: it, fatia }) => (
                     <LinhaLancamento
                       key={it.id}
                       entrada={it}
+                      fatia={fatia}
                       agora={agora}
                       podeEditar={souEuMesmo}
-                      editando={editandoId === it.id}
-                      onEditar={() => setEditandoId(it.id)}
-                      onCancelar={() => setEditandoId(null)}
+                      editando={editando?.id === it.id && editando.dia === g.dia}
+                      onEditar={() => setEditando({ id: it.id, dia: g.dia })}
+                      onCancelar={() => setEditando(null)}
                       onSalvar={(patch) => salvarEdicao(it.id, patch)}
                       onExcluir={() => excluir(it.id)}
                       onRetomar={() => retomar(it)}
@@ -445,10 +474,34 @@ function hhmmLocal(iso: string): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+/**
+ * Monta o instante a partir de data + hora do formulário, preservando os
+ * SEGUNDOS do original quando o minuto não foi mexido.
+ *
+ * O campo só edita hora e minuto. Zerar os segundos fazia um lançamento de
+ * 14:30:05 a 14:30:40 virar dois instantes idênticos: qualquer edição dele —
+ * até a de um campo de texto — passava a ser recusada com "o fim precisa vir
+ * depois do início", sem que houvesse nada de errado com o horário.
+ *
+ * Devolve null quando a data ou a hora não formam um instante válido.
+ */
+function comSegundosDe(original: string | undefined, ymd: string, hhmm: string): Date | null {
+  const d = new Date(`${ymd}T${hhmm}`);
+  if (Number.isNaN(d.getTime())) return null;
+  if (!original) return d;
+  const antes = new Date(original);
+  if (!Number.isNaN(antes.getTime()) && ymdLocal(antes) === ymd && hhmmLocal(original) === hhmm) {
+    d.setSeconds(antes.getSeconds(), antes.getMilliseconds());
+  }
+  return d;
+}
+
 function LinhaLancamento({
-  entrada, agora, podeEditar, editando, onEditar, onCancelar, onSalvar, onExcluir, onRetomar, podeRetomar, nomeDe, mostrarUsuario, tarefas, onEscolherTarefa,
+  entrada, fatia, agora, podeEditar, editando, onEditar, onCancelar, onSalvar, onExcluir, onRetomar, podeRetomar, nomeDe, mostrarUsuario, tarefas, onEscolherTarefa,
 }: {
   entrada: TimeEntry;
+  /** O pedaço deste lançamento que pertence ao dia do cartão. */
+  fatia: Fatia;
   agora: Date;
   podeEditar: boolean;
   editando: boolean;
@@ -463,8 +516,18 @@ function LinhaLancamento({
   tarefas: Task[];
   onEscolherTarefa: (id: string) => { cliente: string; categoria: string } | null;
 }) {
-  const min = duracaoMin(entrada, agora);
-  const hora = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const hora = (d: Date) => d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+  /**
+   * Um turno que vira a meia-noite aparece nos dois cartões, cada um com a sua
+   * parte. Esta frase é o que impede a leitura de "dois lançamentos": diz de
+   * onde a onde o turno foi e quanto durou por inteiro.
+   */
+  const turno = fatia.atravessa
+    ? `Turno de ${fmtCurta(new Date(entrada.inicio))} ${hora(new Date(entrada.inicio))} a ` +
+      (entrada.fim ? `${fmtCurta(new Date(entrada.fim))} ${hora(new Date(entrada.fim))}` : "agora") +
+      ` · ${formatarDuracao(duracaoMin(entrada, agora))} no total`
+    : null;
 
   if (editando) {
     return (
@@ -495,12 +558,13 @@ function LinhaLancamento({
           {entrada.categoria && <span>· {entrada.categoria}</span>}
           {entrada.tags.map((t) => <Badge key={t} tone="slate">{t}</Badge>)}
         </div>
+        {turno && <p className="mt-0.5 hint">{turno}</p>}
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <span className="hidden text-xs tabular-nums text-slate-600 sm:inline dark:text-slate-400">
-          {hora(entrada.inicio)}{entrada.fim ? `–${hora(entrada.fim)}` : ""}
+          {hora(fatia.inicio)}{entrada.fim || fatia.atravessa ? `–${hora(fatia.fim)}` : ""}
         </span>
-        <span className="text-sm font-medium tabular-nums text-slate-600 dark:text-slate-300">{formatarDuracao(min)}</span>
+        <span className="text-sm font-medium tabular-nums text-slate-600 dark:text-slate-300">{formatarDuracao(fatia.min)}</span>
         {podeRetomar && (
           <button type="button" className="icon-btn hover:!bg-indigo-50 hover:!text-gta-indigo dark:text-indigo-300 dark:hover:!bg-indigo-900/20" onClick={onRetomar} aria-label="Retomar esta atividade" title="Retomar esta atividade">
             <Play className="h-4 w-4" aria-hidden />
@@ -539,6 +603,14 @@ function EdicaoLancamento({
   const [inicio, setInicio] = useState(hhmmLocal(entrada.inicio));
   // Lançamento em andamento não tem fim — o campo fica vazio e opcional.
   const [fim, setFim] = useState(entrada.fim ? hhmmLocal(entrada.fim) : "");
+  /**
+   * A data do fim é um campo, não uma dedução.
+   *
+   * Antes ela era reconstruída de "fim menor que início ⇒ dia seguinte", e um
+   * cronômetro esquecido por 26 h encolhia para 2 h só de ser aberto e salvo
+   * sem alterar nada: a regra não tem como representar mais de uma virada.
+   */
+  const [dataFim, setDataFim] = useState(entrada.fim ? ymdLocal(new Date(entrada.fim)) : "");
   const [erro, setErro] = useState<string | null>(null);
 
   function trocarTarefa(id: string) {
@@ -547,20 +619,47 @@ function EdicaoLancamento({
     if (t) { setCliente(t.cliente); setCategoria(t.categoria); }
   }
 
+  /**
+   * Mover a data do início arrasta a do fim junto, preservando o intervalo.
+   *
+   * O deslocamento é medido contra a última data VÁLIDA, e não contra o estado
+   * atual: um `<input type="date">` reporta "" enquanto está sendo digitado, e
+   * medir contra o vazio fazia o passo se perder — a data do início andava
+   * sozinha e a do fim ficava para trás, esticando um turno de 4 h para 28 h.
+   */
+  const ultimaData = useRef(data);
+  function trocarData(nova: string) {
+    const anterior = new Date(`${ultimaData.current}T00:00:00`);
+    const proxima = new Date(`${nova}T00:00:00`);
+    if (dataFim && !Number.isNaN(anterior.getTime()) && !Number.isNaN(proxima.getTime())) {
+      const dias = Math.round((proxima.getTime() - anterior.getTime()) / 86400000);
+      if (dias !== 0) setDataFim(ymdLocal(addDias(new Date(`${dataFim}T00:00:00`), dias)));
+    }
+    if (nova) ultimaData.current = nova;
+    setData(nova);
+  }
+
   function salvar(e: React.FormEvent) {
     e.preventDefault();
     setErro(null);
-    let novoInicio: Date;
+    const novoInicio = comSegundosDe(entrada.inicio, data, inicio);
+    if (!novoInicio) { setErro("Horário de início inválido."); return; }
+    // Reabrir um lançamento encerrado não é o que este formulário faz — e o
+    // patch sem `fim` era entendido pelo servidor como "não altera", então a
+    // ação sumia em silêncio (ou, junto com um início novo, gravava fim antes
+    // do início e zerava a duração).
+    if (entrada.fim && !fim) {
+      setErro("Um lançamento encerrado não volta a ficar em andamento. Para seguir trabalhando nele, use Retomar.");
+      return;
+    }
     let novoFim: Date | null = null;
     if (fim) {
-      // Um fim menor que o início não é erro: é turno que virou a meia-noite.
-      const periodo = montarPeriodo(data, inicio, fim);
-      if (!periodo) { setErro("Data ou horário inválido."); return; }
-      novoInicio = periodo.inicio;
-      novoFim = periodo.fim;
-    } else {
-      novoInicio = new Date(`${data}T${inicio}`);
-      if (Number.isNaN(novoInicio.getTime())) { setErro("Horário de início inválido."); return; }
+      novoFim = comSegundosDe(entrada.fim, dataFim || data, fim);
+      if (!novoFim) { setErro("Horário de fim inválido."); return; }
+      if (novoFim <= novoInicio) {
+        setErro("O fim precisa vir depois do início. Se o turno virou a meia-noite, avance a data do fim.");
+        return;
+      }
     }
     onSalvar({
       descricao: descricao.trim(),
@@ -599,18 +698,25 @@ function EdicaoLancamento({
           <input id={id("categoria")} className="field-input" value={categoria} onChange={(e) => setCategoria(e.target.value)} />
         </div>
         <div className="sm:col-span-2">
-          <label className="field-label" htmlFor={id("data")}>Data</label>
-          <input id={id("data")} type="date" className="field-input" value={data} onChange={(e) => setData(e.target.value)} required />
+          <label className="field-label" htmlFor={id("data")}>Data do início</label>
+          <input id={id("data")} type="date" className="field-input" value={data} onChange={(e) => trocarData(e.target.value)} required />
         </div>
         <div className="sm:col-span-1">
           <label className="field-label" htmlFor={id("inicio")}>Início</label>
           <input id={id("inicio")} type="time" className="field-input" value={inicio} onChange={(e) => setInicio(e.target.value)} required />
         </div>
+        {/* Só faz sentido perguntar a data do fim quando existe um fim. */}
+        {fim && (
+          <div className="sm:col-span-2">
+            <label className="field-label" htmlFor={id("data-fim")}>Data do fim</label>
+            <input id={id("data-fim")} type="date" className="field-input" value={dataFim || data} onChange={(e) => setDataFim(e.target.value)} />
+          </div>
+        )}
         <div className="sm:col-span-1">
           <label className="field-label" htmlFor={id("fim")}>Fim</label>
           <input id={id("fim")} type="time" className="field-input" value={fim} onChange={(e) => setFim(e.target.value)} placeholder="em andamento" />
         </div>
-        <div className="sm:col-span-2">
+        <div className={fim ? "sm:col-span-6" : "sm:col-span-2"}>
           <label className="field-label" htmlFor={id("tags")}>Tags</label>
           <input id={id("tags")} className="field-input" value={tagsTexto} onChange={(e) => setTagsTexto(e.target.value)} placeholder="Separadas por vírgula" />
         </div>

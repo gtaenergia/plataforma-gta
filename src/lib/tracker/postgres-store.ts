@@ -87,17 +87,23 @@ export class PostgresTrackerStore implements TrackerStore {
     return this.ready;
   }
 
+  /**
+   * Sobreposição com [desde, ate), não contenção do `inicio` — ver `ListFiltro`.
+   * `fim IS NULL` é o cronômetro em andamento: ele alcança o presente, então
+   * basta ter começado antes do fim da janela.
+   */
   async list(filtro: ListFiltro): Promise<TimeEntry[]> {
     await this.ensureSchema();
     const { rows } = filtro.usuarioEmail
       ? await this.pool.sql<Row>`
           SELECT * FROM tracker_entries
-          WHERE usuario_email = ${filtro.usuarioEmail} AND inicio >= ${filtro.desde} AND inicio < ${filtro.ate}
+          WHERE usuario_email = ${filtro.usuarioEmail}
+            AND inicio < ${filtro.ate} AND (fim IS NULL OR fim > ${filtro.desde})
           ORDER BY inicio DESC
         `
       : await this.pool.sql<Row>`
           SELECT * FROM tracker_entries
-          WHERE inicio >= ${filtro.desde} AND inicio < ${filtro.ate}
+          WHERE inicio < ${filtro.ate} AND (fim IS NULL OR fim > ${filtro.desde})
           ORDER BY inicio DESC
         `;
     return rows.map(rowTo);

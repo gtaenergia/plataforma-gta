@@ -5,6 +5,7 @@ import {
   updateTimeEntrySchema,
   duracaoMin,
   formatarDuracao,
+  ordemPreservada,
 } from "../tracker/types";
 import { rowTo, type Row } from "../tracker/postgres-store";
 import { montarPeriodo } from "@/components/tracker/comum";
@@ -87,6 +88,38 @@ describe("updateTimeEntrySchema", () => {
 
   it('tarefaId: "" (LIMPAR) passa — a store, não o schema, decide o que fazer', () => {
     expect(updateTimeEntrySchema.safeParse({ tarefaId: "" }).success).toBe(true);
+  });
+});
+
+/**
+ * O buraco que o schema não fecha: ele só compara início e fim quando os dois
+ * vêm no patch. A rota PATCH confere o estado RESULTANTE com esta função.
+ */
+describe("ordemPreservada — o patch aplicado sobre o registro atual", () => {
+  const atual = { inicio: "2026-08-10T11:00:00.000Z", fim: "2026-08-10T12:00:00.000Z" };
+
+  it("recusa um início novo posterior ao fim já gravado", () => {
+    expect(ordemPreservada(atual, { inicio: "2026-08-10T17:00:00.000Z" })).toBe(false);
+  });
+
+  it("recusa um fim novo anterior ao início já gravado", () => {
+    expect(ordemPreservada(atual, { fim: "2026-08-10T10:00:00.000Z" })).toBe(false);
+  });
+
+  it("recusa início igual ao fim resultante", () => {
+    expect(ordemPreservada(atual, { inicio: "2026-08-10T12:00:00.000Z" })).toBe(false);
+  });
+
+  it("aceita um patch que não mexe no horário", () => {
+    expect(ordemPreservada(atual, {})).toBe(true);
+  });
+
+  it("aceita os dois novos, em ordem", () => {
+    expect(ordemPreservada(atual, { inicio: "2026-08-11T22:00:00.000Z", fim: "2026-08-12T02:00:00.000Z" })).toBe(true);
+  });
+
+  it("cronômetro em andamento não tem ordem a violar", () => {
+    expect(ordemPreservada({ inicio: "2026-08-10T11:00:00.000Z" }, { inicio: "2026-08-10T17:00:00.000Z" })).toBe(true);
   });
 });
 
