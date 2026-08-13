@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/session";
 import { getMunicipio } from "@/services/solar/municipios";
-import { dimensionar, kwpTotal, overloadReal } from "@/services/solar/sizing";
+import { dimensionar, kwpTotal, overloadReal, potenciaCaTotal } from "@/services/solar/sizing";
 import { sugerirInversorComercial } from "@/services/solar/commercial";
 import { dimensionarMicro, sugerirMicroinversor } from "@/services/solar/micro";
 import { simularGeracao } from "@/services/solar/generation";
@@ -91,7 +91,9 @@ export async function POST(req: Request) {
   // Valores comerciais aplicados: usa o que o usuário escolheu, senão a sugestão
   const nPaineis = i.nPaineis > 0 ? i.nPaineis : Math.max(1, sizing.nPlacasSugerido);
   const kwp = kwpTotal(nPaineis, i.potenciaPainel);
-  const inversorSugerido = sugerirInversorComercial(kwp, overloadDesejado);
+  // A sugestão é por UNIDADE: quem declarou dois inversores quer cada um
+  // dimensionado para metade do arranjo, não dois para o arranjo inteiro.
+  const inversorSugerido = sugerirInversorComercial(kwp / Math.max(1, i.qtdInversores), overloadDesejado);
 
   // Microinversor tem um dimensionamento próprio: a potência é por unidade e a
   // quantidade sai do overload alvo. Ambos são apenas SUGESTÃO — a potência
@@ -117,7 +119,20 @@ export async function POST(req: Request) {
       ? i.potenciaInversor
       : inversorSugerido;
   const qtdInversores = micro ? micro.qtdMicros : i.qtdInversores;
-  const overload = micro ? micro.overload : overloadReal(kwp, potenciaInversor);
+
+  /**
+   * Potência CA do CONJUNTO — o que a distribuidora enxerga e o denominador do
+   * overload.
+   *
+   * No micro, `potenciaInversor` já é o total (`micro.potenciaCaTotalKw`). No
+   * string ele é a potência de uma unidade, e a quantidade não entrava em conta
+   * nenhuma: só chegava à lista de materiais e ao texto do documento. Dois
+   * inversores de 75 kW num arranjo de 140 kWp apareciam com 87% de sobrecarga
+   * em vez de −7%, e as travas da Lei 14.300 e do tipo de ligação eram
+   * avaliadas com metade da potência real.
+   */
+  const potenciaCa = micro ? potenciaInversor : potenciaCaTotal(potenciaInversor, qtdInversores);
+  const overload = micro ? micro.overload : overloadReal(kwp, potenciaCa);
 
   const geracao = simularGeracao(mun.hsp, kwp, eficiencia, consumo);
   const bom = gerarBom({
@@ -172,7 +187,8 @@ export async function POST(req: Request) {
     disponibilidade: sizing.disponibilidade,
     tipoConexao: i.tipoConexao,
     kwpTotal: kwp,
-    potenciaInversor,
+    potenciaInversor: potenciaCa,
+    qtdInversores,
     overload,
   });
 
@@ -181,6 +197,8 @@ export async function POST(req: Request) {
     avisos,
     // o que foi de fato usado no cálculo (preenche o formulário quando "auto")
     aplicado: { nPaineis, potenciaInversor, qtdInversores, eficiencia, overloadDesejado },
+    /** Potência CA do conjunto (kW) — `potenciaInversor` × quantidade no string. */
+    potenciaCaTotal: potenciaCa,
     inversorSugerido,
     // bloco só presente quando tipoInversor === "micro"
     micro,

@@ -108,10 +108,16 @@ export function planilhaSolar(d: {
     const nRef = a.campo("Nº de painéis (aplicado)", num(s.nPaineis), { fmt: INT, nota: `sugestão ≈ ${Math.ceil((kwpNecNum * 1000) / (num(s.potenciaPainel) || 1))}` });
     const kwpTotalNum = kwp;
     const kwpTotalRef = a.formula("Potência instalada (kWp)", `${nRef}*${wpRef}/1000`, kwpTotalNum, { fmt: KWP, destaque: true });
-    const invRef = a.campo("Inversor (potência)", num(s.potenciaInversor), { fmt: KWFMT });
-    a.campo("Qtd. de inversores", num(s.qtdInversores), { fmt: INT });
-    const invKw = num(s.potenciaInversor);
-    a.formula("Overload do inversor", `${kwpTotalRef}/${invRef}-1`, invKw > 0 ? kwpTotalNum / invKw - 1 : 0, { fmt: PCT, nota: "kWp dos painéis ÷ inversor − 1" });
+    const invRef = a.campo("Inversor (potência de cada)", num(s.potenciaInversor), { fmt: KWFMT });
+    const qtdInvRef = a.campo("Qtd. de inversores", num(s.qtdInversores), { fmt: INT });
+    // A potência CA total é uma célula de fórmula, e não o mesmo número do
+    // inversor: quem abrir a planilha e trocar a quantidade precisa ver o
+    // overload acompanhar. Antes o overload dividia pela potência de UMA
+    // unidade, então dois inversores de 75 kW num arranjo de 140 kWp saíam com
+    // 87% de sobrecarga em vez de −7% — e a planilha vai para o cliente.
+    const invTotalNum = num(s.potenciaInversor) * Math.max(1, num(s.qtdInversores) || 1);
+    const invTotalRef = a.formula("Potência CA total", `${invRef}*${qtdInvRef}`, invTotalNum, { fmt: KWFMT, nota: "potência de cada × quantidade" });
+    a.formula("Overload do inversor", `${kwpTotalRef}/${invTotalRef}-1`, invTotalNum > 0 ? kwpTotalNum / invTotalNum - 1 : 0, { fmt: PCT, nota: "kWp dos painéis ÷ potência CA total − 1" });
   }
 
   // =============================================================== Aba 2 · Preço

@@ -138,6 +138,8 @@ interface Calc {
   /** Travas do projeto real (limite de microgeração, ligação, overload). */
   avisos: { nivel: "atencao" | "critico"; titulo: string; detalhe: string }[];
   aplicado: { nPaineis: number; potenciaInversor: number; qtdInversores: number; eficiencia: number; overloadDesejado: number };
+  /** Potência CA do conjunto (kW): no string, a de cada inversor × quantidade. */
+  potenciaCaTotal: number;
   inversorSugerido: number;
   kwpTotal: number;
   overload: number;
@@ -488,10 +490,14 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
       potenciaPainel: `${form.potenciaPainel} W`,
       qtdPaineis: `${calc.aplicado.nPaineis} unidades`,
       potenciaTotal: `${nf(calc.kwpTotal, 2)} kWp`,
-      // No micro o que vale é a potência CA total do conjunto e a unidade em W.
+      // O que vale é a potência CA TOTAL do conjunto — é ela que vai ao parecer
+      // de acesso. Com mais de uma unidade, o desdobramento vem entre
+      // parênteses, para o leitor saber o que comprar.
       potenciaInversor: calc.micro
         ? `${nf(calc.micro.potenciaCaTotalKw, 2)} kW (${calc.micro.qtdMicros} × ${kw(calc.micro.potenciaKw)} kW)`
-        : `${kw(calc.aplicado.potenciaInversor)} kWp`,
+        : calc.aplicado.qtdInversores > 1
+          ? `${nf(calc.potenciaCaTotal, 2)} kW (${calc.aplicado.qtdInversores} × ${kw(calc.aplicado.potenciaInversor)} kW)`
+          : `${kw(calc.aplicado.potenciaInversor)} kW`,
       overload: pct(calc.overload),
       qtdInversores: `${calc.aplicado.qtdInversores} ${calc.aplicado.qtdInversores > 1 ? "unidades" : "unidade"}`,
       tipoInversor: form.tipoInversor === "micro" ? "microinversor" : "inversor",
@@ -837,7 +843,10 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
           ) : (
             <>
               <div className="sm:col-span-2">
-                <label className="field-label" htmlFor="solar-inversor">Inversor (kW)</label>
+                {/* "cada" no rótulo: é a potência de UMA unidade, e a
+                    quantidade ao lado multiplica. Sem isso, ninguém sabia se
+                    75 kW com 2 unidades queria dizer 75 ou 150. */}
+                <label className="field-label" htmlFor="solar-inversor">Inversor (kW, cada)</label>
                 <div className="flex gap-2">
                   <select
                     id="solar-inversor"
@@ -869,7 +878,14 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
                 </div>
               </div>
               <Campo className="sm:col-span-1" label="Qtd. inversores">
-                <input type="number" className="field-input" value={form.qtdInversores} onChange={(e) => set("qtdInversores", Number(e.target.value))} />
+                <input
+                  type="number"
+                  min={1}
+                  className="field-input"
+                  value={form.qtdInversores}
+                  onChange={(e) => set("qtdInversores", Math.max(1, Number(e.target.value) || 1))}
+                  title="A potência acima é a de CADA inversor. A quantidade multiplica a potência CA do sistema."
+                />
               </Campo>
             </>
           )}
@@ -883,11 +899,18 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
         {calc && (
           <div className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4 dark:bg-slate-900/50">
             <Kpi label="Potência do sistema" value={`${nf(calc.kwpTotal, 2)} kWp`} destaque />
-            <Kpi label="Consumo médio" value={`${nf(calc.sizing.consumoMedio, 0)} kWh/mês`} />
+            {/* Com mais de um inversor, a potência CA total substitui o consumo
+                médio: é ela que a distribuidora enxerga e o denominador do
+                overload — antes não aparecia em lugar nenhum no caminho string. */}
+            {!calc.micro && calc.aplicado.qtdInversores > 1 ? (
+              <Kpi label="Potência CA total" value={`${nf(calc.potenciaCaTotal, 2)} kW`} />
+            ) : (
+              <Kpi label="Consumo médio" value={`${nf(calc.sizing.consumoMedio, 0)} kWh/mês`} />
+            )}
             <Kpi label="HSP média (local)" value={nf(calc.sizing.hspMedia, 2)} />
             <div className={`rounded-md p-2 shadow-sm ${overloadOk ? "bg-white dark:bg-slate-800" : "bg-amber-50 dark:bg-amber-900/30"}`}>
               <div className="text-xs text-slate-600 dark:text-slate-400">
-                {calc.micro ? "Overload por micro" : "Overload do inversor"}
+                {calc.micro ? "Overload por micro" : "Overload do conjunto"}
               </div>
               <div className={`mt-0.5 font-semibold ${overloadOk ? "text-gta-navy dark:text-slate-100" : "text-amber-700 dark:text-amber-300"}`}>
                 {pct(calc.overload)} {overloadOk ? "" : "· verificar"}

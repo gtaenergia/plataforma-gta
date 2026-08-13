@@ -65,7 +65,25 @@ export function kwpTotal(nPaineis: number, potenciaPainel: number): number {
   return (nPaineis * potenciaPainel) / 1000;
 }
 
-/** Overload real = kWpTotal / potênciaInversor − 1. */
-export function overloadReal(kwp: number, potenciaInversorKw: number): number {
-  return potenciaInversorKw > 0 ? kwp / potenciaInversorKw - 1 : 0;
+/**
+ * Potência CA instalada (kW) — a de UMA unidade vezes quantas forem.
+ *
+ * É o número que a distribuidora enxerga no parecer de acesso, e o denominador
+ * do overload. Existe porque `potenciaInversor` é sempre a potência de um
+ * inversor: a lista de materiais sempre leu assim ("2 × INVERSOR 75 kW"), mas o
+ * overload e as travas normativas liam o mesmo campo como se fosse o total.
+ * Dois inversores de 75 kW davam 87% de sobrecarga no lugar de −7%.
+ */
+export function potenciaCaTotal(potenciaUnitariaKw: number, quantidade: number): number {
+  return Math.max(0, potenciaUnitariaKw) * Math.max(1, Math.floor(quantidade || 1));
+}
+
+/**
+ * Overload real = kWpTotal / potência CA − 1.
+ *
+ * O segundo argumento é a potência CA TOTAL do conjunto, não a de uma unidade
+ * — use `potenciaCaTotal` para chegar nela quando houver mais de um inversor.
+ */
+export function overloadReal(kwp: number, potenciaCaTotalKw: number): number {
+  return potenciaCaTotalKw > 0 ? kwp / potenciaCaTotalKw - 1 : 0;
 }

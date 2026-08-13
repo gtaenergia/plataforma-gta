@@ -45,8 +45,16 @@ export interface AvaliacaoInput {
   tipoConexao: "mono" | "bi" | "tri";
   /** Potência CC dos módulos (kWp). */
   kwpTotal: number;
-  /** Potência CA do(s) inversor(es) (kW) — é o que a distribuidora enxerga. */
+  /**
+   * Potência CA TOTAL do conjunto (kW) — é o que a distribuidora enxerga.
+   *
+   * Total, não a de uma unidade: com dois inversores de 75 kW este número é
+   * 150. Quem chama monta com `potenciaCaTotal` (sizing.ts); enquanto chegava
+   * aqui a potência unitária, as travas abaixo julgavam metade do sistema.
+   */
   potenciaInversor: number;
+  /** Quantos inversores — decide se ainda faz sentido falar em "um só". */
+  qtdInversores?: number;
   overload: number;
 }
 
@@ -96,7 +104,12 @@ export function avaliarSistema(i: AvaliacaoInput): AvisoTecnico[] {
 
   // 3. Arranjo maior que o maior inversor do catálogo: a sugestão satura em
   //    75 kW e vira um overload absurdo, em vez de indicar vários inversores.
-  if (i.kwpTotal > MAIOR_INVERSOR_CATALOGO_KW * (1 + OVERLOAD_MAX_SAUDAVEL)) {
+  //
+  //    Só vale enquanto houver UM inversor declarado. O aviso pede "defina a
+  //    quantidade à mão" e continuava aparecendo depois de o projetista fazer
+  //    exatamente isso — porque olhava só a potência CC do arranjo.
+  const umInversorSo = (i.qtdInversores ?? 1) <= 1;
+  if (umInversorSo && i.kwpTotal > MAIOR_INVERSOR_CATALOGO_KW * (1 + OVERLOAD_MAX_SAUDAVEL)) {
     const estimativa = Math.ceil(i.kwpTotal / (1 + 0.15) / MAIOR_INVERSOR_CATALOGO_KW);
     avisos.push({
       nivel: "atencao",

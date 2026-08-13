@@ -40,9 +40,25 @@ export function mapSolar(form: SolarFormData): MapResult {
 
   const ehMicro = form.tipoInversor === "microinversor";
   const labelQtdInversores = ehMicro ? "Quantidade de Microinversores" : "Quantidade de Inversores";
-  // No micro a linha traz a potência CA TOTAL do conjunto (não a de uma unidade),
-  // que é o número que a distribuidora usa no parecer de acesso.
-  const labelPotInversor = ehMicro ? "Potência Total dos Microinversores (kW)" : "Potência do Inversor (kWp)";
+  /**
+   * Quantos inversores, lido do campo de texto ("2 unidades").
+   *
+   * O campo é livre — é digitável à mão no formulário da proposta —, então só o
+   * inteiro do começo é aproveitado, com 1 como piso.
+   */
+  const qtdInv = Number(/^\s*(\d+)/.exec(form.qtdInversores)?.[1] ?? 1) || 1;
+  /**
+   * A linha traz a potência CA TOTAL do conjunto — é o número que a
+   * distribuidora usa no parecer de acesso. No string com mais de um inversor
+   * o rótulo vai no plural, senão "Potência do Inversor: 150 kW" seria lido
+   * como a potência de cada um. A unidade é kW (corrente alternada); "kWp",
+   * que estava aqui, é de módulo.
+   */
+  const labelPotInversor = ehMicro
+    ? "Potência Total dos Microinversores (kW)"
+    : qtdInv > 1
+      ? "Potência Total dos Inversores (kW)"
+      : "Potência do Inversor (kW)";
 
   const data = {
     // cabeçalho

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { avaliarSistema, LIMITE_MICROGERACAO_KW } from "@/services/solar/avisos";
-import { dimensionar } from "@/services/solar/sizing";
+import { dimensionar, overloadReal, potenciaCaTotal } from "@/services/solar/sizing";
 
 const HSP = Array(12).fill(5.2);
 const base = { consumoMedio: 800, disponibilidade: 100, tipoConexao: "tri" as const, kwpTotal: 10, potenciaInversor: 8.7, overload: 0.15 };
@@ -91,5 +91,57 @@ describe("avaliarSistema — travas do projeto real", () => {
   it("acumula avisos quando há mais de um problema", () => {
     const a = avaliarSistema({ ...base, tipoConexao: "mono", kwpTotal: 120, potenciaInversor: 100, overload: 0.9 });
     expect(a.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("com a quantidade declarada, para de mandar declarar a quantidade", () => {
+    // O aviso pedia "defina a potência e a quantidade à mão" e continuava
+    // aparecendo depois disso feito, porque olhava só a potência CC.
+    const a = avaliarSistema({ ...base, kwpTotal: 291, potenciaInversor: 300, qtdInversores: 4, overload: -0.03 });
+    expect(titulos(a)).not.toContain("Arranjo maior que um único inversor");
+  });
+
+  it("um inversor só num arranjo grande continua sendo pego", () => {
+    const a = avaliarSistema({ ...base, kwpTotal: 291, potenciaInversor: 75, qtdInversores: 1, overload: 2.88 });
+    expect(titulos(a)).toContain("Arranjo maior que um único inversor");
+  });
+});
+
+/**
+ * A quantidade de inversores só chegava à lista de materiais e ao texto do
+ * documento: o overload e as travas normativas liam a potência de UMA unidade
+ * como se fosse a do sistema inteiro.
+ */
+describe("potenciaCaTotal — a quantidade entra na conta", () => {
+  it("multiplica a potência de cada unidade", () => {
+    expect(potenciaCaTotal(75, 2)).toBe(150);
+  });
+
+  it("quantidade ausente ou zero conta como uma unidade", () => {
+    expect(potenciaCaTotal(75, 0)).toBe(75);
+    expect(potenciaCaTotal(75, NaN)).toBe(75);
+  });
+
+  it("não aceita potência negativa", () => {
+    expect(potenciaCaTotal(-10, 3)).toBe(0);
+  });
+
+  it("dois inversores de 75 kW num arranjo de 140 kWp: −7%, não +87%", () => {
+    const total = potenciaCaTotal(75, 2);
+    expect(overloadReal(140, total)).toBeCloseTo(-0.0667, 4);
+    // O número que a tela mostrava antes, calculado contra uma unidade só:
+    expect(overloadReal(140, 75)).toBeCloseTo(0.8667, 4);
+  });
+
+  it("sem sobrecarga inventada, o aviso de overload não dispara", () => {
+    const total = potenciaCaTotal(75, 2);
+    const a = avaliarSistema({ ...base, kwpTotal: 140, potenciaInversor: total, qtdInversores: 2, overload: overloadReal(140, total) });
+    expect(titulos(a)).not.toContain("Overload elevado");
+  });
+
+  it("mas a potência CA total passa a ser vista pela trava de microgeração", () => {
+    // 2 × 40 kW = 80 kW: cada unidade cabe no limite, o conjunto não.
+    const total = potenciaCaTotal(40, 2);
+    const a = avaliarSistema({ ...base, kwpTotal: 90, potenciaInversor: total, qtdInversores: 2, overload: overloadReal(90, total) });
+    expect(titulos(a)).toContain("Passou de microgeração — isto é minigeração");
   });
 });
