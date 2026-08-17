@@ -198,6 +198,43 @@ describe("nenhuma tag do molde fica sem valor no mapper", () => {
   );
 });
 
+/**
+ * O texto normal da proposta é 12pt, e as tabelas densas não foram junto.
+ *
+ * Os moldes não declaravam tamanho nenhum no `docDefaults`, então o Word caía
+ * no implícito dele — 10pt — e a proposta inteira saía nesse corpo. O tamanho
+ * agora é explícito, e o teste vale nos dois sentidos: se alguém abrir o molde
+ * no Word e salvar por cima, o padrão volta a cair; e se alguém resolver
+ * "aumentar tudo", as tabelas de simulação e de materiais estouram a coluna.
+ */
+describe("corpo do texto nos moldes", () => {
+  /** Meios-pontos: é assim que o OOXML guarda tamanho de fonte. */
+  const CORPO_MEIOS_PONTOS = 24; // 12pt
+
+  const moldes = [...new Set(SERVICES.map((s) => s.templateFile))];
+
+  it.each(moldes.map((m) => [m] as const))("%s — padrão em 12pt", (arquivo) => {
+    const zip = new PizZip(fs.readFileSync(path.join(process.cwd(), arquivo)));
+    const styles = zip.file("word/styles.xml")?.asText() ?? "";
+    const padrao = /<w:docDefaults>[\s\S]*?<\/w:docDefaults>/.exec(styles)?.[0] ?? "";
+    expect(padrao, "molde sem docDefaults").not.toBe("");
+    expect(
+      /<w:sz w:val="(\d+)"\/>/.exec(padrao)?.[1],
+      "o texto normal precisa ter tamanho declarado — sem ele o Word usa 10pt",
+    ).toBe(String(CORPO_MEIOS_PONTOS));
+  });
+
+  it.each(moldes.map((m) => [m] as const))("%s — tabelas densas seguem menores", (arquivo) => {
+    const zip = new PizZip(fs.readFileSync(path.join(process.cwd(), arquivo)));
+    const doc = zip.file("word/document.xml")?.asText() ?? "";
+    // Os tamanhos declarados no corpo do documento: são eles que protegem a
+    // diagramação (8/8,5/9/9,5pt nas tabelas, 2pt nos espaçadores).
+    const declarados = [...doc.matchAll(/<w:sz w:val="(\d+)"\/>/g)].map((m) => Number(m[1]));
+    const menores = declarados.filter((v) => v > 4 && v < CORPO_MEIOS_PONTOS);
+    expect(menores.length, "nenhum tamanho reduzido sobrou — as tabelas foram junto no aumento").toBeGreaterThan(0);
+  });
+});
+
 describe("cada serviço gera um .docx válido", () => {
   it.each(SERVICES.map((s) => [s.key, s] as const))("%s", (_key, s) => {
     const parsed = s.zodSchema.parse(formPara(s));
