@@ -5,10 +5,9 @@ import { Check, ChevronDown, Plus, Trash2 } from "lucide-react";
 import {
   ITEM_NOVO,
   LARGURA_MAX_PX,
-  itensVisiveis,
   medirPainel,
+  montarLista,
   moverAtivo,
-  recortar,
   valorEscolhido,
 } from "./combobox-lista";
 
@@ -107,16 +106,10 @@ export function Combobox({
   /* A lógica de lista mora em `combobox-lista.ts`, testada sem navegador. Aqui
      havia uma cópia dela — e cópia de regra é o que fez o preço do carregador
      divergir entre engine e tela. */
-  const { itens, ocultos } = useMemo(() => {
-    const todos = itensVisiveis(options, busca, permitirNovo);
-    const r = recortar(todos, maxVisiveis);
-    /* O item de criar não pode ser cortado: ele mora no fim, e é justamente com
-       lista grande que ele mais importa. */
-    if (r.ocultos > 0 && todos[todos.length - 1] === ITEM_NOVO) {
-      r.visiveis[r.visiveis.length - 1] = ITEM_NOVO;
-    }
-    return { itens: r.visiveis, ocultos: r.ocultos };
-  }, [options, busca, permitirNovo, maxVisiveis]);
+  const { itens, ocultos, criar } = useMemo(
+    () => montarLista(options, busca, permitirNovo, maxVisiveis),
+    [options, busca, permitirNovo, maxVisiveis],
+  );
 
   useEffect(() => {
     if (!aberto) return;
@@ -131,12 +124,27 @@ export function Combobox({
     if (aberto) campoBusca.current?.focus();
   }, [aberto]);
 
-  // A opção destacada tem que estar visível: navegar com as setas até o fim de
-  // uma lista de vinte itens sem isto rola a página, não a lista.
+  /**
+   * A opção destacada tem que estar visível: navegar com as setas até o fim de
+   * uma lista de vinte itens sem isto rola a página, não a lista.
+   *
+   * Só que rolar com o MOUSE também move o destaque — o ponteiro passa por cima
+   * dos itens e dispara `onMouseEnter`. Puxar a lista de volta a cada um desses
+   * era o que fazia a rolagem tremer e escapar do dedo em lista longa. Daí o
+   * ajuste valer apenas quando o destaque veio do teclado.
+   */
+  const viaTeclado = useRef(false);
   useEffect(() => {
-    if (!aberto) return;
+    if (!aberto || !viaTeclado.current) return;
+    viaTeclado.current = false;
     document.getElementById(`${idLista}-${ativo}`)?.scrollIntoView({ block: "nearest" });
   }, [ativo, aberto, idLista]);
+
+  /** Move o destaque marcando que a origem foi o teclado. */
+  function destacar(proximo: (a: number) => number) {
+    viaTeclado.current = true;
+    setAtivo(proximo);
+  }
 
   function abrir() {
     if (disabled) return;
@@ -171,19 +179,19 @@ export function Combobox({
     switch (e.key) {
       case "ArrowDown":
         e.preventDefault();
-        setAtivo((a) => moverAtivo(a, 1, itens.length));
+        destacar((a) => moverAtivo(a, 1, itens.length));
         break;
       case "ArrowUp":
         e.preventDefault();
-        setAtivo((a) => moverAtivo(a, -1, itens.length));
+        destacar((a) => moverAtivo(a, -1, itens.length));
         break;
       case "Home":
         e.preventDefault();
-        setAtivo(0);
+        destacar(() => 0);
         break;
       case "End":
         e.preventDefault();
-        setAtivo(moverAtivo(0, itens.length, itens.length));
+        destacar(() => moverAtivo(0, itens.length, itens.length));
         break;
       case "Enter":
         e.preventDefault();
@@ -263,13 +271,17 @@ export function Combobox({
               </li>
             )}
             {itens.map((o, i) => {
-              const criar = o === ITEM_NOVO;
+              const ehNovo = o === ITEM_NOVO;
               return (
                 <li
-                  key={criar ? "__novo" : o}
+                  /* A chave carrega o índice porque `options` é texto livre e
+                     pode repetir — dois cadastros com a mesma descrição davam
+                     chave duplicada, e o React passava a errar qual item o
+                     clique atingiu. */
+                  key={ehNovo ? "__novo" : `${i}-${o}`}
                   id={`${idLista}-${i}`}
                   role="option"
-                  aria-selected={!criar && o === value}
+                  aria-selected={!ehNovo && o === value}
                   onMouseEnter={() => setAtivo(i)}
                   onClick={() => escolher(i)}
                   /* `items-start`, e não `items-center`: com o texto podendo
@@ -279,9 +291,17 @@ export function Combobox({
                     i === ativo
                       ? "bg-gta-indigo/10 text-gta-navy dark:bg-gta-indigo/25 dark:text-slate-100"
                       : "text-slate-700 dark:text-slate-200"
+                  } ${
+                    /* Fixo no rodapé da lista: com 300 materiais cadastrados,
+                       "escrever um nome novo" estava a uma rolagem inteira de
+                       distância. Aqui ele acompanha a rolagem e fica sempre a
+                       um clique — sem sair do fim na ordem do teclado. */
+                    ehNovo
+                      ? "sticky bottom-0 -mx-1 -mb-1 border-t border-slate-200 bg-white px-4 dark:border-slate-700 dark:bg-slate-800"
+                      : ""
                   }`}
                 >
-                  {criar ? (
+                  {ehNovo ? (
                     <>
                       <Plus className="mt-0.5 h-4 w-4 shrink-0 text-gta-indigo dark:text-indigo-300" aria-hidden />
                       <span className="min-w-0 flex-1 break-words">{rotuloNovo.replace("{v}", busca.trim())}</span>
@@ -316,7 +336,8 @@ export function Combobox({
           </ul>
           {ocultos > 0 && (
             <div className="border-t border-slate-200 px-3 py-1.5 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
-              Mostrando {itens.length} de {options.length} — continue digitando para refinar.
+              {/* Conta OPÇÕES, não linhas: o item de criar não é uma delas. */}
+              Mostrando {itens.length - (criar ? 1 : 0)} de {options.length} — continue digitando para refinar.
             </div>
           )}
         </div>
