@@ -96,6 +96,33 @@ describe("payloads reais do configurador", () => {
     expect(r.status).toBe(200);
   });
 
+  it("consumo digitado com vírgula decimal calcula, e certo", async () => {
+    // "850,5" derrubava o cálculo inteiro com "Expected number, received nan".
+    const r = await chamar({ ...base, consumo: Array(12).fill("850,5") });
+    expect(r.status, JSON.stringify(r.json?.issues ?? r.json)).toBe(200);
+    expect(r.json.sizing.consumoMedio).toBeCloseTo(850.5, 3);
+  });
+
+  it("consumo com ponto de milhar NÃO vira um milésimo", async () => {
+    // Number("1.500") = 1,5: o sistema saía dimensionado para 1,5 kWh/mês em
+    // vez de 1500 — sem nenhum erro. O pior dos dois defeitos deste campo.
+    const r = await chamar({ ...base, consumo: Array(12).fill("1.500") });
+    expect(r.status).toBe(200);
+    expect(r.json.sizing.consumoMedio).toBeCloseTo(1500, 3);
+  });
+
+  it("consumo em moeda completa ('1.234,56') também", async () => {
+    const r = await chamar({ ...base, consumo: Array(12).fill("1.234,56") });
+    expect(r.status).toBe(200);
+    expect(r.json.sizing.consumoMedio).toBeCloseTo(1234.56, 2);
+  });
+
+  it("consumo negativo continua recusado", async () => {
+    const r = await chamar({ ...base, consumo: ["-500", ...Array(11).fill("800")] });
+    expect(r.status).toBe(422);
+    expect(r.json.issues.fieldErrors.consumo).toBeDefined();
+  });
+
   it("ano de emissão fora da régua do Fio B é recusado com mensagem de campo", async () => {
     const r = await chamar({ ...base, anoInicial: 2022 });
     expect(r.status).toBe(422);

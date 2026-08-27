@@ -17,6 +17,7 @@ import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { TelhadoSimulador, type EstudoTelhadoSalvo } from "./TelhadoSimulador";
 import { Combobox } from "@/components/Combobox";
 import { Alert, Kpi } from "@/components/ui";
+import { parseNumber } from "@/lib/format";
 import { fraseDoErroDeCalculo, sanearFormSolar } from "@/services/solar/saneamento";
 import { Campo } from "@/components/Campo";
 import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
@@ -338,7 +339,9 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
   }
 
   // recálculo ao vivo (debounce) — dispara com município + consumo; painéis/inversor são sugeridos
-  const temConsumo = form.consumo.some((c) => Number(c) > 0);
+  // parseNumber: com vírgula em todos os meses, Number() dava NaN e o cálculo
+  // nem chegava a disparar — a tela ficava muda, sem aviso nenhum.
+  const temConsumo = form.consumo.some((c) => parseNumber(c) > 0);
   const calcKey = JSON.stringify([
     form.municipio, form.consumo, form.margemSeguranca, form.tipoConexao, form.potenciaPainel, form.eficiencia,
     form.overloadDesejado, form.nPaineis, form.potenciaInversor, form.qtdInversores,
@@ -359,7 +362,10 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             municipio: form.municipio,
-            consumo: form.consumo.map((c) => c || 0),
+            // parseNumber, e não o texto cru: "850,5" virava NaN (recusa) e
+            // "1.500" virava 1,5 — o sistema saía dimensionado para um
+            // MILÉSIMO do consumo, sem nenhum erro na tela.
+            consumo: form.consumo.map((c) => parseNumber(c)),
             margemSeguranca: form.margemSeguranca,
             tipoConexao: form.tipoConexao,
             potenciaPainel: form.potenciaPainel,
@@ -729,7 +735,7 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
             <button
               type="button"
               className="btn-secondary w-full"
-              disabled={!Number(form.consumo[0])}
+              disabled={!parseNumber(form.consumo[0])}
               onClick={() => set("consumo", Array(12).fill(form.consumo[0]))}
               title="Útil quando o cliente só informa a média mensal"
             >

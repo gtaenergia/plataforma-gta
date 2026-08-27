@@ -21,7 +21,14 @@ const schema = z.object({
   municipio: z.string(),
   // .min(0): consumo negativo (um "-500" colado por engano) era aceito e
   // contaminava dimensionamento, geração, preço e payback de uma vez.
-  consumo: z.array(z.coerce.number().min(0, "Consumo não pode ser negativo")).length(12),
+  //
+  // parseNumber, e não coerce puro: o campo chega como texto digitado, e o
+  // formato brasileiro derrubava a conversão nativa — "850,5" virava NaN e o
+  // cálculo inteiro era recusado; "1.500" virava 1,5 e dimensionava o sistema
+  // para um milésimo do consumo. A mesma leitura que kit e tarifa já usam.
+  consumo: z.array(
+    z.preprocess((v) => parseNumber(v), z.number().min(0, "Consumo não pode ser negativo")),
+  ).length(12),
   /** Margem de segurança (%): superdimensiona aumentando o consumo mensal. */
   margemSeguranca: z.coerce.number().min(0).max(200).default(0),
   tipoConexao: z.enum(["mono", "bi", "tri"]).default("tri"),
