@@ -31,7 +31,15 @@ const schema = z.object({
   overloadDesejado: z.coerce.number().min(-1).max(1).optional(),
   nPaineis: z.coerce.number().int().min(0).default(0),
   potenciaInversor: z.coerce.number().min(0).default(0),
-  qtdInversores: z.coerce.number().int().positive().default(1),
+  /**
+   * Cura em vez de recusar: 0, null ou lixo viram 1.
+   *
+   * O campo aceitou ficar vazio por muito tempo, e propostas salvas nessa era
+   * guardaram 0. Recusar aqui fazia a proposta reaberta NUNCA mais calcular —
+   * e a tela, que engolia o erro, só mostrava o nada. Quantidade abaixo de um
+   * nunca significou outra coisa senão "uma unidade".
+   */
+  qtdInversores: z.coerce.number().int().positive().catch(1).default(1),
   tipoInversor: z.enum(["string", "micro"]).default("string"),
   /** Potência de cada microinversor (kW), livre. 0 = usa a sugestão. */
   microPotenciaKw: z.coerce.number().min(0).max(1000).default(0),

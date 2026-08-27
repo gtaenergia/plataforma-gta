@@ -17,6 +17,7 @@ import { BaixarPlanilhaButton } from "@/components/BaixarPlanilhaButton";
 import { TelhadoSimulador, type EstudoTelhadoSalvo } from "./TelhadoSimulador";
 import { Combobox } from "@/components/Combobox";
 import { Alert, Kpi } from "@/components/ui";
+import { fraseDoErroDeCalculo, sanearFormSolar } from "@/services/solar/saneamento";
 import { Campo } from "@/components/Campo";
 import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { DetalhamentoPreco, EquipeResponsavelCard, useEquipeResponsavel, type EquipeSalva } from "@/components/equipe/EquipeResponsavel";
@@ -196,6 +197,15 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
   const [distribuidoras, setDistribuidoras] = useState<string[]>([]);
   const [calc, setCalc] = useState<Calc | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  /**
+   * Por que o último recálculo NÃO aconteceu.
+   *
+   * Quando a API recusava os dados, nada acontecia: os números anteriores
+   * ficavam na tela, congelados, e a pessoa digitava sem ver efeito — a cara
+   * exata de "parou de calcular sozinho". A recusa agora vira frase visível, e
+   * o cálculo antigo continua exposto como referência.
+   */
+  const [erroCalc, setErroCalc] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [gerando, setGerando] = useState(false);
@@ -204,6 +214,16 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
   const [textoTelhado, setTextoTelhado] = useState("");
   /** O texto digitado no Fator; `undefined` = mostra o número vigente. */
   const [textoFator, setTextoFator] = useState<string>();
+  /**
+   * Rascunho do campo de quantidade de inversores, como o `textoFator`.
+   *
+   * Sem ele, apagar o conteúdo para digitar "2" travava o visor: o valor em
+   * uso continua 1 (a trava de mínimo segura), o React não re-renderiza — e o
+   * campo ficava mostrando vazio enquanto tudo calculava com 1. Parecia bug.
+   * O rascunho deixa o vazio existir só durante a digitação; ao sair do campo,
+   * o visor volta a mostrar o valor que de fato está em uso.
+   */
+  const [qtdInvTexto, setQtdInvTexto] = useState<string>();
   /**
    * O estudo do telhado, para gravar junto da proposta.
    *
@@ -273,7 +293,9 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
       fetch(`/api/propostas/${propostaId}`).then((r) => r.json()).then((d) => {
         if (d.proposta?.dados) {
           const dados = d.proposta.dados as Partial<Form> & { cond?: CondPag; materiais?: { qtde: string; descricao: string }[]; estudoTelhado?: EstudoTelhadoSalvo; equipeGta?: EquipeSalva; equipeOrcamento?: EquipeSalva };
-          setForm({ ...FORM_INICIAL, ...dados });
+          // Propostas antigas podem trazer quantidade 0 ou painel 0 — valores
+          // que hoje o formulário impede, e que deixavam o cálculo mudo.
+          setForm(sanearFormSolar({ ...FORM_INICIAL, ...dados }));
           if (dados.cond) setCond(dados.cond as CondPag);
           if (dados.estudoTelhado) setEstudoTelhadoCarregado(dados.estudoTelhado);
           if (dados.equipeGta) equipe.restaurar(dados.equipeGta);
@@ -363,8 +385,14 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
             anoInicial: Number(form.dataEmissao.slice(0, 4)) || undefined,
           }),
         });
-        if (res.ok) {
+        if (!res.ok) {
+          const corpo = await res.json().catch(() => null);
+          setErroCalc(fraseDoErroDeCalculo(corpo));
+          return;
+        }
+        {
           const data = await res.json();
+          setErroCalc(null);
           setCalc(data);
           // Semeia a lista com a sugestão SÓ enquanto o usuário não mexeu nela.
           // Depois disso a lista é dele — sobrescrever apagaria o que digitou.
@@ -882,8 +910,13 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
                   type="number"
                   min={1}
                   className="field-input"
-                  value={form.qtdInversores}
-                  onChange={(e) => set("qtdInversores", Math.max(1, Number(e.target.value) || 1))}
+                  value={qtdInvTexto ?? String(form.qtdInversores)}
+                  onChange={(e) => {
+                    setQtdInvTexto(e.target.value);
+                    const n = Math.floor(Number(e.target.value));
+                    if (Number.isFinite(n) && n >= 1) set("qtdInversores", n);
+                  }}
+                  onBlur={() => setQtdInvTexto(undefined)}
                   title="A potência acima é a de CADA inversor. A quantidade multiplica a potência CA do sistema."
                 />
               </Campo>
@@ -896,6 +929,14 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
           </Campo>
         </div>
 
+        {erroCalc && (
+          <div className="mt-4">
+            <Alert tone="amber">
+              O cálculo não acompanhou a última mudança — {erroCalc}
+              {calc ? " Os números abaixo são do último cálculo válido." : ""}
+            </Alert>
+          </div>
+        )}
         {calc && (
           <div className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4 dark:bg-slate-900/50">
             <Kpi label="Potência do sistema" value={`${nf(calc.kwpTotal, 2)} kWp`} destaque />
