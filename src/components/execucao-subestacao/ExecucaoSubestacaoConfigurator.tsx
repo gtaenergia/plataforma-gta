@@ -239,14 +239,10 @@ export function ExecucaoSubestacaoConfigurator({ propostaId, criadoPor }: { prop
           <Campo className="sm:col-span-2" label="Projeto/ART/outros (R$)"><input className="field-input" inputMode="decimal" value={form.custoProjetoOutros} onChange={(e) => set("custoProjetoOutros", e.target.value)} placeholder="Ex.: 12.000" /></Campo>
         </div>
 
-        {preco && (
-          <div className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-4 dark:bg-slate-900/50">
-            <Kpi label="Custo total" value={brl(preco.custo)} />
-            <Kpi label="Fator K" value={`× ${nf(preco.fatorK, 2)}`} />
-            <Kpi label="Faturamento" value={brl(preco.faturamento)} destaque />
-            <Kpi label="Margem líquida" value={`${nf(preco.margem * 100, 1)}%`} destaque />
-          </div>
-        )}
+        {/* O resumo de preço que morava aqui repetia, número por número, a
+            "Composição do faturamento" da seção Preço — eram dois Fator K na
+            mesma tela dizendo a mesma coisa. Ficou só a composição, que é
+            completa (equipe, impostos, lucro), como no Carregador. */}
       </section>
 
       {/* Preço */}
