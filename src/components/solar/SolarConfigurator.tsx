@@ -30,12 +30,25 @@ const brl = (v: number) => "R$ " + nf(v, 2);
 const pct = (v: number) => nf(v * 100, 2) + "%";
 /** kW sem casas desnecessárias: 3.5 -> "3,5" · 10 -> "10" */
 const kw = (v: number) => nf(v, Number.isInteger(v) ? 0 : 1);
-/** "18.400,27" -> 18400.27 (número no formato BR). */
-const parseBR = (s: string) => {
-  const t = String(s ?? "").trim();
-  if (!t) return 0;
-  return t.includes(",") ? Number(t.replace(/\./g, "").replace(",", ".")) : Number(t);
-};
+
+/**
+ * A legenda de escopo dos campos que existem em DOIS lugares na tela.
+ *
+ * "Fator" (aqui) e "Fator multiplicador" (no cartão de parâmetros) mostravam o
+ * mesmo número sem nada dizendo que um vale só para esta proposta e o outro
+ * para as próximas — e ninguém sabia qual mexer. Quando os dois divergem, a
+ * legenda mostra o padrão e oferece a volta.
+ */
+function DicaPadrao({ fora, padrao, onVoltar }: { fora: boolean; padrao: string | null; onVoltar: () => void }) {
+  if (padrao === null) return null;
+  if (!fora) return <p className="mt-1 hint">Padrão da plataforma. Mude aqui para valer só nesta proposta.</p>;
+  return (
+    <p className="mt-1 hint">
+      Só nesta proposta. Padrão da plataforma: <strong className="tabular-nums">{padrao}</strong>{" "}
+      <button type="button" className="btn-link" onClick={onVoltar}>voltar ao padrão</button>
+    </p>
+  );
+}
 
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
@@ -226,6 +239,16 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
    */
   const [qtdInvTexto, setQtdInvTexto] = useState<string>();
   /**
+   * O padrão da plataforma, para os quatro campos que existem em DOIS lugares:
+   * aqui no formulário (valem só para esta proposta) e no cartão "Parâmetros de
+   * preço e dimensionamento" (valem para as próximas).
+   *
+   * Guardar o padrão resolve duas coisas de uma vez: a tela pode dizer quando
+   * esta proposta saiu dele, e salvar o cartão deixa de atropelar o que foi
+   * digitado aqui — só reaproveita os campos que ainda estavam herdados.
+   */
+  const [padrao, setPadrao] = useState<{ fator: number; viagens: number; eficiencia: number; overloadDesejado: number } | null>(null);
+  /**
    * O estudo do telhado, para gravar junto da proposta.
    *
    * Ele vivia só dentro do simulador e se perdia ao salvar: reabrir devolvia os
@@ -312,30 +335,74 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
           if (dados.microPotenciaKw && !MICROINVERSORES_COMERCIAIS.includes(dados.microPotenciaKw)) setMicroCustom(true);
         }
       }).catch(() => {});
-    } else {
-      // proposta nova: usa os parâmetros vigentes e o próximo nº de referência
-      fetch("/api/solar/config").then((r) => r.json()).then((d) => {
-        if (d.params) {
-          setForm((f) => ({
-            ...f,
-            eficiencia: d.params.eficiencia,
-            overloadDesejado: d.params.overloadDesejado,
-            fator: d.params.fator,
-            viagens: d.params.viagens,
-          }));
-        }
-      }).catch(() => {});
+    }
+    // O padrão da plataforma é buscado SEMPRE — inclusive ao reabrir proposta
+    // salva, que não o usa para calcular mas precisa dele para dizer quando
+    // está fora dele, e para o cartão de parâmetros não atropelar o que já foi
+    // digitado. Em proposta NOVA ele também semeia os campos.
+    fetch("/api/solar/config").then((r) => r.json()).then((d) => {
+      if (!d.params) return;
+      setPadrao({
+        fator: d.params.fator,
+        viagens: d.params.viagens,
+        eficiencia: d.params.eficiencia,
+        overloadDesejado: d.params.overloadDesejado,
+      });
+      if (!propostaId) {
+        setForm((f) => ({
+          ...f,
+          eficiencia: d.params.eficiencia,
+          overloadDesejado: d.params.overloadDesejado,
+          fator: d.params.fator,
+          viagens: d.params.viagens,
+        }));
+      }
+    }).catch(() => {});
+    if (!propostaId) {
       fetch("/api/propostas/proximo?serviceKey=solar").then((r) => r.json()).then((d) => {
         if (d.seq) setForm((f) => ({ ...f, referenciaSeq: d.seq }));
       }).catch(() => {});
     }
   }, [propostaId]);
 
-  // aplica os parâmetros salvos no card de configuração à proposta atual
+  /**
+   * Aplica o padrão recém-salvo à proposta aberta — mas só nos campos que ela
+   * ainda HERDAVA.
+   *
+   * Antes copiava os quatro por cima, sempre. Quem tinha negociado um Fator
+   * próprio nesta proposta e abria o cartão só para corrigir a ART perdia o
+   * valor negociado na mesma clicada, sem aviso, e o preço mudava na tela — o
+   * cartão promete valer "para os próximos cálculos" e reescrevia o atual.
+   *
+   * Comparar com o padrão ANTERIOR é o que distingue "herdado" de "escolhido":
+   * campo igual ao padrão velho nunca foi decisão de ninguém, e acompanhar o
+   * padrão novo é o que a pessoa espera.
+   */
   function aplicarParams(p: { eficiencia: number; overloadDesejado: number; fator: number; viagens: number }) {
-    // O texto acompanha: sem isto o campo continuaria exibindo o fator antigo.
-    setTextoFator(String(p.fator).replace(".", ","));
-    setForm((f) => ({ ...f, eficiencia: p.eficiencia, overloadDesejado: p.overloadDesejado, fator: p.fator, viagens: p.viagens }));
+    const anterior = padrao;
+    setPadrao(p);
+    setForm((f) => {
+      const herdado = (k: "fator" | "viagens" | "eficiencia" | "overloadDesejado") =>
+        !anterior || f[k] === anterior[k];
+      const next = { ...f };
+      if (herdado("fator")) { next.fator = p.fator; setTextoFator(String(p.fator).replace(".", ",")); }
+      if (herdado("viagens")) next.viagens = p.viagens;
+      if (herdado("eficiencia")) next.eficiencia = p.eficiencia;
+      if (herdado("overloadDesejado")) next.overloadDesejado = p.overloadDesejado;
+      return next;
+    });
+  }
+
+  /** O que esta proposta usa, quando difere do padrão da plataforma. */
+  function foraDoPadrao(k: "fator" | "viagens" | "eficiencia" | "overloadDesejado"): boolean {
+    return !!padrao && form[k] !== padrao[k];
+  }
+
+  /** Devolve o campo ao padrão da plataforma. */
+  function voltarAoPadrao(k: "fator" | "viagens" | "eficiencia" | "overloadDesejado") {
+    if (!padrao) return;
+    if (k === "fator") setTextoFator(String(padrao.fator).replace(".", ","));
+    set(k, padrao[k]);
   }
 
   // recálculo ao vivo (debounce) — dispara com município + consumo; painéis/inversor são sugeridos
@@ -555,7 +622,13 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
       distribuidorCnpj: form.distribuidorCnpj,
       kitItens: form.kitItens,
       valorKit: form.kit,
-      valorGta: calc.pricing ? nf(calc.pricing.servicos, 2) : "0",
+      // O molde reparte por QUEM RECEBE: só o kit é pago direto ao
+      // distribuidor, e todo o resto é pago à GTA. Enviar apenas `servicos`
+      // deixava a execução civil de fora, e o mapper reconstrói o total
+      // somando as duas linhas — o documento anunciava ao cliente um total
+      // menor que o cobrado, enquanto as parcelas do pagamento, calculadas
+      // sobre o total cheio, somavam mais do que esse total impresso.
+      valorGta: calc.pricing ? nf(calc.pricing.valorTotal - calc.pricing.kit, 2) : "0",
       prazoExecucao: form.prazoExecucao,
       // economia/payback (entra no .docx quando calculada)
       economiaMensal: calc.economia ? brl(calc.economia.economiaMensalMedia) : "",
@@ -1023,9 +1096,22 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
                 onChange={(e) => set("overloadDesejado", Number(e.target.value) / 100)}
               />
             </Campo>
-            <p className="col-span-2 self-end hint">
-              Padrão vem dos Parâmetros (abaixo) — mude aqui só para esta proposta.
-            </p>
+            {/* A frase genérica virou o padrão concreto de cada campo: dizer
+                "vem dos Parâmetros" não ajudava a saber SE este valor ainda é
+                o de lá, que é a dúvida real de quem vê o mesmo número em dois
+                lugares da tela. */}
+            <div className="col-span-2 self-end">
+              <DicaPadrao
+                fora={foraDoPadrao("eficiencia")}
+                padrao={padrao ? `${nf(padrao.eficiencia * 100, 0)}% de eficiência` : null}
+                onVoltar={() => voltarAoPadrao("eficiencia")}
+              />
+              <DicaPadrao
+                fora={foraDoPadrao("overloadDesejado")}
+                padrao={padrao ? `${nf(padrao.overloadDesejado * 100, 0)}% de overload` : null}
+                onVoltar={() => voltarAoPadrao("overloadDesejado")}
+              />
+            </div>
           </div>
         </details>
       </section>
@@ -1120,7 +1206,10 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
           <Campo className="sm:col-span-2" label="Valor do kit (cotação) *">
             <input className="field-input" value={form.kit} onChange={(e) => set("kit", e.target.value)} placeholder="Ex.: 18.400,27" />
           </Campo>
-          <Campo label="Fator">
+          <Campo
+            label="Fator"
+            hint={<DicaPadrao fora={foraDoPadrao("fator")} padrao={padrao ? String(padrao.fator).replace(".", ",") : null} onVoltar={() => voltarAoPadrao("fator")} />}
+          >
             <input
               // Texto, não `type="number"`: medido num navegador pt-BR, o campo
               // numérico DESCARTA a vírgula e o dígito seguinte entra na frente
@@ -1136,7 +1225,10 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
               }}
             />
           </Campo>
-          <Campo label="Viagens">
+          <Campo
+            label="Viagens"
+            hint={<DicaPadrao fora={foraDoPadrao("viagens")} padrao={padrao ? String(padrao.viagens) : null} onVoltar={() => voltarAoPadrao("viagens")} />}
+          >
             <input type="number" min="0" className="field-input" value={form.viagens} onChange={(e) => set("viagens", Number(e.target.value))} />
           </Campo>
           <Campo className="sm:col-span-2" label="Execução civil (R$)">
@@ -1246,8 +1338,10 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
           Parâmetros de preço e dimensionamento
         </summary>
         <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">
-          Valores padrão da plataforma (custos, imposto/NF, comissão, fator, eficiência). Ao salvar, valem
-          para todos os próximos cálculos.
+          Valores padrão da plataforma (custos, imposto/NF, comissão, fator, eficiência). Ao salvar, valem para
+          as próximas propostas — e passam a valer nesta também nos campos que ela ainda não tiver mudado. O
+          que você já ajustou em <strong>Preço e margem</strong> ou em <strong>Ajustes avançados</strong>
+          continua como está.
         </p>
         <div className="mt-4">
           <SolarParamsForm onSaved={aplicarParams} />
@@ -1297,9 +1391,13 @@ export function SolarConfigurator({ propostaId, criadoPor }: { propostaId?: stri
               : undefined,
             kwp: calc?.kwpTotal ?? 0,
             // preço (aba Preço)
-            kit: parseBR(form.kit),
+            // parseNumber, e não um leitor próprio: o antigo `parseBR` só
+            // tirava o ponto de milhar quando havia vírgula, então "25.000"
+            // virava 25 — e a aba Preço é fórmula viva pendurada nessa célula,
+            // então a planilha se desmanchava ao recalcular no Excel.
+            kit: parseNumber(form.kit),
             fator: form.fator,
-            execucaoCivil: parseBR(form.execucaoCivil),
+            execucaoCivil: parseNumber(form.execucaoCivil),
             valorTotal: calc?.pricing?.valorTotal ?? 0,
             servicos: calc?.pricing?.servicos ?? 0,
             eficiencia: form.eficiencia,
