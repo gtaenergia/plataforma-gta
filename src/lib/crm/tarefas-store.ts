@@ -8,10 +8,14 @@ import { getDbUrl } from "../tasks/postgres-store";
 /**
  * Camada de dados das tarefas do CRM (agenda comercial).
  *
- * Sem `remove()` de propósito: tarefa não se exclui (regra do RD) — conclui-se
- * ou adia-se. A única exceção mora na API: excluir a negociação leva junto as
- * tarefas dela, senão a agenda cobraria compromissos de um negócio que não
- * existe mais — para isso existe o `removeDaNegociacao`.
+ * Tarefa não se exclui (regra do RD) — conclui-se ou adia-se. Duas exceções,
+ * ambas de algo que nunca foi compromisso de alguém:
+ *
+ * - `removeDaNegociacao`: excluir a negociação leva as tarefas dela, senão a
+ *   agenda cobraria compromissos de um negócio que não existe mais;
+ * - `remove`: desfaz a ocorrência que a PLATAFORMA gerou ao concluir um
+ *   compromisso que se repete, quando a conclusão é reaberta. Sem isso, cada
+ *   clique errado no "concluir" deixaria uma tarefa fantasma na agenda.
  */
 
 type CreateInput = Omit<TarefaCrm, "id" | "criadoEm" | "atualizadoEm">;
@@ -30,7 +34,41 @@ export interface TarefaCrmStore {
   get(id: string): Promise<TarefaCrm | null>;
   create(data: CreateInput): Promise<TarefaCrm>;
   update(id: string, patch: UpdatePatch): Promise<TarefaCrm | null>;
+  remove(id: string): Promise<boolean>;
   removeDaNegociacao(negociacaoId: string): Promise<number>;
+}
+
+/**
+ * Tarefa gravada antes dos campos de cliente, repetição e conclusão. Completar
+ * na leitura é o equivalente ao DEFAULT das colunas novas no Postgres: quem
+ * consome recebe sempre o formato inteiro.
+ */
+function completa(t: Partial<TarefaCrm> & Pick<TarefaCrm, "id">): TarefaCrm {
+  return {
+    negociacaoId: "",
+    negociacaoNome: "",
+    clienteId: "",
+    clienteNome: "",
+    tipo: "tarefa",
+    assunto: "",
+    data: "",
+    hora: "",
+    notas: "",
+    responsavel: "",
+    responsavelNome: "",
+    repetirCada: 0,
+    repetirUnidade: "",
+    concluida: false,
+    concluidaEm: "",
+    concluidaPor: "",
+    concluidaPorNome: "",
+    comentario: "",
+    proximaId: "",
+    criadoPor: "",
+    criadoEm: "",
+    atualizadoEm: "",
+    ...t,
+  };
 }
 
 // ------------------------------------------------------------- JSON (dev)
@@ -42,7 +80,7 @@ class JsonTarefaCrmStore implements TarefaCrmStore {
   private readAll(): TarefaCrm[] {
     try {
       const parsed = JSON.parse(fs.readFileSync(this.file, "utf8"));
-      return Array.isArray(parsed) ? (parsed as TarefaCrm[]) : [];
+      return Array.isArray(parsed) ? (parsed as TarefaCrm[]).map(completa) : [];
     } catch {
       return [];
     }
@@ -88,6 +126,12 @@ class JsonTarefaCrmStore implements TarefaCrmStore {
       return { items: next, result: updated };
     });
   }
+  async remove(id: string) {
+    return this.mutate((items) => {
+      const next = items.filter((t) => t.id !== id);
+      return { items: next, result: next.length !== items.length };
+    });
+  }
   async removeDaNegociacao(negociacaoId: string) {
     return this.mutate((items) => {
       const next = items.filter((t) => t.negociacaoId !== negociacaoId);
@@ -102,6 +146,8 @@ interface Row {
   id: string;
   negociacao_id: string;
   negociacao_nome: string;
+  cliente_id: string | null;
+  cliente_nome: string | null;
   tipo: string;
   assunto: string;
   data: string;
@@ -109,8 +155,14 @@ interface Row {
   notas: string;
   responsavel: string;
   responsavel_nome: string;
+  repetir_cada: number | null;
+  repetir_unidade: string | null;
   concluida: boolean;
   concluida_em: string;
+  concluida_por: string | null;
+  concluida_por_nome: string | null;
+  comentario: string | null;
+  proxima_id: string | null;
   criado_por: string;
   criado_por_nome: string | null;
   criado_em: string;
@@ -118,8 +170,10 @@ interface Row {
 }
 const rowTo = (r: Row): TarefaCrm => ({
   id: r.id,
-  negociacaoId: r.negociacao_id,
+  negociacaoId: r.negociacao_id ?? "",
   negociacaoNome: r.negociacao_nome ?? "",
+  clienteId: r.cliente_id ?? "",
+  clienteNome: r.cliente_nome ?? "",
   tipo: (r.tipo as TarefaCrm["tipo"]) ?? "tarefa",
   assunto: r.assunto ?? "",
   data: r.data ?? "",
@@ -127,8 +181,14 @@ const rowTo = (r: Row): TarefaCrm => ({
   notas: r.notas ?? "",
   responsavel: r.responsavel ?? "",
   responsavelNome: r.responsavel_nome ?? "",
+  repetirCada: Number(r.repetir_cada ?? 0),
+  repetirUnidade: (r.repetir_unidade as TarefaCrm["repetirUnidade"]) ?? "",
   concluida: !!r.concluida,
   concluidaEm: r.concluida_em ?? "",
+  concluidaPor: r.concluida_por ?? "",
+  concluidaPorNome: r.concluida_por_nome ?? "",
+  comentario: r.comentario ?? "",
+  proximaId: r.proxima_id ?? "",
   criadoPor: r.criado_por,
   criadoPorNome: r.criado_por_nome ?? undefined,
   criadoEm: new Date(r.criado_em).toISOString(),
@@ -164,6 +224,17 @@ class PostgresTarefaCrmStore implements TarefaCrmStore {
         )
       `
         .then(() => this.pool.sql`CREATE INDEX IF NOT EXISTS crm_tarefas_negociacao_idx ON crm_tarefas (negociacao_id)`)
+        // Colunas do follow-up (cliente, repetição, registro da conclusão).
+        // As tarefas já gravadas ficam válidas: sem cliente próprio, sem
+        // repetição, e a conclusão antiga sem autor nem comentário.
+        .then(() => this.pool.sql`ALTER TABLE crm_tarefas ADD COLUMN IF NOT EXISTS cliente_id text NOT NULL DEFAULT ''`)
+        .then(() => this.pool.sql`ALTER TABLE crm_tarefas ADD COLUMN IF NOT EXISTS cliente_nome text NOT NULL DEFAULT ''`)
+        .then(() => this.pool.sql`ALTER TABLE crm_tarefas ADD COLUMN IF NOT EXISTS repetir_cada integer NOT NULL DEFAULT 0`)
+        .then(() => this.pool.sql`ALTER TABLE crm_tarefas ADD COLUMN IF NOT EXISTS repetir_unidade text NOT NULL DEFAULT ''`)
+        .then(() => this.pool.sql`ALTER TABLE crm_tarefas ADD COLUMN IF NOT EXISTS concluida_por text NOT NULL DEFAULT ''`)
+        .then(() => this.pool.sql`ALTER TABLE crm_tarefas ADD COLUMN IF NOT EXISTS concluida_por_nome text NOT NULL DEFAULT ''`)
+        .then(() => this.pool.sql`ALTER TABLE crm_tarefas ADD COLUMN IF NOT EXISTS comentario text NOT NULL DEFAULT ''`)
+        .then(() => this.pool.sql`ALTER TABLE crm_tarefas ADD COLUMN IF NOT EXISTS proxima_id text NOT NULL DEFAULT ''`)
         .then(() => undefined)
         .catch((e) => {
           this.ready = null;
@@ -197,12 +268,16 @@ class PostgresTarefaCrmStore implements TarefaCrmStore {
     const now = new Date().toISOString();
     await this.pool.sql`
       INSERT INTO crm_tarefas
-        (id, negociacao_id, negociacao_nome, tipo, assunto, data, hora, notas, responsavel,
-         responsavel_nome, concluida, concluida_em, criado_por, criado_por_nome, criado_em, atualizado_em)
+        (id, negociacao_id, negociacao_nome, cliente_id, cliente_nome, tipo, assunto, data, hora, notas,
+         responsavel, responsavel_nome, repetir_cada, repetir_unidade, concluida, concluida_em,
+         concluida_por, concluida_por_nome, comentario, proxima_id, criado_por, criado_por_nome,
+         criado_em, atualizado_em)
       VALUES
-        (${id}, ${data.negociacaoId}, ${data.negociacaoNome}, ${data.tipo}, ${data.assunto}, ${data.data},
-         ${data.hora}, ${data.notas}, ${data.responsavel}, ${data.responsavelNome}, ${data.concluida},
-         ${data.concluidaEm}, ${data.criadoPor}, ${data.criadoPorNome ?? null}, ${now}, ${now})
+        (${id}, ${data.negociacaoId}, ${data.negociacaoNome}, ${data.clienteId}, ${data.clienteNome},
+         ${data.tipo}, ${data.assunto}, ${data.data}, ${data.hora}, ${data.notas}, ${data.responsavel},
+         ${data.responsavelNome}, ${data.repetirCada}, ${data.repetirUnidade}, ${data.concluida},
+         ${data.concluidaEm}, ${data.concluidaPor}, ${data.concluidaPorNome}, ${data.comentario},
+         ${data.proximaId}, ${data.criadoPor}, ${data.criadoPorNome ?? null}, ${now}, ${now})
     `;
     return { ...data, id, criadoEm: now, atualizadoEm: now };
   }
@@ -212,6 +287,8 @@ class PostgresTarefaCrmStore implements TarefaCrmStore {
     const { rows } = await this.pool.sql<Row>`
       UPDATE crm_tarefas SET
         negociacao_nome = COALESCE(${patch.negociacaoNome ?? null}::text, negociacao_nome),
+        cliente_id = COALESCE(${patch.clienteId ?? null}::text, cliente_id),
+        cliente_nome = COALESCE(${patch.clienteNome ?? null}::text, cliente_nome),
         tipo = COALESCE(${patch.tipo ?? null}::text, tipo),
         assunto = COALESCE(${patch.assunto ?? null}::text, assunto),
         data = COALESCE(${patch.data ?? null}::text, data),
@@ -219,13 +296,24 @@ class PostgresTarefaCrmStore implements TarefaCrmStore {
         notas = COALESCE(${patch.notas ?? null}::text, notas),
         responsavel = COALESCE(${patch.responsavel ?? null}::text, responsavel),
         responsavel_nome = COALESCE(${patch.responsavelNome ?? null}::text, responsavel_nome),
+        repetir_cada = COALESCE(${patch.repetirCada ?? null}::integer, repetir_cada),
+        repetir_unidade = COALESCE(${patch.repetirUnidade ?? null}::text, repetir_unidade),
         concluida = COALESCE(${patch.concluida ?? null}::boolean, concluida),
         concluida_em = COALESCE(${patch.concluidaEm ?? null}::text, concluida_em),
+        concluida_por = COALESCE(${patch.concluidaPor ?? null}::text, concluida_por),
+        concluida_por_nome = COALESCE(${patch.concluidaPorNome ?? null}::text, concluida_por_nome),
+        comentario = COALESCE(${patch.comentario ?? null}::text, comentario),
+        proxima_id = COALESCE(${patch.proximaId ?? null}::text, proxima_id),
         atualizado_em = ${atualizadoEm}
       WHERE id = ${id}
       RETURNING *
     `;
     return rows[0] ? rowTo(rows[0]) : null;
+  }
+  async remove(id: string) {
+    await this.ensureSchema();
+    const { rowCount } = await this.pool.sql`DELETE FROM crm_tarefas WHERE id = ${id}`;
+    return (rowCount ?? 0) > 0;
   }
   async removeDaNegociacao(negociacaoId: string) {
     await this.ensureSchema();

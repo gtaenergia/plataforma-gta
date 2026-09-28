@@ -79,9 +79,12 @@ export function textoDaCobranca(c: Cobranca): { titulo: string; mensagem: string
 
   if (c.vencidas.length > 0) {
     const exemplo = c.vencidas[0];
+    // Follow-up direto no cliente não tem negociação: sem o recuo para o
+    // cliente, o recado sairia com "()" no fim.
+    const deQuem = exemplo.negociacaoNome || exemplo.clienteNome;
     partes.push(
       c.vencidas.length === 1
-        ? `1 tarefa atrasada: ${TIPO_TAREFA_LABEL[exemplo.tipo]} — ${exemplo.assunto} (${exemplo.negociacaoNome}).`
+        ? `1 tarefa atrasada: ${TIPO_TAREFA_LABEL[exemplo.tipo]} — ${exemplo.assunto}${deQuem ? ` (${deQuem})` : ""}.`
         : `${c.vencidas.length} tarefas atrasadas, a mais antiga de ${dataBR(exemplo.data)}: ${exemplo.assunto}.`,
     );
   }

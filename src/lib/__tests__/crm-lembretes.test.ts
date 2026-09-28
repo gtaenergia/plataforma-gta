@@ -16,10 +16,10 @@ const neg = (sobre: Partial<Negociacao>): Negociacao => ({
 });
 
 const tar = (sobre: Partial<TarefaCrm>): TarefaCrm => ({
-  id: "t1", negociacaoId: "n1", negociacaoNome: "Negociação",
+  id: "t1", negociacaoId: "n1", negociacaoNome: "Negociação", clienteId: "", clienteNome: "",
   tipo: "ligacao", assunto: "Ligar", data: HOJE, hora: "", notas: "",
-  responsavel: "ana@gta.com", responsavelNome: "Ana",
-  concluida: false, concluidaEm: "",
+  responsavel: "ana@gta.com", responsavelNome: "Ana", repetirCada: 0, repetirUnidade: "",
+  concluida: false, concluidaEm: "", concluidaPor: "", concluidaPorNome: "", comentario: "", proximaId: "",
   criadoPor: "ana@gta.com", criadoEm: "2026-08-01T00:00:00.000Z", atualizadoEm: "2026-08-01T00:00:00.000Z",
   ...sobre,
 });
@@ -114,6 +114,24 @@ describe("textoDaCobranca", () => {
     expect(t.titulo).toBe("Você tem 1 tarefa atrasada");
     expect(t.mensagem).toContain("Enviar proposta");
     expect(t.mensagem).toContain("Subestação");
+  });
+
+  it("follow-up só de cliente diz o cliente, e não sai com parênteses vazios", () => {
+    const c = cobrancasDoDia(
+      [],
+      [tar({ data: "2026-08-01", assunto: "Retorno trimestral", negociacaoId: "", negociacaoNome: "", clienteNome: "Fazenda Rio Doce" })],
+      HOJE,
+    );
+    const t = textoDaCobranca(c[0]);
+    expect(t.mensagem).toContain("(Fazenda Rio Doce)");
+    expect(t.mensagem).not.toContain("()");
+  });
+
+  it("follow-up sem negociação não conta como próximo passo de negociação nenhuma", () => {
+    // O conjunto de "negociações com tarefa pendente" é montado pelo id da
+    // negociação: um "" ali não pode casar com nada.
+    const c = cobrancasDoDia([neg({ id: "n1" })], [tar({ negociacaoId: "", data: "2026-12-01", clienteId: "c1" })], HOJE);
+    expect(c[0].semProximoPasso.map((n) => n.id)).toEqual(["n1"]);
   });
 
   it("várias: conta e mostra a mais antiga com a data", () => {

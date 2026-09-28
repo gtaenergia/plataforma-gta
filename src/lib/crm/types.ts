@@ -256,15 +256,35 @@ export const TIPO_TAREFA_LABEL: Record<TipoTarefa, string> = {
   whatsapp: "WhatsApp",
 };
 
+/** De quanto em quanto tempo um compromisso se repete. */
+export const UNIDADES_REPETICAO = ["dias", "semanas", "meses"] as const;
+export type UnidadeRepeticao = (typeof UNIDADES_REPETICAO)[number];
+
 /**
- * Compromisso comercial, sempre preso a uma negociação (regra do RD — sem
- * negociação não há tarefa). Também como no RD, tarefa não se exclui: se o
- * combinado mudou, conclui-se ou adia-se; o agendamento fica contado.
+ * Compromisso comercial: uma ligação, uma visita, um follow-up.
+ *
+ * Nasceu sempre preso a uma negociação (regra do RD — sem negociação não há
+ * tarefa). Deixou de ser: o follow-up de relacionamento — ligar para o cliente
+ * a cada três meses, depois da obra entregue — não tem negociação em aberto, e
+ * era exatamente o que a GTA não tinha onde marcar. Agora a tarefa é do
+ * CLIENTE, e a negociação é opcional. Com negociação, o cliente é o dela.
+ *
+ * Como no RD, tarefa não se exclui: se o combinado mudou, conclui-se ou
+ * adia-se; o agendamento fica contado. A conclusão é o registro do contato —
+ * quem fez e o que aconteceu —, e é contando as concluídas que a ficha do
+ * cliente diz quantos follow-ups já foram feitos.
  */
 export interface TarefaCrm {
   id: string;
+  /** "" quando é compromisso só com o cliente. */
   negociacaoId: string;
   negociacaoNome: string;
+  /**
+   * Cliente do cadastro. Tarefas anteriores ao campo vêm com "" e são
+   * atribuídas pelo cliente da negociação — ver `clienteDaTarefa`.
+   */
+  clienteId: string;
+  clienteNome: string;
   tipo: TipoTarefa;
   assunto: string;
   /** Data (YYYY-MM-DD) e hora (HH:mm) do compromisso. */
@@ -273,16 +293,33 @@ export interface TarefaCrm {
   notas: string;
   responsavel: string;
   responsavelNome: string;
+  /**
+   * Repete a cada `repetirCada` `repetirUnidade`; 0 = não se repete. Ao
+   * concluir, a próxima ocorrência nasce como uma tarefa nova — cada contato
+   * fica com a sua data, quem fez e o comentário, em vez de um registro só
+   * que se reescreve.
+   */
+  repetirCada: number;
+  repetirUnidade: UnidadeRepeticao | "";
   concluida: boolean;
   concluidaEm: string;
+  /** Quem FEZ o contato — pode não ser o responsável: alguém cobriu. */
+  concluidaPor: string;
+  concluidaPorNome: string;
+  /** O que aconteceu, escrito na conclusão. */
+  comentario: string;
+  /**
+   * A ocorrência que esta conclusão gerou ("" = nenhuma). Serve para desfazer:
+   * reabrir uma conclusão feita por engano apaga a próxima que ela criou.
+   */
+  proximaId: string;
   criadoPor: string;
   criadoPorNome?: string;
   criadoEm: string;
   atualizadoEm: string;
 }
 
-export const criarTarefaCrmSchema = z.object({
-  negociacaoId: z.string().trim().min(1, "Escolha a negociação"),
+const camposTarefaCrm = {
   tipo: z.enum(TIPOS_TAREFA),
   assunto: z.string().trim().min(1, "Informe o assunto").max(200),
   data: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data"),
@@ -295,10 +332,37 @@ export const criarTarefaCrmSchema = z.object({
   notas: z.string().trim().max(2000).default(""),
   responsavel: z.string().trim().max(200).default(""),
   responsavelNome: z.string().trim().max(200).default(""),
-});
+  // Teto de um ano em qualquer unidade: "a cada 400 dias" é digitação errada,
+  // não cadência de relacionamento.
+  repetirCada: z.number().int().min(0).max(365).default(0),
+  repetirUnidade: z.enum(UNIDADES_REPETICAO).or(z.literal("")).default(""),
+};
 
-/** `concluida` fica fora: concluir/reabrir tem rota própria, que grava o histórico. */
-export const atualizarTarefaCrmSchema = criarTarefaCrmSchema.omit({ negociacaoId: true }).partial();
+/** Repetição sem unidade não diz quando volta — melhor recusar que adivinhar. */
+const repeticaoCompleta = (d: { repetirCada?: number; repetirUnidade?: string }) =>
+  !d.repetirCada || !!d.repetirUnidade;
+const MSG_REPETICAO = { message: "Informe de quanto em quanto tempo repete.", path: ["repetirUnidade"] };
+
+export const criarTarefaCrmSchema = z
+  .object({
+    negociacaoId: z.string().trim().max(64).default(""),
+    clienteId: z.string().trim().max(64).default(""),
+    ...camposTarefaCrm,
+  })
+  .refine((d) => !!d.negociacaoId || !!d.clienteId, { message: "Escolha o cliente.", path: ["clienteId"] })
+  .refine(repeticaoCompleta, MSG_REPETICAO);
+
+/**
+ * `concluida` fica fora: concluir/reabrir tem rota própria, que grava o
+ * histórico. Cliente e negociação também: trocar o dono de um compromisso
+ * depois de feito reescreveria a contagem de follow-ups de dois clientes.
+ */
+export const atualizarTarefaCrmSchema = z
+  .object(camposTarefaCrm)
+  .partial()
+  // No patch, unidade ausente é "manter a gravada" — só o vazio explícito é
+  // falta. O estado final é conferido na rota, já somado ao que está gravado.
+  .refine((d) => !d.repetirCada || d.repetirUnidade !== "", MSG_REPETICAO);
 
 // ------------------------------------------- Catálogos (fonte, motivo de perda)
 
