@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronDown, ChevronUp, Phone, Repeat } from "lucide-react";
 import { Alert, EmptyState, Loading, Marca, SectionCard, Segmented } from "@/components/ui";
 import type { Cliente } from "@/lib/clientes/types";
-import { rotuloDoDia, type Agenda, type ContatoAgenda, type ItemAgenda } from "@/lib/crm/agenda";
+import { linkWhatsApp, rotuloDoDia, type Agenda, type ContatoAgenda, type ItemAgenda } from "@/lib/crm/agenda";
 import { descreverRepeticao } from "@/lib/crm/repeticao";
 import { SITUACAO_LABEL, TIPO_TAREFA_LABEL, type Funil, type ItemCatalogo, type Negociacao } from "@/lib/crm/types";
 import type { OpcaoResponsavel } from "@/lib/users/equipe";
@@ -18,13 +18,6 @@ type Quem = "equipe" | "meus";
 
 /** A janela abre numa semana e cresce de semana em semana. */
 const SEMANA = 7;
-
-/** Link de WhatsApp a partir do telefone como foi digitado ("(62) 99999-0000"). */
-function linkWhatsApp(telefone: string): string | null {
-  const digitos = telefone.replace(/\D/g, "");
-  if (digitos.length < 10) return null;
-  return `https://wa.me/${digitos.startsWith("55") && digitos.length > 11 ? digitos : `55${digitos}`}`;
-}
 
 /**
  * Agenda de follow-ups e atividades — o quadro do Início do CRM.

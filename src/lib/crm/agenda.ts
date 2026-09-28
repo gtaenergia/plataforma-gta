@@ -183,6 +183,20 @@ export function montarAgenda(e: {
   };
 }
 
+/**
+ * Link de WhatsApp a partir do telefone como foi digitado ("(62) 99999-0000").
+ *
+ * Só para celular — DDD + 9 dígitos começando em 9. Telefone fixo raramente
+ * tem WhatsApp, e o link abriria a tela de "número não está no WhatsApp" no
+ * meio de uma ligação que devia ser pelo telefone mesmo.
+ */
+export function linkWhatsApp(telefone: string): string | null {
+  let d = telefone.replace(/\D/g, "").replace(/^0+/, "");
+  if (d.length === 13 && d.startsWith("55")) d = d.slice(2);
+  if (d.length !== 11 || d[2] !== "9") return null;
+  return `https://wa.me/55${d}`;
+}
+
 const DIAS_DA_SEMANA = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
 
 /** "Hoje", "Amanhã" ou o dia da semana — o que a pessoa usa para se situar. */

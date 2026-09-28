@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { montarAgenda, rotuloDoDia } from "@/lib/crm/agenda";
+import { linkWhatsApp, montarAgenda, rotuloDoDia } from "@/lib/crm/agenda";
 import type { Cliente } from "@/lib/clientes/types";
 import type { Contato, Funil, Negociacao, TarefaCrm } from "@/lib/crm/types";
 
@@ -134,6 +134,19 @@ describe("montarAgenda — o que vem com cada cliente", () => {
       tarefas: [tar({ clienteId: "", clienteNome: "", negociacaoId: "n1" })],
     });
     expect(a.dias[0].itens[0].cliente).toEqual({ id: "c1", nome: "Fazenda Rio Doce" });
+  });
+});
+
+describe("linkWhatsApp", () => {
+  it("celular, do jeito que se digita, vira link com o 55 na frente", () => {
+    expect(linkWhatsApp("(62) 99999-0000")).toBe("https://wa.me/5562999990000");
+    expect(linkWhatsApp("+55 62 99999-0000")).toBe("https://wa.me/5562999990000");
+    expect(linkWhatsApp("062 99999-0000")).toBe("https://wa.me/5562999990000");
+  });
+
+  it("fixo não tem link — o WhatsApp diria que o número não existe", () => {
+    expect(linkWhatsApp("(62) 3333-4444")).toBeNull();
+    expect(linkWhatsApp("")).toBeNull();
   });
 });
 
