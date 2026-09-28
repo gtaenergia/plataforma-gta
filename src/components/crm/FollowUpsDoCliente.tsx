@@ -118,8 +118,9 @@ export function FollowUpsDoCliente({ cliente, tarefas, negociacoes, funis, motiv
                 return (
                   <li key={t.id} className="py-2.5">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-gta-navy dark:text-slate-100">
+                      <span className="min-w-0 flex-1 basis-48">
+                        {/* No celular o assunto quebra linha: cortado em "Apresent…" ele não diz o que fazer. */}
+                        <span className="block break-words text-sm font-medium text-gta-navy sm:truncate dark:text-slate-100">
                           <span className="mr-1.5 text-xs font-normal text-slate-500 dark:text-slate-400">{TIPO_TAREFA_LABEL[t.tipo]}</span>
                           {t.assunto}
                         </span>

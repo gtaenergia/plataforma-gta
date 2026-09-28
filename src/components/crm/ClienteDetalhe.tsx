@@ -19,6 +19,7 @@ import {
 import type { OpcaoResponsavel } from "@/lib/users/equipe";
 import { buscarJson } from "./buscar";
 import { FollowUpsDoCliente } from "./FollowUpsDoCliente";
+import { HistoricoDoCliente } from "./HistoricoDoCliente";
 import { dataCurta } from "./util";
 
 /**
@@ -88,11 +89,18 @@ export function ClienteDetalhe({ id, usuarioAtual }: { id: string; usuarioAtual:
       .finally(() => setLoading(false));
   }, [id, carregarMovimento]);
 
+  /**
+   * Conta as recargas. O histórico usa para se recarregar junto: concluir um
+   * follow-up marcando "ganha" muda o resultado automático do pedido.
+   */
+  const [versao, setVersao] = useState(0);
+
   /** Depois de agendar ou concluir: a etapa pode ter mudado junto. */
   async function recarregar() {
     if (!cliente) return;
     try {
       await carregarMovimento(cliente);
+      setVersao((v) => v + 1);
     } catch (err) {
       setErro(err instanceof Error ? err.message : "Falha ao recarregar.");
     }
@@ -146,6 +154,8 @@ export function ClienteDetalhe({ id, usuarioAtual }: { id: string; usuarioAtual:
         usuarioAtual={usuarioAtual}
         onMudou={() => void recarregar()}
       />
+
+      <HistoricoDoCliente clienteId={cliente.id} negociacoes={negociacoes} versao={versao} />
 
       <SectionCard
         title="Negociações"
