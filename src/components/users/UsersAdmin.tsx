@@ -16,7 +16,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
 
   // criação
   const [novoAberto, setNovoAberto] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", role: "member" as Role, cargoId: "", senhaProvisoria: "" });
+  const [form, setForm] = useState({ name: "", email: "", role: "member" as Role, cargoId: "", comercial: false, senhaProvisoria: "" });
   const [salvando, setSalvando] = useState(false);
 
   // senha provisória a exibir (após criar ou resetar)
@@ -54,7 +54,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
       if (!res.ok) throw new Error(data.error ?? "Falha ao criar usuário.");
       setUsuarios((prev) => [...prev, data.user]);
       setCredencial({ email: data.user.email, senha: data.senhaProvisoria });
-      setForm({ name: "", email: "", role: "member", cargoId: "", senhaProvisoria: "" });
+      setForm({ name: "", email: "", role: "member", cargoId: "", comercial: false, senhaProvisoria: "" });
       setNovoAberto(false);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao criar.");
@@ -102,6 +102,10 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
         </button>
         <span className="ml-auto hint">{usuarios.length} usuário(s)</span>
       </div>
+      <p className="hint">
+        Marque em <strong>Comercial</strong> quem pode ser responsável por negociações e follow-ups no CRM. Enquanto
+        ninguém estiver marcado, o CRM oferece todos os usuários ativos.
+      </p>
 
       {erro && <Alert tone="red">{erro}</Alert>}
 
@@ -164,6 +168,10 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
             <Campo className="sm:col-span-2" label="Senha provisória (opcional)">
               <input className="field-input" value={form.senhaProvisoria} onChange={(e) => setForm({ ...form, senhaProvisoria: e.target.value })} placeholder="Gerada automaticamente se vazio" />
             </Campo>
+            <label className="toque flex items-center gap-2 text-sm text-slate-700 sm:col-span-6 dark:text-slate-300">
+              <input type="checkbox" checked={form.comercial} onChange={(e) => setForm({ ...form, comercial: e.target.checked })} />
+              Equipe comercial — aparece como responsável no CRM
+            </label>
           </div>
           <div className="mt-3">
             <button type="submit" className="btn-primary" disabled={salvando}>
@@ -212,6 +220,10 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
                   </label>
                 )}
               </div>
+              <label className="toque mt-2 flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                <input type="checkbox" checked={!!u.comercial} onChange={(e) => patch(u.id, { comercial: e.target.checked })} />
+                Equipe comercial
+              </label>
               <div className="mt-3 flex flex-wrap gap-2 text-xs">
                 <button className={`text-gta-indigo dark:text-indigo-300 ${acaoCls}`} onClick={() => resetar(u)}>Resetar senha</button>
                 <button className={`text-slate-600 dark:text-slate-300 ${acaoCls}`} disabled={eu} onClick={() => patch(u.id, { role: u.role === "admin" ? "member" : "admin" })}>
@@ -236,6 +248,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
               <th>E-mail</th>
               <th>Perfil</th>
               <th>Cargo</th>
+              <th>Comercial</th>
               <th>Status</th>
               <th>Ações</th>
             </tr>
@@ -267,6 +280,15 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
                         ))}
                       </select>
                     )}
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      type="checkbox"
+                      className="toque"
+                      checked={!!u.comercial}
+                      onChange={(e) => patch(u.id, { comercial: e.target.checked })}
+                      aria-label={`${u.name} faz parte da equipe comercial`}
+                    />
                   </td>
                   <td className="px-4 py-2">
                     {u.active ? (

@@ -12,6 +12,13 @@ export interface User {
   role: Role;
   /** Cargo atribuído (concede permissões granulares aos não-admins). */
   cargoId?: string;
+  /**
+   * Faz parte do time comercial: o nome aparece nas listas de responsáveis do
+   * CRM. Não é permissão — o CRM segue aberto a quem está autenticado. É quem
+   * pode RECEBER negociações e follow-ups, para a lista não oferecer o
+   * engenheiro de campo como dono de uma venda.
+   */
+  comercial?: boolean;
   /** Se true, é obrigado a definir nova senha no próximo acesso. */
   mustChangePassword: boolean;
   active: boolean;
@@ -62,14 +69,16 @@ export const createUserSchema = z.object({
   name: z.string().trim().min(1, "Informe o nome").max(120),
   role: z.enum(["admin", "member"]).default("member"),
   cargoId: cargoIdCreate,
+  comercial: z.boolean().default(false),
   senhaProvisoria: senha.optional(),
 });
 
-/** Admin edita nome/papel/cargo/ativação. */
+/** Admin edita nome/papel/cargo/equipe/ativação. */
 export const updateUserSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   role: z.enum(["admin", "member"]).optional(),
   cargoId: cargoIdUpdate,
+  comercial: z.boolean().optional(),
   active: z.boolean().optional(),
 });
 

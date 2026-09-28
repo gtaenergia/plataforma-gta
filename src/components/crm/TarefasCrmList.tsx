@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Alert, EmptyState, Loading, SectionCard, Segmented } from "@/components/ui";
 import { Campo } from "@/components/Campo";
 import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
+import { responsavelPadrao } from "@/lib/users/equipe";
 import {
   TIPO_TAREFA_LABEL,
   TIPOS_TAREFA,
@@ -62,7 +63,7 @@ export function TarefasCrmList({ usuarioAtual }: { usuarioAtual: string }) {
     Promise.all([
       fetch("/api/crm/tarefas").then((r) => r.json()),
       fetch("/api/crm/negociacoes").then((r) => r.json()),
-      fetch("/api/usuarios").then((r) => r.json()),
+      fetch("/api/usuarios?equipe=comercial").then((r) => r.json()),
     ])
       .then(([t, n, u]) => {
         setTarefas(t.tarefas ?? []);
@@ -135,9 +136,9 @@ export function TarefasCrmList({ usuarioAtual }: { usuarioAtual: string }) {
     setErro(null);
     setSalvando(true);
     try {
-      // Mesmo `|| usuarioAtual` do campo: criar sem tocar no seletor tem que
-      // agendar para você, não para ninguém.
-      const responsavel = form.responsavel || usuarioAtual;
+      // Mesmo padrão do campo: criar sem tocar no seletor tem que agendar para
+      // quem aparece marcado, não para ninguém.
+      const responsavel = form.responsavel || responsavelPadrao(usuarios, usuarioAtual);
       const usuario = usuarios.find((u) => u.email === responsavel);
       const res = await fetch("/api/crm/tarefas", {
         method: "POST",
@@ -225,7 +226,7 @@ export function TarefasCrmList({ usuarioAtual }: { usuarioAtual: string }) {
                 <input type="time" className="field-input" value={form.hora} onChange={(e) => set("hora", e.target.value)} />
               </Campo>
               <Campo className="sm:col-span-2" label="Responsável">
-                <select className="field-input" value={form.responsavel || usuarioAtual} onChange={(e) => set("responsavel", e.target.value)}>
+                <select className="field-input" value={form.responsavel || responsavelPadrao(usuarios, usuarioAtual)} onChange={(e) => set("responsavel", e.target.value)}>
                   {usuarios.map((u) => <option key={u.email} value={u.email}>{u.name}</option>)}
                 </select>
               </Campo>

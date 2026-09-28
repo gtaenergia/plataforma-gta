@@ -27,12 +27,13 @@ export interface NewUser {
   passwordHash: string;
   role: Role;
   cargoId?: string;
+  comercial?: boolean;
   mustChangePassword: boolean;
   active: boolean;
 }
 
 /** `cargoId: null` limpa o cargo; ausente = não altera. */
-export type UserPatch = Partial<Pick<User, "name" | "role" | "active" | "avatarUrl">> & { cargoId?: string | null };
+export type UserPatch = Partial<Pick<User, "name" | "role" | "active" | "avatarUrl" | "comercial">> & { cargoId?: string | null };
 
 export interface UserStore {
   list(): Promise<User[]>;
@@ -137,6 +138,7 @@ interface Row {
   password_hash: string;
   role: string;
   cargo_id: string | null;
+  comercial: boolean | null;
   must_change_password: boolean;
   active: boolean;
   avatar_url: string | null;
@@ -150,6 +152,7 @@ const rowToUser = (r: Row): User => ({
   passwordHash: r.password_hash,
   role: r.role as Role,
   cargoId: r.cargo_id ?? undefined,
+  comercial: r.comercial ?? false,
   mustChangePassword: r.must_change_password,
   active: r.active,
   avatarUrl: r.avatar_url ?? undefined,
@@ -182,6 +185,9 @@ class PostgresUserStore implements UserStore {
         // Garante a coluna cargo_id em tabelas criadas antes do RBAC por cargos
         .then(() => this.pool.sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS cargo_id text`)
         .then(() => this.pool.sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url text`)
+        // Quem já existia nasce fora do time comercial: marcar é decisão do
+        // administrador, não palpite da migração.
+        .then(() => this.pool.sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS comercial boolean NOT NULL DEFAULT false`)
         .then(() => undefined);
     }
     return this.ready;
@@ -212,8 +218,8 @@ class PostgresUserStore implements UserStore {
     const now = new Date().toISOString();
     try {
       const { rows } = await this.pool.sql<Row>`
-        INSERT INTO users (id, email, name, password_hash, role, cargo_id, must_change_password, active, criado_em, atualizado_em)
-        VALUES (${id}, ${norm(u.email)}, ${u.name}, ${u.passwordHash}, ${u.role}, ${u.cargoId ?? null}, ${u.mustChangePassword}, ${u.active}, ${now}, ${now})
+        INSERT INTO users (id, email, name, password_hash, role, cargo_id, comercial, must_change_password, active, criado_em, atualizado_em)
+        VALUES (${id}, ${norm(u.email)}, ${u.name}, ${u.passwordHash}, ${u.role}, ${u.cargoId ?? null}, ${u.comercial ?? false}, ${u.mustChangePassword}, ${u.active}, ${now}, ${now})
         RETURNING *
       `;
       return rowToUser(rows[0]);
@@ -231,7 +237,8 @@ class PostgresUserStore implements UserStore {
     const atualizadoEm = new Date().toISOString();
     await this.pool.sql`
       UPDATE users SET name = ${merged.name}, role = ${merged.role}, cargo_id = ${cargoId},
-        active = ${merged.active}, avatar_url = ${merged.avatarUrl ?? null}, atualizado_em = ${atualizadoEm}
+        comercial = ${merged.comercial ?? false}, active = ${merged.active}, avatar_url = ${merged.avatarUrl ?? null},
+        atualizado_em = ${atualizadoEm}
       WHERE id = ${id}
     `;
     return { ...cur, ...patch, cargoId: cargoId ?? undefined, atualizadoEm };

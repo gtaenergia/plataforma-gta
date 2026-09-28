@@ -54,6 +54,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
   if (parsed.data.role !== undefined) patch.role = parsed.data.role;
   if (parsed.data.active !== undefined) patch.active = parsed.data.active;
   if (parsed.data.cargoId !== undefined) patch.cargoId = parsed.data.cargoId;
+  if (parsed.data.comercial !== undefined) patch.comercial = parsed.data.comercial;
 
   const atualizado = await store.update(id, patch);
   return NextResponse.json({ user: atualizado ? toPublicUser(atualizado) : null });

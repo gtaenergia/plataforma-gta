@@ -46,7 +46,10 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
   const [funis, setFunis] = useState<Funil[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [contatos, setContatos] = useState<Contato[]>([]);
+  /** Todos os ativos: o pedido de proposta vai para quem EXECUTA, em Operações. */
   const [usuarios, setUsuarios] = useState<UsuarioOpcao[]>([]);
+  /** Só o comercial: quem pode ser dono da negociação. */
+  const [comercial, setComercial] = useState<UsuarioOpcao[]>([]);
   const [fontes, setFontes] = useState<ItemCatalogo[]>([]);
   const [motivos, setMotivos] = useState<ItemCatalogo[]>([]);
   const [catalogo, setCatalogo] = useState<ProdutoCrm[]>([]);
@@ -87,14 +90,16 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
       fetch("/api/crm/fontes").then((r) => r.json()),
       fetch("/api/crm/motivos-perda").then((r) => r.json()),
       fetch("/api/crm/produtos").then((r) => r.json()),
+      fetch("/api/usuarios?equipe=comercial").then((r) => r.json()),
     ])
-      .then(([neg, f, c, ct, u, fo, mo, pr]) => {
+      .then(([neg, f, c, ct, u, fo, mo, pr, com]) => {
         if (!neg.negociacao) throw new Error(neg.error ?? "Negociação não encontrada.");
         setN(neg.negociacao);
         setFunis(f.funis ?? []);
         setClientes(c.clientes ?? []);
         setContatos(ct.contatos ?? []);
         setUsuarios(u.usuarios ?? []);
+        setComercial(com.usuarios ?? []);
         setFontes(fo.fontes ?? []);
         setMotivos(mo.motivos ?? []);
         setCatalogo(pr.produtos ?? []);
@@ -327,7 +332,7 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
               n={n}
               funil={funil}
               clientes={clientes}
-              usuarios={usuarios}
+              usuarios={comercial}
               fontes={fontes}
               aberta={aberta}
               onEditar={edicao.marcarEditado}

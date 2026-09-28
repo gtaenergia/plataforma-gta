@@ -8,6 +8,7 @@ import { Campo } from "@/components/Campo";
 import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
 import { formatBRL, parseNumber } from "@/lib/format";
 import type { Cliente } from "@/lib/clientes/types";
+import { responsavelPadrao } from "@/lib/users/equipe";
 import {
   SITUACAO_LABEL,
   SITUACAO_TONE,
@@ -73,7 +74,7 @@ export function NegociacoesList({ usuarioAtual }: { usuarioAtual: string }) {
       fetch("/api/crm/negociacoes").then((r) => r.json()),
       fetch("/api/crm/funis").then((r) => r.json()),
       fetch("/api/clientes").then((r) => r.json()),
-      fetch("/api/usuarios").then((r) => r.json()),
+      fetch("/api/usuarios?equipe=comercial").then((r) => r.json()),
       fetch("/api/crm/fontes").then((r) => r.json()),
     ])
       .then(([n, f, c, u, fo]) => {
@@ -153,9 +154,9 @@ export function NegociacoesList({ usuarioAtual }: { usuarioAtual: string }) {
     setSalvando(true);
     try {
       const empresa = clientes.find((c) => c.id === form.empresaId);
-      // O mesmo `|| usuarioAtual` do campo: sem isso, criar sem tocar no
-      // seletor mandaria responsável vazio.
-      const usuario = usuarios.find((u) => u.email === (form.responsavel || usuarioAtual));
+      // O mesmo padrão do campo: sem isso, criar sem tocar no seletor mandaria
+      // responsável vazio.
+      const usuario = usuarios.find((u) => u.email === (form.responsavel || responsavelPadrao(usuarios, usuarioAtual)));
       const fonte = fontes.find((f) => f.id === form.fonteId);
       const res = await fetch("/api/crm/negociacoes", {
         method: "POST",
@@ -259,10 +260,11 @@ export function NegociacoesList({ usuarioAtual }: { usuarioAtual: string }) {
                 </select>
               </Campo>
               <Campo className="sm:col-span-2" label="Responsável">
-                {/* `|| usuarioAtual`: o campo abre em você mesmo sem depender de
-                    quem abriu o formulário ter preenchido (o atalho `#novo` do
-                    quadro não passa por `abrirNovo`). */}
-                <select className="field-input" value={form.responsavel || usuarioAtual} onChange={(e) => set("responsavel", e.target.value)}>
+                {/* O padrão abre em você mesmo sem depender de quem abriu o
+                    formulário ter preenchido (o atalho `#novo` do quadro não
+                    passa por `abrirNovo`) — ou no primeiro do comercial, se você
+                    não é da equipe. */}
+                <select className="field-input" value={form.responsavel || responsavelPadrao(usuarios, usuarioAtual)} onChange={(e) => set("responsavel", e.target.value)}>
                   {usuarios.map((u) => <option key={u.email} value={u.email}>{u.name}</option>)}
                 </select>
               </Campo>
