@@ -12,7 +12,7 @@ import type { OpcaoResponsavel } from "@/lib/users/equipe";
 import { AgendarCompromisso } from "./AgendarCompromisso";
 import { buscarJson, enviarJson } from "./buscar";
 import { ConcluirCompromisso } from "./ConcluirCompromisso";
-import { dataCurta, dataHora } from "./util";
+import { dataCurta, dataHora, diaLocal } from "./util";
 
 type Quem = "equipe" | "meus";
 
@@ -332,7 +332,7 @@ function LinhaAgenda({ item, atrasado, aberto, onAlternar, concluindo, onConclui
               {item.feitos} {item.feitos === 1 ? "follow-up feito" : "follow-ups feitos"}
             </span>
             <span>
-              {item.ultimo ? `Último: ${dataCurta(item.ultimo.em.slice(0, 10))} por ${item.ultimo.por}` : "Primeiro contato"}
+              {item.ultimo ? `Último: ${diaLocal(item.ultimo.em)} por ${item.ultimo.por}` : "Primeiro contato"}
             </span>
           </div>
         </div>

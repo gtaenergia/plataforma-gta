@@ -117,6 +117,15 @@ describe("montarHistorico — o que vem sozinho", () => {
     expect(soDocumento.valor).toBe(10000);
   });
 
+  it("ganha às 22h daqui conta no dia daqui, não no dia seguinte do UTC", () => {
+    const [l] = historico({
+      propostas: [prop({ negociacaoId: "n1", criadoEm: "2026-03-11T01:30:00.000Z", dataEmissao: "" })],
+      negociacoes: [neg({ situacao: "ganha", fechadoEm: "2026-04-03T01:00:00.000Z" })],
+    });
+    expect(l.decididoEm).toBe("2026-04-02");
+    expect(l.solicitadoEm).toBe("2026-03-10");
+  });
+
   it("negociação ganha fecha o pedido sozinha, com a data do fechamento", () => {
     const [l] = historico({
       propostas: [prop({ negociacaoId: "n1" })],

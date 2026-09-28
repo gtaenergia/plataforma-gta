@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Estacao } from "../orcamentos/types";
 import type { StatusProposta } from "../propostas/types";
 import { ehDoCliente, type RefCliente } from "./followups";
+import { hojeEmSaoPaulo } from "./repeticao";
 import type { Negociacao, SituacaoNegociacao } from "./types";
 
 /**
@@ -273,7 +274,16 @@ export function propostasDoCliente(
   });
 }
 
-const dia = (iso: string) => (iso ? iso.slice(0, 10) : "");
+/**
+ * O dia de um carimbo, em São Paulo. Cortar o texto daria o dia em UTC: a
+ * proposta aberta ou a negociação ganha às 22h daqui cairia no dia seguinte.
+ */
+function dia(iso: string): string {
+  if (!iso) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso.slice(0, 10) : hojeEmSaoPaulo(d);
+}
 
 /**
  * Quando o cliente pediu, pelo que a plataforma sabe: a MAIS ANTIGA entre a

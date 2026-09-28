@@ -24,7 +24,7 @@ import { SITUACAO_LABEL, type Negociacao } from "@/lib/crm/types";
 import { estacaoLabel } from "@/lib/orcamentos/types";
 import { statusPropostaLabel } from "@/lib/propostas/types";
 import { buscarJson, enviarJson } from "./buscar";
-import { dataCurta } from "./util";
+import { dataCurta, diaLocal } from "./util";
 
 interface Avulsa {
   id: string;
@@ -586,7 +586,7 @@ function VincularProposta({ clienteId, avulsas, onVinculada, onCancelar }: {
               <span className="min-w-0">
                 <span className="block truncate text-sm font-medium text-gta-navy dark:text-slate-100">{a.cliente}</span>
                 <span className="hint block truncate">
-                  {[a.referencia, a.servico, dataCurta(a.criadoEm.slice(0, 10))].filter(Boolean).join(" · ")}
+                  {[a.referencia, a.servico, diaLocal(a.criadoEm)].filter(Boolean).join(" · ")}
                 </span>
               </span>
               <button className="btn-secondary !py-1 text-xs" disabled={salvando !== null} onClick={() => void vincular(a)}>

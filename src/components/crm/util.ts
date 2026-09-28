@@ -23,6 +23,20 @@ export function hojeISO(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/**
+ * A data de um momento, no fuso de quem está olhando ("29/09/2026").
+ *
+ * Cortar o texto do carimbo ("2026-09-29T01:30:00Z".slice(0, 10)) dá o dia
+ * em UTC: o contato concluído às 22h30 de Goiânia apareceria como feito no
+ * dia seguinte. Data pura (YYYY-MM-DD) não tem fuso e sai como veio.
+ */
+export function diaLocal(valor: string): string {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(valor)) return dataCurta(valor);
+  const d = new Date(valor);
+  if (Number.isNaN(d.getTime())) return valor;
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+}
+
 /** Carimbo de data e hora ("07/08/2026 14:32") para o histórico. */
 export function dataHora(iso: string): string {
   const d = new Date(iso);

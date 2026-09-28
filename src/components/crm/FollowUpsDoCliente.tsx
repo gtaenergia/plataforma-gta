@@ -12,7 +12,7 @@ import type { OpcaoResponsavel } from "@/lib/users/equipe";
 import { AgendarCompromisso } from "./AgendarCompromisso";
 import { enviarJson } from "./buscar";
 import { ConcluirCompromisso } from "./ConcluirCompromisso";
-import { dataCurta, dataHora, hojeISO } from "./util";
+import { dataCurta, dataHora, diaLocal, hojeISO } from "./util";
 
 /** Quantos contatos feitos aparecem antes do "ver todos". */
 const FEITOS_VISIVEIS = 5;
@@ -79,7 +79,7 @@ export function FollowUpsDoCliente({ cliente, tarefas, negociacoes, funis, motiv
             value={
               resumo.ultimo ? (
                 <>
-                  {dataCurta((resumo.ultimo.concluidaEm || resumo.ultimo.data).slice(0, 10))}
+                  {diaLocal(resumo.ultimo.concluidaEm || resumo.ultimo.data)}
                   <span className="block text-xs font-normal text-slate-600 dark:text-slate-400">por {quemFez(resumo.ultimo)}</span>
                 </>
               ) : "—"
