@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { clienteDaTarefa, ehDoCliente, quemFez, resumoFollowUps, tarefasDoCliente } from "@/lib/crm/followups";
+import {
+  clienteDaTarefa,
+  ehDoCliente,
+  negociacaoDeReferencia,
+  quemFez,
+  resumoFollowUps,
+  tarefasDoCliente,
+} from "@/lib/crm/followups";
+import { indicePreset } from "@/lib/crm/repeticao";
 import type { Negociacao, TarefaCrm } from "@/lib/crm/types";
 
 const neg = (sobre: Partial<Negociacao>): Negociacao => ({
@@ -81,6 +89,36 @@ describe("resumoFollowUps", () => {
   it("sem nada, sem números inventados", () => {
     const r = resumoFollowUps([]);
     expect(r).toMatchObject({ feitos: 0, ultimo: null, proximo: null });
+  });
+});
+
+describe("negociacaoDeReferencia", () => {
+  const negs = [
+    neg({ id: "velha", empresaId: "c1", atualizadoEm: "2026-09-01T00:00:00.000Z" }),
+    neg({ id: "viva", empresaId: "c1", atualizadoEm: "2026-10-01T00:00:00.000Z" }),
+    neg({ id: "ganha", empresaId: "c1", situacao: "ganha", atualizadoEm: "2026-10-20T00:00:00.000Z" }),
+    neg({ id: "alheia", empresaId: "c9", atualizadoEm: "2026-10-25T00:00:00.000Z" }),
+  ];
+
+  it("a negociação da própria tarefa, quando ela tem", () => {
+    expect(negociacaoDeReferencia(tar({ negociacaoId: "velha" }), FAZENDA, negs)?.id).toBe("velha");
+  });
+
+  it("follow-up só de cliente: a negociação em andamento mexida por último", () => {
+    // A ganha é mais recente, mas não diz em que etapa o cliente ESTÁ.
+    expect(negociacaoDeReferencia(tar({ clienteId: "c1" }), FAZENDA, negs)?.id).toBe("viva");
+  });
+
+  it("sem nenhuma em andamento, nenhuma — melhor mostrar nada que uma etapa velha", () => {
+    expect(negociacaoDeReferencia(tar({ clienteId: "c1" }), FAZENDA, [negs[2], negs[3]])).toBeNull();
+  });
+});
+
+describe("indicePreset", () => {
+  it("reconhece a cadência da lista e aponta a personalizada", () => {
+    expect(indicePreset(0, "")).toBe(0);
+    expect(indicePreset(3, "meses")).toBeGreaterThan(0);
+    expect(indicePreset(5, "semanas")).toBe(-1);
   });
 });
 

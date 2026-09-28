@@ -1,18 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Alert, BackLink, EmptyState, Kpi, KpiGrid, Loading, Marca, SectionCard } from "@/components/ui";
 import { formatBRL } from "@/lib/format";
 import { cidadeUf, type Cliente } from "@/lib/clientes/types";
+import { negociacoesDoCliente, tarefasDoCliente } from "@/lib/crm/followups";
 import {
   SITUACAO_LABEL,
   SITUACAO_TONE,
   valorDaNegociacao,
   type Contato,
+  type Funil,
+  type ItemCatalogo,
   type Negociacao,
+  type TarefaCrm,
 } from "@/lib/crm/types";
+import type { OpcaoResponsavel } from "@/lib/users/equipe";
 import { buscarJson } from "./buscar";
+import { FollowUpsDoCliente } from "./FollowUpsDoCliente";
 import { dataCurta } from "./util";
 
 /**
@@ -30,37 +36,67 @@ import { dataCurta } from "./util";
  * herdado do RD Station. Renomear essas chaves seria migração de dado gravado;
  * o que a pessoa vê diz "cliente".)
  */
-export function ClienteDetalhe({ id }: { id: string }) {
+export function ClienteDetalhe({ id, usuarioAtual }: { id: string; usuarioAtual: string }) {
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [negociacoes, setNegociacoes] = useState<Negociacao[]>([]);
   const [contatos, setContatos] = useState<Contato[]>([]);
+  const [tarefas, setTarefas] = useState<TarefaCrm[]>([]);
+  const [funis, setFunis] = useState<Funil[]>([]);
+  const [motivos, setMotivos] = useState<ItemCatalogo[]>([]);
+  const [usuarios, setUsuarios] = useState<OpcaoResponsavel[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+
+  /*
+   * Casa por id OU por nome (ver `ehDoCliente`).
+   *
+   * Nem toda negociação tem `empresaId`: a criação rápida na coluna do funil
+   * pede só o nome, e negociações antigas nasceram antes de o cliente existir
+   * no cadastro. Filtrar só por id mostraria "nenhuma negociação" para um
+   * cliente com seis — e o nome está denormalizado justamente para casos assim.
+   */
+  const carregarMovimento = useCallback(async (c: Cliente) => {
+    const [n, t] = await Promise.all([
+      buscarJson<{ negociacoes: Negociacao[] }>("/api/crm/negociacoes"),
+      buscarJson<{ tarefas: TarefaCrm[] }>("/api/crm/tarefas"),
+    ]);
+    const todas = n.negociacoes ?? [];
+    setNegociacoes(negociacoesDoCliente(c, todas));
+    // As tarefas precisam de TODAS as negociações: a tarefa antiga só conhece
+    // a dela, e é pelo cliente da negociação que ela chega até aqui.
+    setTarefas(tarefasDoCliente(c, t.tarefas ?? [], todas));
+  }, []);
 
   useEffect(() => {
     Promise.all([
       buscarJson<{ cliente: Cliente }>(`/api/clientes/${id}`),
-      buscarJson<{ negociacoes: Negociacao[] }>("/api/crm/negociacoes"),
       buscarJson<{ contatos: Contato[] }>("/api/crm/contatos"),
+      buscarJson<{ funis: Funil[] }>("/api/crm/funis"),
+      buscarJson<{ motivos: ItemCatalogo[] }>("/api/crm/motivos-perda"),
+      buscarJson<{ usuarios: OpcaoResponsavel[] }>("/api/usuarios?equipe=comercial"),
     ])
-      .then(([e, n, c]) => {
+      .then(async ([e, c, f, m, u]) => {
         setCliente(e.cliente);
-        /*
-         * Casa por id OU por nome.
-         *
-         * Nem toda negociação tem `empresaId`: a criação rápida na coluna do
-         * funil pede só o nome, e negociações antigas nasceram antes de o
-         * cliente existir no cadastro. Filtrar só por id mostraria "nenhuma
-         * negociação" para um cliente com seis — e o nome está denormalizado
-         * justamente para casos assim.
-         */
         const mesmoNome = (nome: string) => nome.trim().toLowerCase() === e.cliente.nome.trim().toLowerCase();
-        setNegociacoes((n.negociacoes ?? []).filter((x) => (x.empresaId ? x.empresaId === id : mesmoNome(x.empresaNome))));
         setContatos((c.contatos ?? []).filter((x) => (x.empresaId ? x.empresaId === id : mesmoNome(x.empresaNome))));
+        setFunis(f.funis ?? []);
+        setMotivos(m.motivos ?? []);
+        setUsuarios(u.usuarios ?? []);
+        await carregarMovimento(e.cliente);
       })
       .catch((err) => setErro(err instanceof Error ? err.message : "Falha ao carregar o cliente."))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, carregarMovimento]);
+
+  /** Depois de agendar ou concluir: a etapa pode ter mudado junto. */
+  async function recarregar() {
+    if (!cliente) return;
+    try {
+      await carregarMovimento(cliente);
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : "Falha ao recarregar.");
+    }
+  }
 
   const resumo = useMemo(() => {
     const abertas = negociacoes.filter((n) => n.situacao === "aberta" || n.situacao === "pausada");
@@ -99,6 +135,17 @@ export function ClienteDetalhe({ id }: { id: string }) {
           <Kpi label="Negociações ganhas" value={resumo.ganhas} />
         </KpiGrid>
       </SectionCard>
+
+      <FollowUpsDoCliente
+        cliente={cliente}
+        tarefas={tarefas}
+        negociacoes={negociacoes}
+        funis={funis}
+        motivos={motivos}
+        usuarios={usuarios}
+        usuarioAtual={usuarioAtual}
+        onMudou={() => void recarregar()}
+      />
 
       <SectionCard
         title="Negociações"

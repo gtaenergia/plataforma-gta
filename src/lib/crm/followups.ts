@@ -46,6 +46,35 @@ export function tarefasDoCliente(
   return tarefas.filter((t) => ehDoCliente(clienteDaTarefa(t, porId), cliente));
 }
 
+/** As negociações deste cliente (mesma regra de casamento das tarefas). */
+export function negociacoesDoCliente(cliente: RefCliente, negociacoes: readonly Negociacao[]): Negociacao[] {
+  return negociacoes.filter((n) => ehDoCliente({ id: n.empresaId, nome: n.empresaNome }, cliente));
+}
+
+const emAndamento = (n: Negociacao) => n.situacao === "aberta" || n.situacao === "pausada";
+
+/**
+ * A negociação que diz "em que etapa o cliente está" para um compromisso.
+ *
+ * A dele, quando ele tem uma. Follow-up só de cliente não tem: aí vale a
+ * negociação em andamento mexida por último com esse cliente — é a conversa
+ * viva no momento. Sem nenhuma em andamento, não há etapa a mostrar, e
+ * inventar uma ("Ganha", da venda do ano passado) diria que o cliente está
+ * num ponto em que ele não está.
+ */
+export function negociacaoDeReferencia(
+  t: TarefaCrm,
+  cliente: RefCliente,
+  negociacoes: readonly Negociacao[],
+): Negociacao | null {
+  if (t.negociacaoId) {
+    const propria = negociacoes.find((n) => n.id === t.negociacaoId);
+    if (propria) return propria;
+  }
+  const vivas = negociacoesDoCliente(cliente, negociacoes).filter(emAndamento);
+  return vivas.sort((a, b) => b.atualizadoEm.localeCompare(a.atualizadoEm))[0] ?? null;
+}
+
 /** Quem fez o contato. Conclusão antiga não guardava o autor: vale o responsável. */
 export function quemFez(t: TarefaCrm): string {
   return t.concluidaPorNome || t.concluidaPor || t.responsavelNome || t.responsavel;

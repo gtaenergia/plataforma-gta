@@ -14,7 +14,7 @@ export default async function CrmClientePage({ params }: { params: Promise<{ id:
     <div className="min-h-screen">
       <AppHeader userName={user.name} avatarUrl={user.avatarUrl} isAdmin={user.role === "admin"} />
       <main className="app-container py-8">
-        <ClienteDetalhe id={id} />
+        <ClienteDetalhe id={id} usuarioAtual={user.email} />
       </main>
     </div>
   );

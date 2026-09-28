@@ -64,6 +64,25 @@ export function proximaOcorrencia(agendada: string, cada: number, unidade: Unida
   return "";
 }
 
+/**
+ * As cadências que a tela oferece de cara. Qualquer outra entra por
+ * "Personalizado" — a lista curta é para o caso comum não exigir conta.
+ */
+export const PRESETS_REPETICAO: readonly { cada: number; unidade: UnidadeRepeticao | "" }[] = [
+  { cada: 0, unidade: "" },
+  { cada: 1, unidade: "semanas" },
+  { cada: 15, unidade: "dias" },
+  { cada: 1, unidade: "meses" },
+  { cada: 3, unidade: "meses" },
+  { cada: 6, unidade: "meses" },
+];
+
+/** O preset que corresponde à repetição, ou -1 quando ela é personalizada. */
+export function indicePreset(cada: number, unidade: UnidadeRepeticao | ""): number {
+  if (!cada || !unidade) return 0;
+  return PRESETS_REPETICAO.findIndex((p) => p.cada === cada && p.unidade === unidade);
+}
+
 /** "Toda semana", "A cada 15 dias", "Todo mês", "A cada 3 meses". */
 export function descreverRepeticao(cada: number, unidade: UnidadeRepeticao | ""): string {
   if (!cada || !unidade) return "Não se repete";

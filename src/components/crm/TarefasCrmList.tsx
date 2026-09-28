@@ -1,36 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { Repeat } from "lucide-react";
 import { Alert, EmptyState, Loading, SectionCard, Segmented } from "@/components/ui";
 import { Campo } from "@/components/Campo";
-import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
-import { responsavelPadrao } from "@/lib/users/equipe";
+import type { Cliente } from "@/lib/clientes/types";
+import { clienteDaTarefa, negociacaoDeReferencia, quemFez } from "@/lib/crm/followups";
+import { descreverRepeticao } from "@/lib/crm/repeticao";
 import {
   TIPO_TAREFA_LABEL,
-  TIPOS_TAREFA,
+  type Funil,
+  type ItemCatalogo,
   type Negociacao,
   type TarefaCrm,
-  type TipoTarefa,
 } from "@/lib/crm/types";
-import { classificarTarefa, dataCurta, hojeISO, type ClasseTarefa } from "./util";
+import type { OpcaoResponsavel } from "@/lib/users/equipe";
+import { AgendarCompromisso } from "./AgendarCompromisso";
+import { buscarJson, enviarJson } from "./buscar";
+import { ConcluirCompromisso } from "./ConcluirCompromisso";
+import { classificarTarefa, dataCurta, dataHora, hojeISO, type ClasseTarefa } from "./util";
 
 type Visao = "pendentes" | "concluidas";
-
-type FormState = {
-  negociacaoId: string;
-  tipo: TipoTarefa;
-  assunto: string;
-  data: string;
-  hora: string;
-  responsavel: string;
-  notas: string;
-};
-
-interface UsuarioOpcao {
-  email: string;
-  name: string;
-}
 
 const GRUPOS: { classe: ClasseTarefa; titulo: string; tone: "red" | "indigo" | "slate" }[] = [
   { classe: "atrasada", titulo: "Atrasadas", tone: "red" },
@@ -42,44 +33,50 @@ const GRUPOS: { classe: ClasseTarefa; titulo: string; tone: "red" | "indigo" | "
 export function TarefasCrmList({ usuarioAtual }: { usuarioAtual: string }) {
   const [tarefas, setTarefas] = useState<TarefaCrm[]>([]);
   const [negociacoes, setNegociacoes] = useState<Negociacao[]>([]);
-  const [usuarios, setUsuarios] = useState<UsuarioOpcao[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [funis, setFunis] = useState<Funil[]>([]);
+  const [motivos, setMotivos] = useState<ItemCatalogo[]>([]);
+  const [usuarios, setUsuarios] = useState<OpcaoResponsavel[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
 
   const [visao, setVisao] = useState<Visao>("pendentes");
   const [fResponsavel, setFResponsavel] = useState("");
-
   const [criando, setCriando] = useState(false);
-  const [form, setForm] = useState<FormState>({ negociacaoId: "", tipo: "ligacao", assunto: "", data: hojeISO(), hora: "", responsavel: "", notas: "" });
-  const [salvando, setSalvando] = useState(false);
-  const edicao = useEdicaoPendente();
+  const [concluindo, setConcluindo] = useState<string | null>(null);
 
-  const set = <K extends keyof FormState>(k: K, v: FormState[K]) => {
-    edicao.marcarEditado();
-    setForm((f) => ({ ...f, [k]: v }));
-  };
+  /** Tarefas e negociações andam juntas: concluir pode mover a etapa e gerar a próxima. */
+  const carregarMovimento = useCallback(async () => {
+    const [t, n] = await Promise.all([
+      buscarJson<{ tarefas: TarefaCrm[] }>("/api/crm/tarefas"),
+      buscarJson<{ negociacoes: Negociacao[] }>("/api/crm/negociacoes"),
+    ]);
+    setTarefas(t.tarefas ?? []);
+    setNegociacoes(n.negociacoes ?? []);
+  }, []);
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/crm/tarefas").then((r) => r.json()),
-      fetch("/api/crm/negociacoes").then((r) => r.json()),
-      fetch("/api/usuarios?equipe=comercial").then((r) => r.json()),
+      carregarMovimento(),
+      buscarJson<{ clientes: Cliente[] }>("/api/clientes").then((d) => setClientes(d.clientes ?? [])),
+      buscarJson<{ funis: Funil[] }>("/api/crm/funis").then((d) => setFunis(d.funis ?? [])),
+      buscarJson<{ motivos: ItemCatalogo[] }>("/api/crm/motivos-perda").then((d) => setMotivos(d.motivos ?? [])),
+      buscarJson<{ usuarios: OpcaoResponsavel[] }>("/api/usuarios?equipe=comercial").then((d) => setUsuarios(d.usuarios ?? [])),
     ])
-      .then(([t, n, u]) => {
-        setTarefas(t.tarefas ?? []);
-        setNegociacoes(n.negociacoes ?? []);
-        setUsuarios(u.usuarios ?? []);
-      })
-      .catch(() => setErro("Falha ao carregar."))
+      .catch((e) => setErro(e instanceof Error ? e.message : "Falha ao carregar."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [carregarMovimento]);
 
-  // Só se agenda em negociação em andamento — o servidor recusa as fechadas.
-  const negociaveis = useMemo(
-    () => negociacoes.filter((n) => n.situacao === "aberta" || n.situacao === "pausada"),
-    [negociacoes],
-  );
+  async function recarregar() {
+    try {
+      await carregarMovimento();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao recarregar.");
+    }
+  }
 
+  const porNegociacao = useMemo(() => new Map(negociacoes.map((n) => [n.id, n])), [negociacoes]);
   const hoje = hojeISO();
   const filtradas = useMemo(
     () => tarefas.filter((t) => !fResponsavel || t.responsavel === fResponsavel),
@@ -100,73 +97,74 @@ export function TarefasCrmList({ usuarioAtual }: { usuarioAtual: string }) {
     return Array.from(mapa, ([email, nome]) => ({ email, nome })).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   }, [tarefas]);
 
-  function atualizarLocal(t: TarefaCrm) {
-    setTarefas((prev) => prev.map((x) => (x.id === t.id ? t : x)));
-  }
-
-  async function concluir(t: TarefaCrm, concluida: boolean) {
+  async function reabrir(t: TarefaCrm) {
+    if (!window.confirm(`Reabrir "${t.assunto}"?\n\nO contato deixa de contar como feito, e o próximo que ele agendou sai da agenda.`)) return;
     setErro(null);
-    const res = await fetch(`/api/crm/tarefas/${t.id}/concluir`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ concluida }),
-    });
-    const data = await res.json();
-    if (!res.ok) { setErro(data.error ?? "Falha ao concluir."); return; }
-    atualizarLocal(data.tarefa as TarefaCrm);
+    try {
+      await enviarJson(`/api/crm/tarefas/${t.id}/concluir`, "POST", { concluida: false });
+      await recarregar();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao reabrir.");
+    }
   }
 
   async function adiar(t: TarefaCrm, novaData: string) {
     if (!novaData || novaData === t.data) return;
     setErro(null);
-    const res = await fetch(`/api/crm/tarefas/${t.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: novaData }),
-    });
-    const data = await res.json();
-    if (!res.ok) { setErro(data.error ?? "Falha ao adiar."); return; }
-    atualizarLocal(data.tarefa as TarefaCrm);
-  }
-
-  async function salvar(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.negociacaoId) { setErro("Escolha a negociação."); return; }
-    if (!form.assunto.trim()) { setErro("Informe o assunto."); return; }
-    setErro(null);
-    setSalvando(true);
     try {
-      // Mesmo padrão do campo: criar sem tocar no seletor tem que agendar para
-      // quem aparece marcado, não para ninguém.
-      const responsavel = form.responsavel || responsavelPadrao(usuarios, usuarioAtual);
-      const usuario = usuarios.find((u) => u.email === responsavel);
-      const res = await fetch("/api/crm/tarefas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, responsavel, responsavelNome: usuario?.name ?? "" }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Falha ao salvar.");
-      setTarefas((prev) => [...prev, data.tarefa as TarefaCrm].sort((a, b) => `${a.data} ${a.hora}`.localeCompare(`${b.data} ${b.hora}`)));
-      edicao.marcarSalvo();
-      setCriando(false);
-      setForm({ negociacaoId: "", tipo: "ligacao", assunto: "", data: hojeISO(), hora: "", responsavel: "", notas: "" });
-    } catch (err) {
-      setErro(err instanceof Error ? err.message : "Erro ao salvar.");
-    } finally {
-      setSalvando(false);
+      const d = await enviarJson<{ tarefa: TarefaCrm }>(`/api/crm/tarefas/${t.id}`, "PATCH", { data: novaData });
+      setTarefas((prev) => prev.map((x) => (x.id === t.id ? d.tarefa : x)));
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Falha ao adiar.");
     }
   }
 
   if (loading) return <Loading>Carregando tarefas…</Loading>;
 
-  const concluidas = (porClasse.get("concluida") ?? []).slice().reverse();
+  const concluidas = (porClasse.get("concluida") ?? [])
+    .slice()
+    .sort((a, b) => (b.concluidaEm || b.data).localeCompare(a.concluidaEm || a.data));
+
+  const linha = (t: TarefaCrm, atrasada: boolean) => {
+    const cliente = clienteDaTarefa(t, porNegociacao);
+    const neg = negociacaoDeReferencia(t, cliente, negociacoes);
+    return (
+      <LinhaTarefa
+        key={t.id}
+        t={t}
+        clienteNome={cliente.nome}
+        clienteId={cliente.id}
+        atrasada={atrasada}
+        onAdiar={adiar}
+        onReabrir={reabrir}
+        concluindo={concluindo === t.id}
+        onConcluir={() => { setAviso(null); setConcluindo(t.id); }}
+        painel={
+          <ConcluirCompromisso
+            tarefa={t}
+            negociacao={neg}
+            funil={funis.find((f) => f.id === neg?.funilId) ?? null}
+            motivos={motivos}
+            usuarios={usuarios}
+            usuarioAtual={usuarioAtual}
+            onConcluido={(c) => {
+              setConcluindo(null);
+              if (c.aviso) setAviso(c.aviso);
+              void recarregar();
+            }}
+            onCancelar={() => setConcluindo(null)}
+          />
+        }
+      />
+    );
+  };
 
   return (
     <div className="space-y-4">
       {erro && <Alert tone="red">{erro}</Alert>}
+      {aviso && <Alert tone="amber">{aviso}</Alert>}
 
-      {/* Barra: visão + filtro + nova tarefa */}
+      {/* Barra: visão + filtro + novo compromisso */}
       <div className="flex flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-end sm:p-4 card">
         <Segmented<Visao>
           value={visao}
@@ -185,59 +183,29 @@ export function TarefasCrmList({ usuarioAtual }: { usuarioAtual: string }) {
           <button
             className="btn-primary whitespace-nowrap"
             onClick={() => { setErro(null); setCriando(true); }}
-            disabled={negociaveis.length === 0}
+            disabled={clientes.length === 0}
           >
-            + Nova tarefa
+            + Novo follow-up / tarefa
           </button>
         )}
       </div>
 
-      {negociaveis.length === 0 && tarefas.length === 0 && (
+      {clientes.length === 0 && tarefas.length === 0 && (
         <Alert tone="indigo">
-          Tarefa é sempre presa a uma negociação em andamento. <Link href="/crm/negociacoes#novo" className="btn-link">Crie uma negociação</Link> para começar a agendar.
+          Todo compromisso é com um cliente. <Link href="/crm/clientes" className="btn-link">Cadastre um cliente</Link> para começar a agendar.
         </Alert>
       )}
 
       {criando && (
-        <SectionCard
-          title="Nova tarefa"
-          actions={<button type="button" className="btn-secondary !py-2 text-sm" onClick={() => { edicao.marcarSalvo(); setCriando(false); }}>Cancelar</button>}
-        >
-          <form onSubmit={salvar} className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
-              <Campo className="sm:col-span-3" label="Negociação *">
-                <select className="field-input" value={form.negociacaoId} onChange={(e) => set("negociacaoId", e.target.value)}>
-                  <option value="">Escolha…</option>
-                  {negociaveis.map((n) => <option key={n.id} value={n.id}>{n.nome}{n.empresaNome ? ` — ${n.empresaNome}` : ""}</option>)}
-                </select>
-              </Campo>
-              <Campo className="sm:col-span-3" label="Assunto *">
-                <input className="field-input" value={form.assunto} onChange={(e) => set("assunto", e.target.value)} placeholder="Ex.: Apresentar a proposta revisada" />
-              </Campo>
-              <Campo className="sm:col-span-2" label="Tipo">
-                <select className="field-input" value={form.tipo} onChange={(e) => set("tipo", e.target.value as TipoTarefa)}>
-                  {TIPOS_TAREFA.map((t) => <option key={t} value={t}>{TIPO_TAREFA_LABEL[t]}</option>)}
-                </select>
-              </Campo>
-              <Campo className="sm:col-span-1" label="Data *">
-                <input type="date" className="field-input" value={form.data} onChange={(e) => set("data", e.target.value)} required />
-              </Campo>
-              <Campo className="sm:col-span-1" label="Hora">
-                <input type="time" className="field-input" value={form.hora} onChange={(e) => set("hora", e.target.value)} />
-              </Campo>
-              <Campo className="sm:col-span-2" label="Responsável">
-                <select className="field-input" value={form.responsavel || responsavelPadrao(usuarios, usuarioAtual)} onChange={(e) => set("responsavel", e.target.value)}>
-                  {usuarios.map((u) => <option key={u.email} value={u.email}>{u.name}</option>)}
-                </select>
-              </Campo>
-            </div>
-            <Campo label="Notas">
-              <textarea className="field-input min-h-[60px]" value={form.notas} onChange={(e) => set("notas", e.target.value)} placeholder="Contexto para quem vai executar…" />
-            </Campo>
-            <div className="flex justify-end gap-2">
-              <button type="submit" className="btn-primary" disabled={salvando}>{salvando ? "Salvando…" : "Agendar tarefa"}</button>
-            </div>
-          </form>
+        <SectionCard title="Novo follow-up ou tarefa">
+          <AgendarCompromisso
+            clientes={clientes}
+            negociacoes={negociacoes}
+            usuarios={usuarios}
+            usuarioAtual={usuarioAtual}
+            onAgendado={() => { setCriando(false); void recarregar(); }}
+            onCancelar={() => setCriando(false)}
+          />
         </SectionCard>
       )}
 
@@ -252,9 +220,7 @@ export function TarefasCrmList({ usuarioAtual }: { usuarioAtual: string }) {
                   <p className="subtitle">Nada por aqui.</p>
                 ) : (
                   <ul className="divide-y divide-slate-100 dark:divide-slate-700">
-                    {grupo.map((t) => (
-                      <LinhaTarefa key={t.id} t={t} atrasada={classe === "atrasada"} onConcluir={concluir} onAdiar={adiar} />
-                    ))}
+                    {grupo.map((t) => linha(t, classe === "atrasada"))}
                   </ul>
                 )}
               </SectionCard>
@@ -266,9 +232,7 @@ export function TarefasCrmList({ usuarioAtual }: { usuarioAtual: string }) {
       ) : (
         <SectionCard title={`Concluídas (${concluidas.length})`}>
           <ul className="divide-y divide-slate-100 dark:divide-slate-700">
-            {concluidas.map((t) => (
-              <LinhaTarefa key={t.id} t={t} atrasada={false} onConcluir={concluir} onAdiar={adiar} />
-            ))}
+            {concluidas.map((t) => linha(t, false))}
           </ul>
         </SectionCard>
       )}
@@ -276,46 +240,81 @@ export function TarefasCrmList({ usuarioAtual }: { usuarioAtual: string }) {
   );
 }
 
-function LinhaTarefa({ t, atrasada, onConcluir, onAdiar }: {
+function LinhaTarefa({ t, clienteNome, clienteId, atrasada, concluindo, painel, onConcluir, onAdiar, onReabrir }: {
   t: TarefaCrm;
+  clienteNome: string;
+  clienteId: string;
   atrasada: boolean;
-  onConcluir: (t: TarefaCrm, concluida: boolean) => Promise<void>;
+  concluindo: boolean;
+  painel: React.ReactNode;
+  onConcluir: () => void;
   onAdiar: (t: TarefaCrm, novaData: string) => Promise<void>;
+  onReabrir: (t: TarefaCrm) => Promise<void>;
 }) {
+  // A tarefa aponta para a negociação quando tem uma; o follow-up só de
+  // cliente aponta para a ficha do cliente.
+  const destino = t.negociacaoId
+    ? { href: `/crm/negociacoes/${t.negociacaoId}`, rotulo: [t.negociacaoNome, clienteNome].filter(Boolean).join(" · ") }
+    : clienteId
+      ? { href: `/crm/clientes/${clienteId}`, rotulo: clienteNome }
+      : null;
+
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
-      <input
-        type="checkbox"
-        className="toque shrink-0"
-        checked={t.concluida}
-        onChange={() => void onConcluir(t, !t.concluida)}
-        aria-label={`Concluir: ${t.assunto}`}
-      />
-      <span className="min-w-0 flex-1">
-        <span className={`block truncate text-sm font-medium ${t.concluida ? "text-slate-400 line-through dark:text-slate-500" : "text-gta-navy dark:text-slate-100"}`}>
-          <span className="mr-1.5 text-xs font-normal text-slate-500 dark:text-slate-400">{TIPO_TAREFA_LABEL[t.tipo]}</span>
-          {t.assunto}
+    <li className="py-2.5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="min-w-0 flex-1">
+          <span className={`block truncate text-sm font-medium ${t.concluida ? "text-slate-500 dark:text-slate-400" : "text-gta-navy dark:text-slate-100"}`}>
+            <span className="mr-1.5 text-xs font-normal text-slate-500 dark:text-slate-400">{TIPO_TAREFA_LABEL[t.tipo]}</span>
+            {t.assunto}
+          </span>
+          <span className="hint flex flex-wrap items-center gap-x-2">
+            {destino ? (
+              <Link href={destino.href} className="truncate hover:underline">{destino.rotulo}</Link>
+            ) : (
+              <span>{clienteNome || "—"}</span>
+            )}
+            {t.repetirCada > 0 && !t.concluida && (
+              <span className="inline-flex items-center gap-1">
+                <Repeat className="h-3 w-3" aria-hidden />
+                {descreverRepeticao(t.repetirCada, t.repetirUnidade)}
+              </span>
+            )}
+          </span>
         </span>
-        <Link href={`/crm/negociacoes/${t.negociacaoId}`} className="hint block truncate hover:underline">
-          {t.negociacaoNome}
-        </Link>
-      </span>
-      <span className={`shrink-0 text-xs ${atrasada ? "font-semibold text-red-600 dark:text-red-400" : "text-slate-600 dark:text-slate-400"}`}>
-        {dataCurta(t.data)}{t.hora ? ` ${t.hora}` : ""}
-      </span>
-      {t.responsavelNome && <span className="hint hidden shrink-0 sm:inline">{t.responsavelNome}</span>}
-      {!t.concluida && (
-        <label className="hint shrink-0">
-          Adiar:{" "}
-          <input
-            type="date"
-            className="field-input inline-block w-auto !py-0.5 text-xs"
-            value={t.data}
-            onChange={(e) => void onAdiar(t, e.target.value)}
-            aria-label={`Adiar: ${t.assunto}`}
-          />
-        </label>
+        <span className={`shrink-0 text-xs ${atrasada ? "font-semibold text-red-600 dark:text-red-400" : "text-slate-600 dark:text-slate-400"}`}>
+          {t.concluida && t.concluidaEm ? `Feito em ${dataHora(t.concluidaEm)}` : `${dataCurta(t.data)}${t.hora ? ` ${t.hora}` : ""}`}
+        </span>
+        {t.responsavelNome && !t.concluida && <span className="hint hidden shrink-0 sm:inline">{t.responsavelNome}</span>}
+        {!t.concluida ? (
+          <>
+            <label className="hint shrink-0">
+              Adiar:{" "}
+              <input
+                type="date"
+                className="field-input inline-block w-auto !py-0.5 text-xs"
+                value={t.data}
+                onChange={(e) => void onAdiar(t, e.target.value)}
+                aria-label={`Adiar: ${t.assunto}`}
+              />
+            </label>
+            {!concluindo && (
+              <button className="btn-secondary !py-1 text-xs" onClick={onConcluir}>
+                Concluir
+              </button>
+            )}
+          </>
+        ) : (
+          <button className="btn-link shrink-0 text-xs" onClick={() => void onReabrir(t)}>Reabrir</button>
+        )}
+      </div>
+      {t.concluida && (
+        <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+          <span className="font-medium">{quemFez(t)}</span>
+          {t.comentario ? <span className="whitespace-pre-wrap"> — {t.comentario}</span> : null}
+        </p>
       )}
+      {!t.concluida && t.notas && <p className="mt-1 whitespace-pre-wrap text-xs text-slate-600 dark:text-slate-400">{t.notas}</p>}
+      {concluindo && painel}
     </li>
   );
 }
