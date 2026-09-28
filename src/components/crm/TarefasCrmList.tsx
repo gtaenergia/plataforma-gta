@@ -109,7 +109,9 @@ export function TarefasCrmList({ usuarioAtual }: { usuarioAtual: string }) {
   }
 
   async function adiar(t: TarefaCrm, novaData: string) {
-    if (!novaData || novaData === t.data) return;
+    // Digitando o ano pelo teclado, o campo de data dispara valores parciais
+    // ("0002-10-29") a cada tecla — e cada um viraria um PATCH.
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(novaData) || novaData < "2000-01-01" || novaData === t.data) return;
     setErro(null);
     try {
       const d = await enviarJson<{ tarefa: TarefaCrm }>(`/api/crm/tarefas/${t.id}`, "PATCH", { data: novaData });

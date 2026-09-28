@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Alert, EmptyState, Kpi, KpiGrid, Loading, Marca, SectionCard } from "@/components/ui";
 import { formatBRL } from "@/lib/format";
@@ -10,20 +10,29 @@ import {
   valorDaNegociacao,
   type Negociacao,
 } from "@/lib/crm/types";
+import { AgendaCrm } from "./AgendaCrm";
 
-/** Painel de abertura do CRM: o momento comercial em quatro números + o que se mexeu por último. */
-export function CrmInicio() {
+/**
+ * Painel de abertura do CRM: o momento comercial em quatro números, a agenda
+ * de contatos do dia e o que se mexeu por último.
+ */
+export function CrmInicio({ usuarioAtual }: { usuarioAtual: string }) {
   const [negociacoes, setNegociacoes] = useState<Negociacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
+  const carregar = useCallback(
+    () =>
+      fetch("/api/crm/negociacoes")
+        .then((r) => r.json())
+        .then((d) => setNegociacoes(d.negociacoes ?? []))
+        .catch(() => setErro("Falha ao carregar.")),
+    [],
+  );
+
   useEffect(() => {
-    fetch("/api/crm/negociacoes")
-      .then((r) => r.json())
-      .then((d) => setNegociacoes(d.negociacoes ?? []))
-      .catch(() => setErro("Falha ao carregar."))
-      .finally(() => setLoading(false));
-  }, []);
+    carregar().finally(() => setLoading(false));
+  }, [carregar]);
 
   const resumo = useMemo(() => {
     const agora = new Date();
@@ -57,6 +66,10 @@ export function CrmInicio() {
         <Kpi tone="green" label="Vendido no mês" value={`${formatBRL(resumo.vendidoMes)} (${resumo.ganhasMes})`} />
         <Kpi tone={resumo.perdidasMes > 0 ? "red" : undefined} label="Perdidas no mês" value={resumo.perdidasMes} />
       </KpiGrid>
+
+      {/* Concluir um contato pode mover ou fechar a negociação: os números de
+          cima e as movimentações de baixo acompanham. */}
+      <AgendaCrm usuarioAtual={usuarioAtual} onMudou={() => void carregar()} />
 
       <SectionCard
         title="Últimas movimentações"

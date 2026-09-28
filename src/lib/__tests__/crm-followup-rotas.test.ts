@@ -257,12 +257,43 @@ describe("Follow-up preso a uma negociação", () => {
   });
 });
 
+describe("Agenda do Início", () => {
+  type Item = { cliente: { id: string }; feitos: number; ultimo: { por: string } | null; contatos: { nome: string; telefone: string }[]; tarefa: { responsavel: string } };
+  const itensDe = (agenda: { atrasados: Item[]; dias: { itens: Item[] }[] }) => [
+    ...agenda.atrasados,
+    ...agenda.dias.flatMap((d) => d.itens),
+  ];
+
+  it("traz cada compromisso com o contador do cliente, quem fez o último e com quem falar", async () => {
+    const rota = await import("@/app/api/crm/agenda/route");
+    const d = await corpoDe(await rota.GET(new Request("http://localhost/api/crm/agenda?dias=60")));
+    // O dia é o de São Paulo (o relógio fingido está em 30/10, 16h UTC).
+    expect(d.hoje).toBe("2026-10-30");
+    const daFazenda = itensDe(d.agenda).filter((i) => i.cliente.id === clienteId);
+    expect(daFazenda.length).toBeGreaterThan(0);
+    // Os contatos concluídos nos testes acima: o contador é do CLIENTE.
+    expect(daFazenda[0].feitos).toBeGreaterThanOrEqual(3);
+    expect(daFazenda[0].ultimo).not.toBeNull();
+    expect(daFazenda[0].contatos[0]).toMatchObject({ nome: "João", telefone: "(62) 99999-0000" });
+  });
+
+  it("\"só os meus\" deixa só os compromissos da pessoa", async () => {
+    const rota = await import("@/app/api/crm/agenda/route");
+    const d = await corpoDe(await rota.GET(new Request(`http://localhost/api/crm/agenda?dias=60&responsavel=${BETO.email}`)));
+    const itens = itensDe(d.agenda);
+    expect(itens.length).toBeGreaterThan(0);
+    expect(itens.every((i) => i.tarefa.responsavel === BETO.email)).toBe(true);
+  });
+});
+
 describe("Sem sessão", () => {
   it("nada passa", async () => {
     const salvo = usuarioAtual;
     usuarioAtual = null;
     expect((await r.concluir.POST(req({ concluida: true }), ctx("x"))).status).toBe(401);
     expect((await r.tarefaId.PATCH(req({ data: "2026-11-01" }, "PATCH"), ctx("x"))).status).toBe(401);
+    const agenda = await import("@/app/api/crm/agenda/route");
+    expect((await agenda.GET(new Request("http://localhost/api/crm/agenda"))).status).toBe(401);
     usuarioAtual = salvo;
   });
 });

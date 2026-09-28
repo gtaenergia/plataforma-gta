@@ -3,18 +3,21 @@ import { CrmShell } from "@/components/crm/CrmShell";
 import { CrmInicio } from "@/components/crm/CrmInicio";
 import { SectionCard } from "@/components/ui";
 import { getProduto } from "@/lib/produtos/registry";
+import { requirePageUser } from "@/lib/session";
 
 export default async function CrmInicioPage() {
+  const user = await requirePageUser();
   const crm = getProduto("crm")!;
   const atalhos = [...crm.nav.filter((i) => i.href !== "/crm"), crm.config!];
 
   return (
     <CrmShell
+      user={user}
       titulo="CRM"
-      subtitulo="A ferramenta comercial da GTA: do primeiro contato ao fechamento. Clientes, contatos, negociações no funil e as tarefas de cada uma."
+      subtitulo="A ferramenta comercial da GTA: do primeiro contato ao fechamento. Clientes, contatos, negociações no funil e a agenda de follow-ups."
     >
       <div className="space-y-4">
-        <CrmInicio />
+        <CrmInicio usuarioAtual={user.email} />
         <SectionCard title="Onde ir">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {atalhos.map((i) => (
