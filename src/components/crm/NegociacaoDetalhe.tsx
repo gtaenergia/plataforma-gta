@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Badge, BackLink, Kpi, KpiGrid, Loading, Marca, SectionCard } from "@/components/ui";
 import { Campo } from "@/components/Campo";
@@ -21,11 +21,12 @@ import {
   type ProdutoNegociado,
 } from "@/lib/crm/types";
 import type { ValoresCampos } from "@/lib/crm/campos";
+import type { ContadorFollowUp } from "@/lib/crm/followups";
 import { enviarJson } from "./buscar";
 import { CamposDaNegociacao } from "./CamposDaNegociacao";
 import { PedirProposta } from "./PedirProposta";
 import { TarefasDaNegociacao } from "./TarefasDaNegociacao";
-import { dataCurta, dataHora } from "./util";
+import { dataCurta, dataHora, diaLocal } from "./util";
 
 const ACAO_LABEL: Record<AcaoNegociacao, string> = {
   pausar: "Pausar",
@@ -151,8 +152,24 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
     }
   }
 
+  /** O contador de follow-ups do cliente desta negociação. */
+  const [followUps, setFollowUps] = useState<ContadorFollowUp | null>(null);
+  const carregarFollowUps = useCallback(async () => {
+    try {
+      const res = await fetch("/api/crm/followups");
+      const data = await res.json();
+      if (res.ok) setFollowUps((data.porNegociacao ?? {})[id] ?? null);
+    } catch {
+      /* a ficha segue sem o contador */
+    }
+  }, [id]);
+  useEffect(() => {
+    void carregarFollowUps();
+  }, [carregarFollowUps]);
+
   /** Recarrega a negociação — usado quando as tarefas gravam histórico no servidor. */
   async function recarregar() {
+    void carregarFollowUps();
     try {
       const res = await fetch(`/api/crm/negociacoes/${id}`);
       const data = await res.json();
@@ -400,7 +417,22 @@ export function NegociacaoDetalhe({ id }: { id: string }) {
           />
 
           {/* Agenda da negociação */}
-          <SectionCard title="Tarefas" subtitle="Os compromissos desta negociação — cada agendamento e conclusão entra no histórico.">
+          <SectionCard
+            title="Tarefas e follow-ups"
+            subtitle="Os compromissos desta negociação — cada agendamento e conclusão entra no histórico."
+            actions={
+              followUps && (
+                <span className="text-right text-sm">
+                  <span className="block font-semibold text-gta-navy dark:text-slate-100">
+                    {followUps.feitos} {followUps.feitos === 1 ? "follow-up feito" : "follow-ups feitos"}
+                  </span>
+                  <span className="hint block">
+                    {followUps.ultimoEm ? `último ${diaLocal(followUps.ultimoEm)} por ${followUps.ultimoPor}` : "com o cliente, em todas as negociações"}
+                  </span>
+                </span>
+              )
+            }
+          >
             <TarefasDaNegociacao negociacaoId={id} aberta={aberta} onHistoricoMudou={() => void recarregar()} />
           </SectionCard>
 

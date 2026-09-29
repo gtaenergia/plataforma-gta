@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   clienteDaTarefa,
+  contadoresDeFollowUp,
   ehDoCliente,
   negociacaoDeReferencia,
   quemFez,
@@ -89,6 +90,38 @@ describe("resumoFollowUps", () => {
   it("sem nada, sem números inventados", () => {
     const r = resumoFollowUps([]);
     expect(r).toMatchObject({ feitos: 0, ultimo: null, proximo: null });
+  });
+});
+
+describe("contadoresDeFollowUp", () => {
+  const negociacoes = [
+    neg({ id: "n-fazenda", empresaId: "c1", empresaNome: "Fazenda Rio Doce" }),
+    neg({ id: "n-so-nome", empresaId: "", empresaNome: "Fazenda Rio Doce" }),
+    neg({ id: "n-solta", empresaId: "", empresaNome: "" }),
+  ];
+  const tarefas = [
+    tar({ id: "a", clienteId: "c1", clienteNome: "Fazenda Rio Doce", concluida: true, concluidaEm: "2026-09-10T12:00:00.000Z", concluidaPorNome: "Ana" }),
+    // Tarefa antiga, só com a negociação que tem só o nome: conta pelo nome.
+    tar({ id: "b", negociacaoId: "n-so-nome", concluida: true, concluidaEm: "2026-09-20T12:00:00.000Z", concluidaPorNome: "Beto" }),
+    tar({ id: "c", clienteId: "c1", clienteNome: "Fazenda Rio Doce", data: "2026-10-05" }),
+    tar({ id: "d", clienteId: "c1", clienteNome: "Fazenda Rio Doce", data: "2026-10-01" }),
+    tar({ id: "e", negociacaoId: "n-solta", concluida: true, concluidaEm: "2026-09-01T12:00:00.000Z" }),
+    tar({ id: "f", clienteId: "c9", clienteNome: "Outro", concluida: true, concluidaEm: "2026-09-25T12:00:00.000Z" }),
+  ];
+  const r = contadoresDeFollowUp({ tarefas, negociacoes, clientes: [FAZENDA, { id: "c9", nome: "Outro" }] });
+
+  it("por cliente: feitos, último e próximo, sem misturar clientes", () => {
+    expect(r.porCliente.c1).toEqual({ feitos: 2, ultimoEm: "2026-09-20T12:00:00.000Z", ultimoPor: "Beto", proximo: "2026-10-01" });
+    expect(r.porCliente.c9.feitos).toBe(1);
+  });
+
+  it("a negociação mostra o contador do CLIENTE dela, não só o dela", () => {
+    expect(r.porNegociacao["n-fazenda"].feitos).toBe(2);
+    expect(r.porNegociacao["n-so-nome"].feitos).toBe(2);
+  });
+
+  it("negociação sem cliente nenhum conta as próprias tarefas", () => {
+    expect(r.porNegociacao["n-solta"]).toMatchObject({ feitos: 1, proximo: "" });
   });
 });
 

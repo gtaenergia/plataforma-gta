@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
-import { Alert, Badge, EmptyState, Loading } from "@/components/ui";
+import { CalendarPlus, Plus } from "lucide-react";
+import { Alert, Badge, EmptyState, Loading, SectionCard } from "@/components/ui";
 import { Campo } from "@/components/Campo";
 import { formatBRL } from "@/lib/format";
+import type { ContadorFollowUp } from "@/lib/crm/followups";
 import { valorDaNegociacao, type Funil, type Negociacao } from "@/lib/crm/types";
+import type { OpcaoResponsavel } from "@/lib/users/equipe";
+import { AgendarCompromisso } from "./AgendarCompromisso";
 import { buscarJson, enviarJson } from "./buscar";
-import { dataCurta } from "./util";
+import { dataCurta, hojeISO } from "./util";
 
 /**
  * O quadro do funil: uma coluna por etapa, um cartão por negociação em aberto.
@@ -16,10 +19,22 @@ import { dataCurta } from "./util";
  * Mover de etapa: arrastando o cartão (desktop) ou pelo seletor de etapa no
  * próprio cartão — que é também o caminho do dedo, onde arrastar não existe.
  * Ganhar/perder ficam na ficha da negociação, onde a perda pede o motivo.
+ *
+ * Cada cartão diz quantos follow-ups já foram feitos com o cliente e quando é
+ * o próximo — e agenda o próximo ali mesmo. O funil é a tela aberta o dia
+ * inteiro; o contato que só se marca na ficha do cliente é o que fica sem
+ * marcar.
  */
-export function FunilBoard() {
+export function FunilBoard({ usuarioAtual }: { usuarioAtual: string }) {
   const [funis, setFunis] = useState<Funil[]>([]);
   const [negociacoes, setNegociacoes] = useState<Negociacao[]>([]);
+  /** Contador de follow-ups por negociação (o do cliente dela). */
+  const [contadores, setContadores] = useState<Record<string, ContadorFollowUp>>({});
+  const [usuarios, setUsuarios] = useState<OpcaoResponsavel[]>([]);
+  /** A negociação cujo follow-up está sendo agendado (o formulário fica acima do quadro). */
+  const [agendandoEm, setAgendandoEm] = useState<Negociacao | null>(null);
+  const [agendado, setAgendado] = useState<string | null>(null);
+  const painelRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   /**
    * DOIS erros, de propósito.
@@ -57,6 +72,30 @@ export function FunilBoard() {
       .catch((e) => setErroCarregar(e instanceof Error ? e.message : "Falha ao carregar o funil."))
       .finally(() => setLoading(false));
   }, []);
+
+  // À parte do quadro: sem o contador, o funil continua servindo para mover
+  // negociação — ele não pode derrubar a tela.
+  const carregarContadores = useCallback(async () => {
+    try {
+      const d = await buscarJson<{ porNegociacao: Record<string, ContadorFollowUp> }>("/api/crm/followups");
+      setContadores(d.porNegociacao ?? {});
+    } catch {
+      /* os cartões ficam sem a linha de follow-up */
+    }
+  }, []);
+
+  useEffect(() => {
+    void carregarContadores();
+    buscarJson<{ usuarios: OpcaoResponsavel[] }>("/api/usuarios?equipe=comercial")
+      .then((d) => setUsuarios(d.usuarios ?? []))
+      .catch(() => {});
+  }, [carregarContadores]);
+
+  // O formulário abre acima do quadro; com a página rolada até a coluna,
+  // ele nasceria fora da vista e o clique pareceria não ter feito nada.
+  useEffect(() => {
+    if (agendandoEm) painelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [agendandoEm]);
 
   const funil = useMemo(() => funis.find((f) => f.id === funilId) ?? null, [funis, funilId]);
 
@@ -143,6 +182,8 @@ export function FunilBoard() {
     );
   }
 
+  const hoje = hojeISO();
+
   return (
     <div className="space-y-4">
       {erroAcao && (
@@ -179,6 +220,35 @@ export function FunilBoard() {
         <div className="flex-1" />
         <Link href="/crm/negociacoes#novo" className="btn-primary whitespace-nowrap">+ Nova negociação</Link>
       </div>
+
+      {agendado && (
+        <Alert tone="green">
+          {agendado}{" "}
+          <button type="button" className="btn-link" onClick={() => setAgendado(null)}>
+            Fechar
+          </button>
+        </Alert>
+      )}
+
+      {agendandoEm && (
+        <div ref={painelRef}>
+          <SectionCard title="Agendar follow-up">
+            <AgendarCompromisso
+              clientes={[]}
+              negociacoes={[]}
+              negociacaoFixa={agendandoEm}
+              usuarios={usuarios}
+              usuarioAtual={usuarioAtual}
+              onAgendado={(t) => {
+                setAgendandoEm(null);
+                setAgendado(`Follow-up com ${t.clienteNome || t.negociacaoNome} agendado para ${dataCurta(t.data)}.`);
+                void carregarContadores();
+              }}
+              onCancelar={() => setAgendandoEm(null)}
+            />
+          </SectionCard>
+        </div>
+      )}
 
       {/* O quadro. As colunas DIVIDEM a largura disponível (`flex-1`): com o
           funil padrão de 5 etapas, todas cabem inteiras no container — a
@@ -296,6 +366,22 @@ export function FunilBoard() {
                         </div>
                         {n.responsavelNome && <div className="hint mt-1 truncate">{n.responsavelNome}</div>}
                       </Link>
+                      <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-100 pt-2 dark:border-slate-700">
+                        <LinhaFollowUp contador={contadores[n.id]} hoje={hoje} />
+                        <button
+                          type="button"
+                          className="btn-secondary shrink-0 !px-2 !py-1 text-xs"
+                          onClick={() => {
+                            setAgendado(null);
+                            setAgendandoEm(n);
+                          }}
+                          aria-label={`Agendar follow-up de ${n.nome}`}
+                          title="Agendar follow-up"
+                        >
+                          <CalendarPlus className="h-3.5 w-3.5" aria-hidden />
+                          Follow-up
+                        </button>
+                      </div>
                       {/* Caminho sem arrasto (dedo, teclado): o mesmo movimento, por seletor. */}
                       <select
                         className="field-input mt-2 w-full !py-1 text-xs"
@@ -314,5 +400,32 @@ export function FunilBoard() {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * "3 follow-ups · próximo 29/09" no pé do cartão.
+ *
+ * O número é do CLIENTE da negociação: o contato feito por outra negociação
+ * com ele também conta. Sem próximo contato marcado, a linha avisa em âmbar —
+ * é o cliente que esfria em silêncio.
+ */
+function LinhaFollowUp({ contador, hoje }: { contador: ContadorFollowUp | undefined; hoje: string }) {
+  if (!contador) return <span className="hint">—</span>;
+  // "0 follow-ups", e não "Nenhum follow-up": é um contador, e a frase longa
+  // quebrava em duas linhas na coluna estreita.
+  const feitos = `${contador.feitos} ${contador.feitos === 1 ? "follow-up" : "follow-ups"}`;
+  const atrasado = !!contador.proximo && contador.proximo < hoje;
+  return (
+    <span className="min-w-0 text-xs leading-tight">
+      <span className="block text-slate-600 dark:text-slate-400">{feitos}</span>
+      {contador.proximo ? (
+        <span className={`block ${atrasado ? "font-semibold text-red-600 dark:text-red-400" : "text-slate-600 dark:text-slate-400"}`}>
+          {atrasado ? "Atrasado" : "Próximo"} {dataCurta(contador.proximo).slice(0, 5)}
+        </span>
+      ) : (
+        <span className="block text-amber-700 dark:text-amber-400">Sem próximo contato</span>
+      )}
+    </span>
   );
 }

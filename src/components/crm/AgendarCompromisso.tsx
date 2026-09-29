@@ -22,11 +22,22 @@ import { hojeISO } from "./util";
  * também entra no histórico dela.
  *
  * `clienteFixo` é a ficha do cliente: lá a pergunta "com quem?" já está
- * respondida.
+ * respondida. `negociacaoFixa` é o cartão do funil: a negociação já está
+ * escolhida, e o cliente é o dela — o servidor completa.
  */
-export function AgendarCompromisso({ clientes, clienteFixo, negociacoes, usuarios, usuarioAtual, onAgendado, onCancelar }: {
+export function AgendarCompromisso({
+  clientes,
+  clienteFixo,
+  negociacaoFixa,
+  negociacoes,
+  usuarios,
+  usuarioAtual,
+  onAgendado,
+  onCancelar,
+}: {
   clientes: Cliente[];
   clienteFixo?: Cliente;
+  negociacaoFixa?: Negociacao;
   negociacoes: Negociacao[];
   usuarios: OpcaoResponsavel[];
   usuarioAtual: string;
@@ -34,7 +45,7 @@ export function AgendarCompromisso({ clientes, clienteFixo, negociacoes, usuario
   onCancelar: () => void;
 }) {
   const [clienteId, setClienteId] = useState(clienteFixo?.id ?? "");
-  const [negociacaoId, setNegociacaoId] = useState("");
+  const [negociacaoId, setNegociacaoId] = useState(negociacaoFixa?.id ?? "");
   const [tipo, setTipo] = useState<TipoTarefa>("ligacao");
   const [assunto, setAssunto] = useState("");
   const [data, setData] = useState(hojeISO());
@@ -64,13 +75,15 @@ export function AgendarCompromisso({ clientes, clienteFixo, negociacoes, usuario
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
-    if (!cliente) { setErro("Escolha o cliente."); return; }
+    if (!cliente && !negociacaoFixa) { setErro("Escolha o cliente."); return; }
     if (!assunto.trim()) { setErro("Informe o assunto."); return; }
     setErro(null);
     setSalvando(true);
     try {
       const d = await enviarJson<{ tarefa: TarefaCrm }>("/api/crm/tarefas", "POST", {
-        clienteId: cliente.id,
+        // Com a negociação fixa, o cliente é o dela: o servidor completa, e
+        // não há como mandar um diferente por engano.
+        clienteId: negociacaoFixa ? "" : cliente?.id ?? "",
         negociacaoId,
         tipo,
         assunto,
@@ -94,8 +107,20 @@ export function AgendarCompromisso({ clientes, clienteFixo, negociacoes, usuario
   return (
     <form onSubmit={salvar} className="space-y-4">
       {erro && <Alert tone="red">{erro}</Alert>}
+      {negociacaoFixa && (
+        <p className="text-sm text-slate-700 dark:text-slate-300">
+          <span className="hint">Negociação:</span> <strong>{negociacaoFixa.nome}</strong>
+          {negociacaoFixa.empresaNome && (
+            <>
+              {" "}
+              <span className="hint">· Cliente:</span> <strong>{negociacaoFixa.empresaNome}</strong>
+            </>
+          )}
+          <span className="hint block">O compromisso também entra no histórico da negociação.</span>
+        </p>
+      )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-6">
-        {!clienteFixo && (
+        {!clienteFixo && !negociacaoFixa && (
           <Campo className="sm:col-span-3" label="Cliente *">
             <select
               className="field-input"
@@ -111,27 +136,29 @@ export function AgendarCompromisso({ clientes, clienteFixo, negociacoes, usuario
             </select>
           </Campo>
         )}
-        <Campo
-          className={clienteFixo ? "sm:col-span-6" : "sm:col-span-3"}
-          label="Negociação"
-          hint={
-            <p className="hint mt-1">
-              {cliente && doCliente.length === 0
-                ? "Nenhuma negociação em andamento com este cliente — o compromisso fica só com o cliente."
-                : "Opcional. Com negociação, o compromisso também entra no histórico dela."}
-            </p>
-          }
-        >
-          <select
-            className="field-input"
-            value={negociacaoId}
-            onChange={(e) => editar(setNegociacaoId)(e.target.value)}
-            disabled={!cliente || doCliente.length === 0}
+        {!negociacaoFixa && (
+          <Campo
+            className={clienteFixo ? "sm:col-span-6" : "sm:col-span-3"}
+            label="Negociação"
+            hint={
+              <p className="hint mt-1">
+                {cliente && doCliente.length === 0
+                  ? "Nenhuma negociação em andamento com este cliente — o compromisso fica só com o cliente."
+                  : "Opcional. Com negociação, o compromisso também entra no histórico dela."}
+              </p>
+            }
           >
-            <option value="">— Só o cliente —</option>
-            {doCliente.map((n) => <option key={n.id} value={n.id}>{n.nome}</option>)}
-          </select>
-        </Campo>
+            <select
+              className="field-input"
+              value={negociacaoId}
+              onChange={(e) => editar(setNegociacaoId)(e.target.value)}
+              disabled={!cliente || doCliente.length === 0}
+            >
+              <option value="">— Só o cliente —</option>
+              {doCliente.map((n) => <option key={n.id} value={n.id}>{n.nome}</option>)}
+            </select>
+          </Campo>
+        )}
         <Campo className="sm:col-span-4" label="Assunto *">
           <input
             className="field-input"

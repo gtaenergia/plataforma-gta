@@ -21,7 +21,7 @@ export default async function CrmClientesPage() {
       titulo="Clientes"
       subtitulo="A entidade de onde saem as negociações — cliente atual ou possível. Clique no nome para ver tudo o que existe com ele."
     >
-      <ClientesList fichaBase="/crm/clientes" />
+      <ClientesList fichaBase="/crm/clientes" comFollowUps />
     </CrmShell>
   );
 }

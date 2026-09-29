@@ -92,6 +92,96 @@ export interface ResumoFollowUps {
   concluidas: TarefaCrm[];
 }
 
+/** O contador de follow-ups em forma curta — o que cabe num cartão do funil. */
+export interface ContadorFollowUp {
+  /** Contatos concluídos com o cliente. */
+  feitos: number;
+  /** Quando foi o último (ISO), "" sem nenhum. */
+  ultimoEm: string;
+  ultimoPor: string;
+  /** Data do próximo compromisso pendente (YYYY-MM-DD), "" sem nenhum. */
+  proximo: string;
+}
+
+function contar(tarefas: readonly TarefaCrm[]): ContadorFollowUp {
+  const c: ContadorFollowUp = { feitos: 0, ultimoEm: "", ultimoPor: "", proximo: "" };
+  for (const t of tarefas) {
+    if (t.concluida) {
+      c.feitos++;
+      const em = t.concluidaEm || t.data;
+      if (em > c.ultimoEm) {
+        c.ultimoEm = em;
+        c.ultimoPor = quemFez(t);
+      }
+    } else if (t.data && (!c.proximo || t.data < c.proximo)) {
+      c.proximo = t.data;
+    }
+  }
+  return c;
+}
+
+/**
+ * O contador de TODOS os clientes e de todas as negociações de uma vez.
+ *
+ * O funil e a lista de clientes precisam do número em cada linha; pedir as
+ * tarefas inteiras (com os comentários de anos de contato) para o navegador
+ * contar seria mandar o arquivo todo para mostrar um número. O servidor conta
+ * e devolve só isto.
+ *
+ * Mesma regra de casamento da ficha (`ehDoCliente`): pelo id quando há, pelo
+ * nome quando não há. A negociação sem cliente nenhum conta só as tarefas
+ * dela.
+ */
+export function contadoresDeFollowUp(e: {
+  tarefas: readonly TarefaCrm[];
+  negociacoes: readonly Negociacao[];
+  clientes: readonly RefCliente[];
+}): { porCliente: Record<string, ContadorFollowUp>; porNegociacao: Record<string, ContadorFollowUp> } {
+  const porNeg = new Map(e.negociacoes.map((n) => [n.id, n]));
+  const comId = new Map<string, TarefaCrm[]>();
+  const soNome = new Map<string, TarefaCrm[]>();
+  const semCliente = new Map<string, TarefaCrm[]>();
+  const junta = (mapa: Map<string, TarefaCrm[]>, chave: string, t: TarefaCrm) => {
+    const lista = mapa.get(chave);
+    if (lista) lista.push(t);
+    else mapa.set(chave, [t]);
+  };
+  for (const t of e.tarefas) {
+    const ref = clienteDaTarefa(t, porNeg);
+    if (ref.id) junta(comId, ref.id, t);
+    else if (ref.nome.trim()) junta(soNome, normal(ref.nome), t);
+    else if (t.negociacaoId) junta(semCliente, t.negociacaoId, t);
+  }
+  const doCliente = (alvo: RefCliente) =>
+    contar([...(alvo.id ? comId.get(alvo.id) ?? [] : []), ...(alvo.nome.trim() ? soNome.get(normal(alvo.nome)) ?? [] : [])]);
+
+  const porCliente: Record<string, ContadorFollowUp> = {};
+  for (const c of e.clientes) porCliente[c.id] = doCliente(c);
+
+  /*
+   * Negociação criada pelo "+" do funil tem só o nome do cliente. Se o nome
+   * é o de UM cadastro, ela é daquele cliente — e mostra o contador dele,
+   * não só o das tarefas que por acaso também não têm id. Nome repetido em
+   * dois cadastros não escolhe nenhum.
+   */
+  const idPorNome = new Map<string, string | null>();
+  for (const c of e.clientes) {
+    const k = normal(c.nome);
+    idPorNome.set(k, idPorNome.has(k) ? null : c.id);
+  }
+
+  const porNegociacao: Record<string, ContadorFollowUp> = {};
+  for (const n of e.negociacoes) {
+    const doCadastro = !n.empresaId && n.empresaNome.trim() ? idPorNome.get(normal(n.empresaNome)) : null;
+    porNegociacao[n.id] = doCadastro
+      ? porCliente[doCadastro]
+      : n.empresaId || n.empresaNome.trim()
+        ? doCliente({ id: n.empresaId, nome: n.empresaNome })
+        : contar(semCliente.get(n.id) ?? []);
+  }
+  return { porCliente, porNegociacao };
+}
+
 /** Recebe as tarefas de UM cliente (ver `tarefasDoCliente`). */
 export function resumoFollowUps(tarefas: readonly TarefaCrm[]): ResumoFollowUps {
   const pendentes = tarefas

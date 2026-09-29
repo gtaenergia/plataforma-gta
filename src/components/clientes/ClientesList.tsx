@@ -7,6 +7,26 @@ import { usePaginacao, Paginacao } from "@/components/Paginacao";
 import { SEGMENTOS, UFS, cidadeUf, type Cliente } from "@/lib/clientes/types";
 import { Campo } from "@/components/Campo";
 import { useEdicaoPendente } from "@/components/useAvisoNaoSalvo";
+import { dataCurta, hojeISO } from "@/components/crm/util";
+import type { ContadorFollowUp } from "@/lib/crm/followups";
+
+/** "3 feitos · próximo 29/09" — o contador de follow-ups na linha do cliente. */
+function ResumoFollowUp({ c, hoje }: { c: ContadorFollowUp | undefined; hoje: string }) {
+  if (!c || (c.feitos === 0 && !c.proximo)) return <span className="sem-valor">—</span>;
+  const atrasado = !!c.proximo && c.proximo < hoje;
+  return (
+    <span className="flex flex-col">
+      <span>{c.feitos} {c.feitos === 1 ? "feito" : "feitos"}</span>
+      {c.proximo ? (
+        <span className={atrasado ? "text-xs font-semibold text-red-600 dark:text-red-400" : "hint"}>
+          {atrasado ? "atrasado" : "próximo"} {dataCurta(c.proximo)}
+        </span>
+      ) : (
+        <span className="text-xs text-amber-700 dark:text-amber-400">sem próximo</span>
+      )}
+    </span>
+  );
+}
 
 type FormState = {
   nome: string;
@@ -48,10 +68,14 @@ function paraForm(c: Cliente): FormState {
  * É string, e não função `(c) => href`, de propósito: quem monta esta lista é
  * uma página de SERVIDOR, e função não atravessa a fronteira servidor→cliente
  * — o Next recusa a serialização e a página cai com erro 500.
+ *
+ * `comFollowUps` acrescenta o contador de follow-ups de cada cliente (o CRM
+ * usa; o cadastro puro não precisa).
  */
-export function ClientesList({ fichaBase }: { fichaBase?: string } = {}) {
+export function ClientesList({ fichaBase, comFollowUps = false }: { fichaBase?: string; comFollowUps?: boolean } = {}) {
   const hrefFicha = fichaBase ? (c: Cliente) => `${fichaBase}/${c.id}` : undefined;
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [followUps, setFollowUps] = useState<Record<string, ContadorFollowUp> | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -78,6 +102,17 @@ export function ClientesList({ fichaBase }: { fichaBase?: string } = {}) {
       .catch(() => setErro("Falha ao carregar."))
       .finally(() => setLoading(false));
   }, []);
+
+  // À parte: sem o contador, a lista continua sendo o cadastro.
+  useEffect(() => {
+    if (!comFollowUps) return;
+    fetch("/api/crm/followups")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setFollowUps(d?.porCliente ?? null))
+      .catch(() => {});
+  }, [comFollowUps]);
+
+  const hoje = hojeISO();
 
   const segmentosComClientes = useMemo(
     () => Array.from(new Set(clientes.map((c) => c.segmento).filter(Boolean))).sort(),
@@ -285,6 +320,12 @@ export function ClientesList({ fichaBase }: { fichaBase?: string } = {}) {
               {c.telefone && <span>{c.telefone}</span>}
               {c.email && <span className="truncate">{c.email}</span>}
             </div>
+            {followUps && (
+              <div className="mt-2 flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300">
+                <span className="hint">Follow-ups:</span>
+                <ResumoFollowUp c={followUps[c.id]} hoje={hoje} />
+              </div>
+            )}
             <div className="mt-3 flex gap-2">
               <button onClick={() => abrirEdicao(c)} className="btn-secondary flex-1 justify-center !py-2 text-xs">Editar</button>
               <button onClick={() => excluir(c)} className="btn-danger flex-1 !py-2 text-xs">Excluir</button>
@@ -303,13 +344,14 @@ export function ClientesList({ fichaBase }: { fichaBase?: string } = {}) {
               <th>Cidade/UF</th>
               <th>Contato</th>
               <th>Segmento</th>
+              {followUps && <th>Follow-ups</th>}
               <th className="text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
             {filtrados.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
+                <td colSpan={followUps ? 7 : 6} className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
                   {clientes.length === 0 ? "Nenhum cliente cadastrado ainda." : "Nenhum cliente corresponde aos filtros."}
                 </td>
               </tr>
@@ -338,6 +380,11 @@ export function ClientesList({ fichaBase }: { fichaBase?: string } = {}) {
                     como em Cidade/UF ao lado. No cartão do celular a pílula fica,
                     porque lá ela aparece uma vez por cartão, não em coluna. */}
                 <td className="px-4 py-2 text-slate-600 dark:text-slate-300">{c.segmento || <span className="sem-valor">—</span>}</td>
+                {followUps && (
+                  <td className="px-4 py-2 text-slate-600 dark:text-slate-300">
+                    <ResumoFollowUp c={followUps[c.id]} hoje={hoje} />
+                  </td>
+                )}
                 <td className="px-4 py-2">
                   <div className="flex items-center justify-end gap-3 whitespace-nowrap">
                     <button onClick={() => abrirEdicao(c)} className="btn-link text-xs">Editar</button>
