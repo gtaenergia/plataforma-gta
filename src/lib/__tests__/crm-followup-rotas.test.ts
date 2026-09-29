@@ -112,6 +112,15 @@ describe("Follow-up direto no cliente", () => {
     expect(avisos[0]).toMatchObject({ tipo: "crm_tarefa", link: `/crm/clientes/${clienteId}` });
   });
 
+  it("responsável só com e-mail: o nome vem do cadastro, não de quem agendou", async () => {
+    // Ana agenda para o Beto mandando só o e-mail. Antes, o compromisso do
+    // Beto saía na agenda com o nome da Ana.
+    const res = await r.tarefas.POST(req({
+      clienteId, tipo: "ligacao", assunto: "Confirmar visita", data: "2026-11-03", responsavel: BETO.email,
+    }));
+    expect((await corpoDe(res)).tarefa).toMatchObject({ responsavel: BETO.email, responsavelNome: BETO.name });
+  });
+
   it("sem cliente nem negociação, recusa dizendo o que falta", async () => {
     const res = await r.tarefas.POST(req({ tipo: "ligacao", assunto: "Solto", data: "2026-11-01" }));
     expect(res.status).toBe(422);

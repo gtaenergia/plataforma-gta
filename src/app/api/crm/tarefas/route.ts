@@ -6,6 +6,7 @@ import { getTarefaCrmStore } from "@/lib/crm/tarefas-store";
 import { criarTarefaCrmSchema, TIPO_TAREFA_LABEL } from "@/lib/crm/types";
 import { notificar } from "@/lib/notificacoes/store";
 import { getCurrentUser } from "@/lib/session";
+import { users } from "@/lib/users/store";
 
 export const runtime = "nodejs";
 
@@ -62,6 +63,17 @@ export async function POST(req: Request) {
   const cliente = clienteId ? await getClienteStore().get(clienteId) : null;
   if (!negociacao && !cliente) return NextResponse.json({ error: "Cliente não encontrado." }, { status: 422 });
 
+  /*
+   * O nome do responsável vem do cadastro. Antes, e-mail sem nome caía no
+   * nome de QUEM AGENDOU: a agenda mostrava "Administrador" num compromisso
+   * que era do Beto — e o aviso ia para o Beto, então ninguém via o erro.
+   */
+  const responsavel = dados.responsavel || user.email;
+  const doCadastro = dados.responsavel ? await (await users()).getByEmail(responsavel) : null;
+  const responsavelNome = dados.responsavel
+    ? doCadastro?.name || dados.responsavelNome || responsavel
+    : user.name || user.email;
+
   const tarefa = await getTarefaCrmStore().create({
     ...dados,
     negociacaoNome: negociacao?.nome ?? "",
@@ -69,8 +81,8 @@ export async function POST(req: Request) {
     // Cadastro apagado depois de a negociação existir: o nome gravado nela
     // continua contando de quem era (mesma denormalização de `empresaNome`).
     clienteNome: cliente?.nome ?? negociacao?.empresaNome ?? "",
-    responsavel: dados.responsavel || user.email,
-    responsavelNome: dados.responsavelNome || user.name || user.email,
+    responsavel,
+    responsavelNome,
     concluida: false,
     concluidaEm: "",
     concluidaPor: "",
