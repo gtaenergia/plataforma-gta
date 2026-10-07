@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getClienteStore } from "@/lib/clientes/store";
 import { criarClienteSchema } from "@/lib/clientes/types";
+import { garantirContatoDoCliente } from "@/lib/crm/contato-do-cliente";
 import { getCurrentUser } from "@/lib/session";
 import { users } from "@/lib/users/store";
 
@@ -36,10 +37,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Dados inválidos.", issues: parsed.error.flatten() }, { status: 422 });
   }
 
-  const cliente = await getClienteStore().create({
-    ...parsed.data,
-    criadoPor: user.email,
-    criadoPorNome: user.name || user.email,
-  });
+  const autor = { criadoPor: user.email, criadoPorNome: user.name || user.email };
+  const cliente = await getClienteStore().create({ ...parsed.data, ...autor });
+
+  // A seção "Contato" vira contato na aba Contatos. Tudo ou nada: cliente
+  // gravado com o contato perdido levaria a pessoa a tentar de novo — e a
+  // segunda tentativa cadastraria o cliente em dobro.
+  try {
+    await garantirContatoDoCliente(cliente, null, autor);
+  } catch (e) {
+    console.error("Clientes: falha ao cadastrar o contato —", e);
+    await getClienteStore().remove(cliente.id);
+    return NextResponse.json({ error: "Falha ao cadastrar o contato do cliente. Nada foi gravado — tente de novo." }, { status: 500 });
+  }
   return NextResponse.json({ cliente }, { status: 201 });
 }

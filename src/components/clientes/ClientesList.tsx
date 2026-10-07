@@ -250,6 +250,8 @@ export function ClientesList({ fichaBase, comFollowUps = false }: { fichaBase?: 
                   <input type="email" className="field-input" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="cliente@email.com" />
                 </Campo>
               </div>
+              {/* A rota cadastra a pessoa na aba Contatos — ver lib/crm/contato-do-cliente.ts. */}
+              <p className="hint mt-2">Ao salvar, este contato também entra na aba Contatos, vinculado ao cliente.</p>
             </div>
 
             {/* Endereço */}
