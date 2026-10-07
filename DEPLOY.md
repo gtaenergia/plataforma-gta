@@ -118,6 +118,44 @@ Para anexar PDFs/planilhas na **Aprovação de orçamentos** em produção:
 Sem o Blob store, os anexos não funcionam em produção (o filesystem da Vercel é
 efêmero); em desenvolvimento local, os anexos são gravados em `data/uploads/`.
 
+## Integração com o chat — proposta direto no CRM (opcional)
+
+Quando o Claude gera uma proposta técnica no chat (Claude Code, neste
+computador), ele pode registrar na plataforma, depois que você confirmar o
+resumo: o cliente (se for novo), o contato, a negociação na etapa **Proposta
+enviada**, a proposta e um **follow-up de ligação para 2 dias depois** (se cair
+num domingo, passa para a segunda).
+
+**Ligar:**
+
+1. No computador onde você usa o Claude, rode (troque pela URL real da plataforma):
+   `node scripts/integracao-gerar-token.mjs https://SEU-DOMINIO.vercel.app`
+   O token fica salvo em `C:\Users\<você>\.gta\integracao.json` e **não aparece na
+   tela**. O script mostra só o **hash**.
+2. Na Vercel, em **Settings → Environment Variables** (Production), crie:
+   - `INTEGRACAO_TOKEN_SHA256` = o hash mostrado pelo script
+   - `INTEGRACAO_USUARIO_EMAIL` = o seu e-mail de login (tudo fica no seu nome)
+3. Faça um novo deploy.
+
+**Segurança:**
+
+- **O servidor guarda só o hash:** quem enxerga as variáveis da Vercel não
+  consegue usar a integração.
+- **Só cria registros:** não lista, não altera e não apaga nada. A única
+  consulta possível é "esse cliente existe?", e a resposta traz só o nome.
+- **Freios:** 10 tentativas com token errado bloqueiam o IP por 15 minutos.
+  Além disso, há um teto de 20 registros e 120 chamadas por hora.
+- **Tudo ou nada:** se alguma etapa falhar no meio, o que já tinha sido criado é
+  desfeito.
+- **Registro de chamadas:** toda chamada fica na tabela `integracao_log`, sem
+  dados pessoais do cliente.
+- **Aviso no sino:** cada registro gera uma notificação para você. Uma
+  notificação que você não reconhece é sinal de token vazado.
+
+**Desligar ou trocar o token:** apague `INTEGRACAO_TOKEN_SHA256` na Vercel (a rota
+passa a responder 404) ou rode o passo 1 de novo e salve o hash novo. Nos dois
+casos, faça um novo deploy. O token antigo deixa de funcionar na hora.
+
 ## Domínio próprio (opcional)
 
 Em **Settings → Domains** você pode ligar um domínio (ex.: `app.gtaenergia.com`)

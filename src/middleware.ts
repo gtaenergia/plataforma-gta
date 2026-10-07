@@ -20,6 +20,10 @@ export async function middleware(req: NextRequest) {
     pathname === "/api/logout" ||
     pathname === "/icon.png" ||
     pathname.startsWith("/api/cron/") || // cron da Vercel (protegido por CRON_SECRET na rota)
+    // Integração do chat: sem sessão de navegador, autenticada por token na
+    // própria rota (ver lib/integracao/regras.ts). Caminho exato, não prefixo:
+    // uma rota nova em /api/integracoes não nasce pública sem querer.
+    pathname === "/api/integracoes/proposta" ||
     pathname.startsWith("/brand/") || // logo e ícone da marca (acessíveis no login)
     // PWA: o navegador busca estes três SEM a sessão, e às vezes sem cookie
     // nenhum. Protegidos, o service worker chega como HTML da tela de login e
