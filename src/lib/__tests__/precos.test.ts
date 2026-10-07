@@ -1,10 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CABECALHO, gerarCsv, lerCsv } from "@/lib/precos/csv";
 
 /** O separador da planilha; nenhuma descrição do catálogo o contém. */
 const SEP_TESTE = ";";
 import {
   CATALOGO_PADRAO,
+  DATA_CALIBRACAO_PADRAO,
   DIAS_PARA_REVISAO,
   diasRestantes,
   indicePorId,
@@ -307,7 +308,26 @@ describe("aviso por proposta — só o que a lista usa", () => {
   });
 
   it("conferência recente não gera aviso nenhum", () => {
-    expect(pendentesEntre(CATALOGO_PADRAO, idsUsados)).toEqual([]);
+    // O catálogo de fábrica traz a data da calibração; "recente" é medido a
+    // partir dela. Sem fixar o relógio, o teste quebrava sozinho 90 dias depois
+    // — quando o aviso passa a ser, corretamente, devido.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(new Date(DATA_CALIBRACAO_PADRAO).getTime() + 86_400_000));
+    try {
+      expect(pendentesEntre(CATALOGO_PADRAO, idsUsados)).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("passada a validade, o catálogo de fábrica pede revisão", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(new Date(DATA_CALIBRACAO_PADRAO).getTime() + (DIAS_PARA_REVISAO + 1) * 86_400_000));
+    try {
+      expect(pendentesEntre(CATALOGO_PADRAO, idsUsados).length).toBe(new Set(idsUsados).size);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("com tudo revisado, não sobra aviso", () => {
