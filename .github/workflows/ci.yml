@@ -15,7 +15,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # 22 é o mínimo: os testes usam fs.globSync, que não existe no 20.
+          # Com o 20 aqui, todo run falhou de agosto a novembro de 2026.
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npm run typecheck
