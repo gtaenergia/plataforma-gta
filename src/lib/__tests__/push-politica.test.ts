@@ -18,6 +18,13 @@ describe("merecePush", () => {
     }
   });
 
+  it("libera os avisos da verificação de tarefas", () => {
+    // A tarefa entregue espera alguém agir; a devolvida volta para a fila
+    // de quem executa. Os dois pedem ação de uma pessoa.
+    expect(merecePush("tarefa_aguardando_verificacao")).toBe(true);
+    expect(merecePush("tarefa_devolvida")).toBe(true);
+  });
+
   it("NÃO envia novidade da plataforma", () => {
     // É difusão para a equipe inteira. Virar push seria vibrar o celular de
     // todo mundo de uma vez — e quem recebe isso desliga tudo, inclusive o que

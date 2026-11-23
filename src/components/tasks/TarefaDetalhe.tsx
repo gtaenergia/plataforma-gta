@@ -12,6 +12,8 @@ import { SugestaoResponsavel } from "./SugestaoResponsavel";
 import { MarcaPrioridade, MarcaStatus } from "./marcadores";
 import { PedidoDoComercial } from "./PedidoDoComercial";
 import { comCategoria, comTipoDemanda, paraPayload, type FormState } from "./formulario";
+import type { UsuarioDaLista } from "./TaskList";
+import { bloqueioDaTransicao } from "@/lib/tasks/verificacao";
 import { catalogoDeTipos, horasParaMin, minParaHoras, useCapacidade } from "@/components/capacidade/comum";
 import {
   CATEGORIAS_PADRAO_TAREFA,
@@ -74,9 +76,12 @@ function paraFormulario(t: Task): FormState {
 export function TarefaDetalhe({
   inicial,
   podeEditarCatalogo,
+  usuario,
 }: {
   inicial: Task;
   podeEditarCatalogo: boolean;
+  /** Quem está vendo: decide o que o seletor oferece e se o painel de verificação tem botões. */
+  usuario: UsuarioDaLista;
 }) {
   const router = useRouter();
   // A lista repassa os filtros na query; voltar sem eles obrigaria a
@@ -93,6 +98,8 @@ export function TarefaDetalhe({
   const [comentario, setComentario] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  /** `null` = o formulário de devolução está fechado. */
+  const [motivoDevolucao, setMotivoDevolucao] = useState<string | null>(null);
 
   /*
    * Só avisa quando há edição de fato. Usar `editando` sozinho cobraria
@@ -100,7 +107,10 @@ export function TarefaDetalhe({
    * que aparece à toa é o aviso que as pessoas aprendem a ignorar.
    */
   const alterado = editando && JSON.stringify(form) !== JSON.stringify(paraFormulario(tarefa));
-  useAvisoNaoSalvo(alterado);
+  // O motivo da devolução também é texto que se perde ao sair da página.
+  // Só enquanto o formulário está na tela: com a tarefa fora de "Concluída" ele
+  // some, e um aviso sem nada visível para salvar só ensina a ignorar avisos.
+  useAvisoNaoSalvo(alterado || (tarefa.status === "entregue" && !!motivoDevolucao?.trim()));
 
   useEffect(() => {
     (async () => {
@@ -133,7 +143,12 @@ export function TarefaDetalhe({
     return [...s].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [tarefas, capacidade.tipos]);
 
-  async function enviar(patch: Record<string, unknown>) {
+  /**
+   * `manterEdicao`: numa mudança só de status (seletor, verificar), o que está
+   * sendo digitado no formulário de edição não pode ser apagado pelos valores
+   * gravados — o formulário não tem status, e nada ali mudou.
+   */
+  async function enviar(patch: Record<string, unknown>, { manterEdicao = false } = {}) {
     setSalvando(true);
     setErro(null);
     try {
@@ -143,9 +158,15 @@ export function TarefaDetalhe({
         body: JSON.stringify(patch),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Falha ao salvar.");
+      if (!res.ok) {
+        // 409: a tarefa mudou desde que a página abriu. Ela vem na resposta, e a
+        // tela passa a mostrar o status de agora — não o que motivou o clique.
+        if (res.status === 409 && data.task) setTarefa(data.task);
+        throw new Error(data.error ?? "Falha ao salvar.");
+      }
       setTarefa(data.task);
-      setForm(paraFormulario(data.task));
+      if (!manterEdicao) setForm(paraFormulario(data.task));
+      if (data.task.status !== "entregue") setMotivoDevolucao(null);
       return true;
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao salvar.");
@@ -171,6 +192,35 @@ export function TarefaDetalhe({
       setComentario("");
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao comentar.");
+    }
+  }
+
+  async function devolver() {
+    const motivo = (motivoDevolucao ?? "").trim();
+    if (motivo.length < 3) return;
+    setSalvando(true);
+    setErro(null);
+    try {
+      const res = await fetch(`/api/tarefas/${tarefa.id}/devolver`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ motivo }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 409 && data.task) {
+          setTarefa(data.task);
+          setMotivoDevolucao(null);
+        }
+        throw new Error(data.error ?? "Falha ao devolver a tarefa.");
+      }
+      setTarefa(data.task);
+      if (!editando) setForm(paraFormulario(data.task));
+      setMotivoDevolucao(null);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Erro ao devolver a tarefa.");
+    } finally {
+      setSalvando(false);
     }
   }
 
@@ -206,10 +256,14 @@ export function TarefaDetalhe({
             aria-label="Status da tarefa"
             className="field-input !w-auto"
             value={tarefa.status}
-            onChange={(e) => enviar({ status: e.target.value })}
+            onChange={(e) => {
+              const s = e.target.value;
+              if (s === "concluida" && !confirm("Marcar como Concluída (verificada)? A tarefa sai da lista de ativas.")) return;
+              enviar({ status: s, statusEsperado: tarefa.status }, { manterEdicao: editando });
+            }}
           >
             {STATUS_TAREFA.map((s) => (
-              <option key={s.value} value={s.value}>
+              <option key={s.value} value={s.value} disabled={!!bloqueioDaTransicao(tarefa, s.value, usuario)}>
                 {s.label}
               </option>
             ))}
@@ -218,6 +272,63 @@ export function TarefaDetalhe({
       />
 
       {erro && <Alert tone="red">{erro}</Alert>}
+
+      {tarefa.status === "entregue" && (
+        <Alert tone="indigo" titulo="Aguardando verificação.">
+          {tarefa.entreguePor ? (
+            <>
+              {nomeDe(tarefa.entreguePor)} marcou como Concluída em {formatDataHora(tarefa.entregueEm)}.{" "}
+            </>
+          ) : (
+            "Marcada como Concluída. "
+          )}
+          {usuario.podeVerificar
+            ? "Confira a entrega: verifique para encerrar a tarefa, ou devolva ao responsável com o motivo."
+            : "Ela continua nas ativas até um administrador ou quem tem a permissão de verificar encerrá-la."}
+          {usuario.podeVerificar && motivoDevolucao === null && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" className="btn-primary" disabled={salvando} onClick={() => enviar({ status: "concluida", statusEsperado: "entregue" }, { manterEdicao: editando })}>
+                Marcar como verificada
+              </button>
+              <button type="button" className="btn-secondary" disabled={salvando} onClick={() => setMotivoDevolucao("")}>
+                Devolver ao responsável
+              </button>
+            </div>
+          )}
+          {usuario.podeVerificar && motivoDevolucao !== null && (
+            <form
+              className="mt-3 space-y-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void devolver();
+              }}
+            >
+              <label className="field-label" htmlFor="motivo-devolucao">
+                Motivo da devolução *
+              </label>
+              <textarea
+                id="motivo-devolucao"
+                className="field-input min-h-[80px]"
+                required
+                autoFocus
+                maxLength={2000}
+                placeholder="O que falta ou precisa ser ajustado"
+                value={motivoDevolucao}
+                onChange={(e) => setMotivoDevolucao(e.target.value)}
+              />
+              <p className="hint">O motivo fica nos comentários e vai no aviso ao responsável. A tarefa volta para Em Andamento.</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="submit" className="btn-primary" disabled={salvando || motivoDevolucao.trim().length < 3}>
+                  Devolver
+                </button>
+                <button type="button" className="btn-secondary" disabled={salvando} onClick={() => setMotivoDevolucao(null)}>
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          )}
+        </Alert>
+      )}
 
       {tarefa.negociacaoId && (
         <PedidoDoComercial
@@ -243,6 +354,16 @@ export function TarefaDetalhe({
             <Dado rotulo="Status">
               <MarcaStatus valor={tarefa.status} />
             </Dado>
+            {tarefa.entreguePor && (
+              <Dado rotulo="Entregue">
+                {nomeDe(tarefa.entreguePor)} em {formatDataHora(tarefa.entregueEm)}
+              </Dado>
+            )}
+            {tarefa.verificadaPor && (
+              <Dado rotulo="Verificada">
+                {nomeDe(tarefa.verificadaPor)} em {formatDataHora(tarefa.verificadaEm)}
+              </Dado>
+            )}
             <Dado rotulo="Prioridade">
               <MarcaPrioridade valor={tarefa.prioridade} />
             </Dado>

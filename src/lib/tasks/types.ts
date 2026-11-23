@@ -2,12 +2,20 @@ import { z } from "zod";
 
 /** Modelo e validação do módulo de Tarefas. */
 
+/*
+ * A conclusão tem duas etapas. Quem executa marca "Concluída" (`entregue`) e a
+ * tarefa CONTINUA nas ativas, aguardando verificação; só "Concluída
+ * (verificada)" a encerra. O valor gravado do final segue sendo `concluida` —
+ * por isso nada precisou ser migrado: as tarefas que já estavam concluídas
+ * viraram verificadas sozinhas, e toda leitura de `concluida` manteve o sentido.
+ */
 export const STATUS_TAREFA = [
   { value: "afazer", label: "A Fazer" },
   { value: "andamento", label: "Em Andamento" },
   { value: "atraso", label: "Em Atraso" },
   { value: "continuo", label: "Contínuo" },
-  { value: "concluida", label: "Concluída" },
+  { value: "entregue", label: "Concluída" },
+  { value: "concluida", label: "Concluída (verificada)" },
 ] as const;
 
 export const PRIORIDADES = [
@@ -100,9 +108,26 @@ export interface Task {
   criadoPor: string;
   criadoEm: string;
   atualizadoEm: string;
+  /*
+   * Quem entregou e quem verificou, e quando. `atualizadoEm` não serve para
+   * isso: muda a cada edição e a cada comentário. "" = não aconteceu (ou foi
+   * desfeito, quando a tarefa volta para um status aberto).
+   *
+   * Só o servidor grava estes quatro: eles ficam fora do zod de propósito, e
+   * `z.object` descarta chave desconhecida — o cliente não consegue forjá-los.
+   */
+  entregueEm: string;
+  entreguePor: string;
+  verificadaEm: string;
+  verificadaPor: string;
 }
 
-const statusEnum = z.enum(["afazer", "andamento", "atraso", "continuo", "concluida"]);
+/** Campos que só o servidor preenche — ficam fora do que se passa ao `create`. */
+export type CamposDoServidor = "entregueEm" | "entreguePor" | "verificadaEm" | "verificadaPor";
+
+// Derivado da lista, e não repetido: duas listas à mão já deixaram a tela
+// oferecer um status que a API recusava com 422.
+const statusEnum = z.enum(STATUS_TAREFA.map((s) => s.value) as [StatusTarefa, ...StatusTarefa[]]);
 const prioridadeEnum = z.enum(["baixa", "media", "alta"]);
 
 /** Verifica se yyyy-mm-dd é uma data real do calendário (rejeita 2026-02-31). */
@@ -160,6 +185,40 @@ export const createComentarioSchema = z.object({
 
 export function statusLabel(s: StatusTarefa): string {
   return STATUS_TAREFA.find((x) => x.value === s)?.label ?? s;
+}
+
+/*
+ * As três perguntas que o resto da plataforma faz sobre o status. Ficam aqui,
+ * e não espalhadas em `status === "concluida"`, porque com duas etapas de
+ * conclusão a resposta depende da pergunta:
+ *
+ * - sai das ativas, da lista de horas e do calendário? só a verificada;
+ * - o prazo parou de correr? já na entrega — o responsável cumpriu a parte dele.
+ */
+
+/** Encerrada de vez: "Concluída (verificada)". */
+export function estaVerificada(s: string): boolean {
+  return s === "concluida";
+}
+
+/** O responsável já entregou (verificada ou não): o prazo não corre mais. */
+export function trabalhoEntregue(s: string): boolean {
+  return s === "entregue" || s === "concluida";
+}
+
+/**
+ * Rótulo para o seletor de cada linha da lista. Um <select> toma a largura da
+ * MAIOR opção, então "Concluída (verificada)" alargaria o seletor de todas as
+ * linhas — e, no celular, espremeria o título. O rótulo completo segue no
+ * filtro e na página da tarefa.
+ */
+export function rotuloCurto(s: StatusTarefa): string {
+  return s === "concluida" ? "Verificada" : statusLabel(s);
+}
+
+/** Ordem na lista: abertas, depois entregues, depois verificadas. */
+export function ordemDeConclusao(s: string): number {
+  return estaVerificada(s) ? 2 : s === "entregue" ? 1 : 0;
 }
 
 export function prioridadeLabel(p: Prioridade): string {

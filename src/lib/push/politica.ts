@@ -22,6 +22,11 @@ import type { PayloadPush } from "./types";
  */
 export const TIPOS_COM_PUSH: readonly string[] = [
   "tarefa_atribuida",
+  // A verificação: a tarefa entregue espera alguém agir sobre ela, e a
+  // devolvida volta para a fila de quem executa. A verificação em si não
+  // avisa — o responsável vê a tarefa sair da lista.
+  "tarefa_aguardando_verificacao",
+  "tarefa_devolvida",
   "orcamento_aprovado",
   "orcamento_rejeitado",
   "orcamento_reaberto",

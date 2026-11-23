@@ -39,6 +39,9 @@ export const PERMISSOES = {
   "crm.cadastros.editar": "Criar e editar clientes e contatos (ainda não exigida)",
   "crm.relatorios.ver": "Ver os relatórios do CRM (ainda não exigida)",
   "crm.configurar": "Configurar funis, etapas, fontes, motivos de perda e produtos",
+  // A segunda etapa da conclusão: quem executa marca "Concluída", e só quem
+  // tem esta chave (ou é admin) encerra a tarefa ou a devolve ao responsável.
+  "tarefas.verificar": "Verificar tarefas concluídas e devolvê-las ao responsável",
 } as const;
 
 export type PermissaoKey = keyof typeof PERMISSOES;
@@ -66,6 +69,10 @@ export const PERMISSOES_POR_MODULO: { modulo: string; chaves: PermissaoKey[] }[]
   {
     modulo: "CRM",
     chaves: ["crm.acessar", "crm.negociacoes.editar", "crm.cadastros.editar", "crm.relatorios.ver", "crm.configurar"],
+  },
+  {
+    modulo: "Tarefas",
+    chaves: ["tarefas.verificar"],
   },
   {
     modulo: "Administração",

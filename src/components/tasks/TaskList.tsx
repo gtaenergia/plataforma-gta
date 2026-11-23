@@ -10,11 +10,16 @@ import {
   DEMANDANTES,
   CATEGORIAS_PADRAO_TAREFA,
   demandanteLabel,
+  ordemDeConclusao,
+  rotuloCurto,
+  statusLabel,
+  trabalhoEntregue,
   type Demandante,
   type Prioridade,
   type StatusTarefa,
   type Task,
 } from "@/lib/tasks/types";
+import { bloqueioDaTransicao } from "@/lib/tasks/verificacao";
 import { Alert, Loading } from "@/components/ui";
 import { Paginacao, usePaginacao } from "@/components/Paginacao";
 import { MarcaPrioridade, PontoStatus } from "./marcadores";
@@ -34,9 +39,13 @@ function hoje(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Um prazo está vencido se a data — ou data+hora, quando há hora — já passou e a tarefa não foi concluída. */
+/**
+ * Um prazo está vencido se a data — ou data+hora, quando há hora — já passou e
+ * o responsável ainda não entregou. A entrega para o relógio, mesmo antes da
+ * verificação: o vermelho cobra quem executa, e ele já cumpriu a parte dele.
+ */
 function prazoAtrasado(data: string, hora: string, status: StatusTarefa): boolean {
-  if (status === "concluida" || !data) return false;
+  if (trabalhoEntregue(status) || !data) return false;
   if (hora) return new Date(`${data}T${hora}`).getTime() < Date.now();
   return data < hoje();
 }
@@ -75,7 +84,13 @@ function formatDataHora(iso: string): string {
   return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
-export function TaskList() {
+/** Quem está vendo a lista — decide o que o seletor de status oferece. */
+export interface UsuarioDaLista {
+  email: string;
+  podeVerificar: boolean;
+}
+
+export function TaskList({ usuario }: { usuario: UsuarioDaLista }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
@@ -161,10 +176,11 @@ export function TaskList() {
           (t.cliente ?? "").toLowerCase().includes(q),
       );
     }
-    // ordenação: concluídas por último; depois atrasadas primeiro; prazo mais próximo; prioridade
+    // ordenação: abertas, depois entregues (aguardando verificação), depois
+    // verificadas; dentro de cada grupo, atrasadas primeiro; prazo mais próximo; prioridade
     list.sort((a, b) => {
-      const ca = a.status === "concluida" ? 1 : 0;
-      const cb = b.status === "concluida" ? 1 : 0;
+      const ca = ordemDeConclusao(a.status);
+      const cb = ordemDeConclusao(b.status);
       if (ca !== cb) return ca - cb;
       const aa = algumAtrasado(a) ? 0 : 1;
       const ab = algumAtrasado(b) ? 0 : 1;
@@ -196,6 +212,9 @@ export function TaskList() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setErro(data.error ?? "Falha ao atualizar.");
+        // 409: a tarefa mudou desde que a lista carregou. Ela vem na resposta
+        // para a linha mostrar o status de agora, e não o de antes.
+        if (res.status === 409 && data.task) aplicar(data.task);
         return;
       }
       aplicar(data.task);
@@ -320,7 +339,14 @@ export function TaskList() {
                 task={t}
                 nomeDe={nomeDe}
                 href={`/tarefas/${t.id}${query ? `?${query}` : ""}`}
-                onStatus={(s) => atualizar(t.id, { status: s })}
+                usuario={usuario}
+                onStatus={(s) => {
+                  // O seletor grava ao mudar: no celular, um toque errado
+                  // encerraria a tarefa sem querer. O <select> é controlado,
+                  // então cancelar devolve o valor antigo sozinho.
+                  if (s === "concluida" && !window.confirm(`Marcar “${t.titulo}” como Concluída (verificada)? A tarefa sai da lista de ativas.`)) return;
+                  atualizar(t.id, { status: s, statusEsperado: t.status });
+                }}
                 onExcluir={() => excluir(t.id, t.titulo)}
               />
             ))}
@@ -339,11 +365,13 @@ export function TaskList() {
 function TaskRow({
   task: t,
   href,
+  usuario,
   nomeDe,
   onStatus,
   onExcluir,
 }: {
   task: Task;
+  usuario: UsuarioDaLista;
   /** Endereço da tarefa JÁ com os filtros da lista, para o Voltar reencontrá-los. */
   href: string;
   nomeDe: (email: string) => string;
@@ -374,12 +402,13 @@ function TaskRow({
             value={t.status}
             onClick={(e) => e.stopPropagation()}
             aria-label={`Status de: ${t.titulo}`}
+            title={statusLabel(t.status)}
             onChange={(e) => onStatus(e.target.value as StatusTarefa)}
             className="toque select-pilula rounded-md border border-slate-300 bg-transparent py-1 pl-7 pr-6 text-xs text-slate-700 dark:border-slate-600 dark:text-slate-300"
           >
             {STATUS_TAREFA.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
+              <option key={s.value} value={s.value} disabled={!!bloqueioDaTransicao(t, s.value, usuario)}>
+                {rotuloCurto(s.value)}
               </option>
             ))}
           </select>

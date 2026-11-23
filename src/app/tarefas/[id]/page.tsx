@@ -3,6 +3,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { TarefaDetalhe } from "@/components/tasks/TarefaDetalhe";
 import { BackLink } from "@/components/ui";
 import { requirePageUser } from "@/lib/session";
+import { temPermissao } from "@/lib/rbac/resolve";
 import { getTaskStore } from "@/lib/tasks/store";
 import { urlDaLista } from "@/components/tasks/filtros";
 
@@ -36,7 +37,11 @@ export default async function TarefaPage({
         <div className="mb-6">
           <BackLink href={urlDaLista(query)}>Voltar para Tarefas</BackLink>
         </div>
-        <TarefaDetalhe inicial={tarefa} podeEditarCatalogo={user.role === "admin"} />
+        <TarefaDetalhe
+          inicial={tarefa}
+          podeEditarCatalogo={user.role === "admin"}
+          usuario={{ email: user.email, podeVerificar: await temPermissao(user, "tarefas.verificar") }}
+        />
       </main>
     </div>
   );

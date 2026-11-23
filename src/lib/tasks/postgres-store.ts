@@ -1,6 +1,6 @@
 import { createPool, type VercelPool } from "@vercel/postgres";
 import crypto from "node:crypto";
-import type { Comentario, Task } from "./types";
+import type { CamposDoServidor, Comentario, Task } from "./types";
 import type { TaskStore } from "./store";
 
 /**
@@ -59,6 +59,10 @@ export interface Row {
   /** Opcionais: a réplica que ainda não rodou o ALTER devolve a linha sem elas. */
   negociacao_id?: string | null;
   service_key?: string | null;
+  entregue_em?: string | null;
+  entregue_por?: string | null;
+  verificada_em?: string | null;
+  verificada_por?: string | null;
   comentarios: Comentario[];
   criado_por: string;
   criado_em: string;
@@ -91,6 +95,10 @@ export function rowToTask(r: Row): Task {
     criadoPor: r.criado_por,
     criadoEm: new Date(r.criado_em).toISOString(),
     atualizadoEm: new Date(r.atualizado_em).toISOString(),
+    entregueEm: r.entregue_em ?? "",
+    entreguePor: r.entregue_por ?? "",
+    verificadaEm: r.verificada_em ?? "",
+    verificadaPor: r.verificada_por ?? "",
   };
 }
 
@@ -141,6 +149,13 @@ export class PostgresTaskStore implements TaskStore {
         // guarda "" — a coluna existe para as que o comercial pediu.
         .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS negociacao_id text NOT NULL DEFAULT ''`)
         .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS service_key text NOT NULL DEFAULT ''`)
+        // Quem entregou e quem verificou (ver Task em types.ts). Só ADD COLUMN
+        // aqui: isto roda a cada cold start, e um UPDATE de status neste ponto
+        // reclassificaria a toda hora as tarefas recém-concluídas.
+        .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS entregue_em text NOT NULL DEFAULT ''`)
+        .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS entregue_por text NOT NULL DEFAULT ''`)
+        .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS verificada_em text NOT NULL DEFAULT ''`)
+        .then(() => this.pool.sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS verificada_por text NOT NULL DEFAULT ''`)
         .then(() => undefined);
     }
     return this.ready;
@@ -159,7 +174,7 @@ export class PostgresTaskStore implements TaskStore {
   }
 
   async create(
-    data: Omit<Task, "id" | "comentarios" | "criadoEm" | "atualizadoEm">,
+    data: Omit<Task, "id" | "comentarios" | "criadoEm" | "atualizadoEm" | CamposDoServidor>,
   ): Promise<Task> {
     await this.ensureSchema();
     const id = crypto.randomUUID();
@@ -171,7 +186,18 @@ export class PostgresTaskStore implements TaskStore {
         (${id}, ${data.titulo}, ${data.descricao}, ${data.cliente}, ${data.categoria}, ${data.tipoDemanda ?? ""}, ${data.demandante}, ${data.responsavel}, ${data.status},
          ${data.prioridade}, ${data.prazo}, ${data.prazoComercial}, ${data.prazoOperacional}, ${data.horaComercial}, ${data.horaOperacional}, ${data.estimativaMin ?? 0}, ${data.negociacaoId ?? ""}, ${data.serviceKey ?? ""}, '[]'::jsonb, ${data.criadoPor}, ${now}, ${now})
     `;
-    return { ...data, id, comentarios: [], criadoEm: now, atualizadoEm: now };
+    // Os carimbos ficam com o DEFAULT '' da coluna: tarefa nasce em aberto.
+    return {
+      ...data,
+      id,
+      comentarios: [],
+      criadoEm: now,
+      atualizadoEm: now,
+      entregueEm: "",
+      entreguePor: "",
+      verificadaEm: "",
+      verificadaPor: "",
+    };
   }
 
   async update(
@@ -205,6 +231,10 @@ export class PostgresTaskStore implements TaskStore {
         estimativa_min = COALESCE(${patch.estimativaMin ?? null}::int, estimativa_min),
         negociacao_id = COALESCE(${patch.negociacaoId ?? null}::text, negociacao_id),
         service_key = COALESCE(${patch.serviceKey ?? null}::text, service_key),
+        entregue_em = COALESCE(${patch.entregueEm ?? null}::text, entregue_em),
+        entregue_por = COALESCE(${patch.entreguePor ?? null}::text, entregue_por),
+        verificada_em = COALESCE(${patch.verificadaEm ?? null}::text, verificada_em),
+        verificada_por = COALESCE(${patch.verificadaPor ?? null}::text, verificada_por),
         atualizado_em = ${atualizadoEm}
       WHERE id = ${id}
       RETURNING *

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import type { Comentario, Task } from "./types";
+import type { CamposDoServidor, Comentario, Task } from "./types";
 import { PostgresTaskStore, getDbUrl } from "./postgres-store";
 
 /**
@@ -18,7 +18,7 @@ import { PostgresTaskStore, getDbUrl } from "./postgres-store";
 export interface TaskStore {
   list(): Promise<Task[]>;
   get(id: string): Promise<Task | null>;
-  create(data: Omit<Task, "id" | "comentarios" | "criadoEm" | "atualizadoEm">): Promise<Task>;
+  create(data: Omit<Task, "id" | "comentarios" | "criadoEm" | "atualizadoEm" | CamposDoServidor>): Promise<Task>;
   update(id: string, patch: Partial<Omit<Task, "id" | "comentarios">>): Promise<Task | null>;
   remove(id: string): Promise<boolean>;
   addComment(id: string, comentario: Omit<Comentario, "id" | "em">): Promise<Task | null>;
@@ -44,6 +44,10 @@ class JsonTaskStore implements TaskStore {
         ...t,
         estimativaMin: Number(t.estimativaMin ?? 0) || 0,
         tipoDemanda: t.tipoDemanda ?? "",
+        entregueEm: t.entregueEm ?? "",
+        entreguePor: t.entreguePor ?? "",
+        verificadaEm: t.verificadaEm ?? "",
+        verificadaPor: t.verificadaPor ?? "",
       }));
     } catch {
       return []; // arquivo inexistente ou corrompido -> lista vazia
@@ -78,10 +82,20 @@ class JsonTaskStore implements TaskStore {
   }
 
   async create(
-    data: Omit<Task, "id" | "comentarios" | "criadoEm" | "atualizadoEm">,
+    data: Omit<Task, "id" | "comentarios" | "criadoEm" | "atualizadoEm" | CamposDoServidor>,
   ): Promise<Task> {
     const now = new Date().toISOString();
-    const task: Task = { ...data, id: crypto.randomUUID(), comentarios: [], criadoEm: now, atualizadoEm: now };
+    const task: Task = {
+      ...data,
+      id: crypto.randomUUID(),
+      comentarios: [],
+      criadoEm: now,
+      atualizadoEm: now,
+      entregueEm: "",
+      entreguePor: "",
+      verificadaEm: "",
+      verificadaPor: "",
+    };
     return this.mutate((tasks) => ({ tasks: [...tasks, task], result: task }));
   }
 

@@ -38,6 +38,9 @@ const PONTO_STATUS: Record<StatusTarefa, string> = {
   andamento: "bg-gta-indigo dark:bg-indigo-400",
   atraso: "bg-red-500",
   continuo: "bg-amber-500",
+  // Verde vazado: concluída, mas ainda não fechada. Diz "quase" sem inventar
+  // um sexto tom fora da paleta — e não some no escuro.
+  entregue: "border-2 border-green-500 bg-transparent",
   concluida: "bg-green-500",
 };
 

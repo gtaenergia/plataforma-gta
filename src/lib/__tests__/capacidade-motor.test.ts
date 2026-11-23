@@ -326,6 +326,9 @@ describe("a fila", () => {
   it("só entram na fila os status abertos", () => {
     expect(["afazer", "andamento", "atraso"].every(entraNaFila)).toBe(true);
     expect(entraNaFila("concluida")).toBe(false);
+    // Entregue, aguardando verificação: o responsável já cumpriu a parte
+    // dele, e a semana não segue ocupada pela espera de outra pessoa.
+    expect(entraNaFila("entregue")).toBe(false);
     // Contínua sem fim travaria a fila para sempre.
     expect(entraNaFila("continuo")).toBe(false);
   });

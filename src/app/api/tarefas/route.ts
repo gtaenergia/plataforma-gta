@@ -34,6 +34,14 @@ export async function POST(req: Request) {
       { status: 422 },
     );
   }
+  // Criar já concluída pularia a verificação inteira. Nenhuma tela faz isso (a
+  // nova tarefa sai sempre "A Fazer"); a regra fecha o atalho pela API.
+  if (parsed.data.status === "entregue" || parsed.data.status === "concluida") {
+    return NextResponse.json(
+      { error: "Uma tarefa nasce em aberto: marque a conclusão depois de criá-la." },
+      { status: 422 },
+    );
+  }
 
   // Lista ANTES de criar: é o retrato contra o qual se mede se esta tarefa foi
   // a que estourou a semana de alguém.

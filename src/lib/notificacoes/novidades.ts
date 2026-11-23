@@ -20,6 +20,13 @@ export interface Novidade {
 
 export const NOVIDADES: Novidade[] = [
   {
+    slug: "tarefas-verificacao-2026-11",
+    titulo: "Tarefas: a conclusão agora passa por verificação",
+    mensagem:
+      "Marcar uma tarefa como Concluída não a tira mais da lista de ativas: ela passa a aguardar verificação, e o prazo dela para de correr. Quem verifica — administradores e quem tem a permissão de verificar tarefas — é avisado, confere a entrega e a encerra como Concluída (verificada), que faz o que a antiga Concluída fazia. Se faltar algo, a tarefa pode ser devolvida ao responsável, com o motivo registrado nos comentários e aviso para quem executa. As tarefas que já estavam concluídas foram consideradas verificadas.",
+    link: "/tarefas",
+  },
+  {
     slug: "crm-clientes-2026-08",
     titulo: "CRM: a aba Empresas voltou a se chamar Clientes",
     mensagem:

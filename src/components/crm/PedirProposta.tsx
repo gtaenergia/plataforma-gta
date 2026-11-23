@@ -184,8 +184,15 @@ export function PedirProposta({ negociacao, produtos, usuarios, aberta, onPedido
                 {t.prazoOperacional && <span className="hint">{dataCurta(t.prazoOperacional)}</span>}
                 {/* `Marca`, não `Badge`: isto se repete por linha da lista, e
                     pílula colorida repetida satura (ver ui.tsx). */}
-                <Marca tone={t.status === "concluida" ? "green" : "slate"} className="text-xs">
-                  {t.status === "concluida" ? "Concluída" : "Em Operações"}
+                <Marca
+                  tone={t.status === "concluida" ? "green" : t.status === "entregue" ? "amber" : "slate"}
+                  className="text-xs"
+                >
+                  {t.status === "concluida"
+                    ? "Concluída (verificada)"
+                    : t.status === "entregue"
+                      ? "Aguardando verificação"
+                      : "Em Operações"}
                 </Marca>
               </span>
             </li>

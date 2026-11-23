@@ -83,6 +83,23 @@ describe("tipo de demanda vindo do banco", () => {
   });
 });
 
+describe("quem entregou e quem verificou, vindos do banco", () => {
+  it("linha anterior às colunas (null ou ausente) vira string vazia", () => {
+    // A réplica que ainda não rodou o ALTER devolve a linha sem as colunas.
+    const semColunas = rowToTask(linha());
+    expect(semColunas).toMatchObject({ entregueEm: "", entreguePor: "", verificadaEm: "", verificadaPor: "" });
+    const nulas = rowToTask(linha({ entregue_em: null, entregue_por: null, verificada_em: null, verificada_por: null }));
+    expect(nulas).toMatchObject({ entregueEm: "", entreguePor: "", verificadaEm: "", verificadaPor: "" });
+  });
+
+  it("o status intermediário e os carimbos atravessam intactos", () => {
+    const t = rowToTask(linha({ status: "entregue", entregue_em: "2026-11-23T15:00:00.000Z", entregue_por: "ana@gta.com" }));
+    expect(t.status).toBe("entregue");
+    expect(t.entreguePor).toBe("ana@gta.com");
+    expect(t.entregueEm).toBe("2026-11-23T15:00:00.000Z");
+  });
+});
+
 describe("validação do payload", () => {
   const base = { titulo: "X", responsavel: "ana@gta.com" };
 

@@ -81,6 +81,10 @@ export interface PessoaDaEquipe {
 export const STATUS_NA_FILA = ["afazer", "andamento", "atraso"] as const;
 
 /**
+ * `entregue` ("Concluída", aguardando verificação) fica de fora: o
+ * responsável já entregou, e a semana dele não deve seguir ocupada pela
+ * espera de outra pessoa. Se a tarefa for devolvida, ela volta à fila.
+ *
  * `continuo` fica de fora: uma tarefa sem fim com estimativa travaria a fila
  * para sempre e empurraria toda entrega para o infinito. Ela consome dia real,
  * então a tela mostra a contagem ao lado da ocupação — lacuna visível é melhor

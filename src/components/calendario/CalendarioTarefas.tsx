@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Alert, EmptyState, Loading, Segmented } from "@/components/ui";
 import { diaDaSemana, paraData, somarDias, ymd, type Ymd } from "@/lib/capacidade/datas";
 import { excedentePorDia, segmentarSemana, type Intervalo, type Segmento } from "@/lib/calendario/faixas";
-import { prioridadeLabel, statusLabel, type Prioridade, type Task } from "@/lib/tasks/types";
+import { prioridadeLabel, statusLabel, trabalhoEntregue, type Prioridade, type Task } from "@/lib/tasks/types";
 
 /**
  * Calendário das tarefas na estrutura de uma agenda: cada tarefa é uma BARRA
@@ -102,7 +102,9 @@ export function CalendarioTarefas({ currentUserEmail }: { currentUserEmail: stri
   const barras = useMemo(() => {
     const lista: Barra[] = [];
     for (const t of tarefas) {
-      if (t.status === "concluida") continue;
+      // Agenda de execução: a tarefa entregue já não tem execução pendente,
+      // ainda que espere verificação. O prazo dela parou de correr.
+      if (trabalhoEntregue(t.status)) continue;
       if (escopo === "minhas" && t.responsavel !== currentUserEmail) continue;
       const criacao = diaDeCriacao(t.criadoEm);
       const adicionar = (prazo: string, tipo: TipoPrazo, hora: string) => {
