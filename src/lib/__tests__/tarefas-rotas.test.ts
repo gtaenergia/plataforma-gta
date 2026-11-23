@@ -89,7 +89,10 @@ async function patch(id: string, dados: unknown) {
 }
 async function devolver(id: string, dados: unknown) {
   const res = await r.devolver.POST(
-    new Request(`http://localhost/api/tarefas/${id}/devolver`, { method: "POST", body: JSON.stringify(dados) }),
+    new Request(`http://localhost/api/tarefas/${id}/devolver`, {
+      method: "POST",
+      body: dados === undefined ? undefined : JSON.stringify(dados),
+    }),
     ctx(id),
   );
   await Promise.all(h.pendentes.splice(0));
@@ -270,7 +273,7 @@ describe("tela desatualizada", () => {
 });
 
 describe("devolver ao responsável", () => {
-  it("pelo seletor de status, não: a devolução exige o motivo", async () => {
+  it("pelo seletor de status, não: a devolução passa pela rota que avisa o responsável", async () => {
     const id = await novaTarefa("entregue");
     como(CHEFE);
     expect((await patch(id, { status: "andamento" })).status).toBe(403);
@@ -331,14 +334,23 @@ describe("devolver ao responsável", () => {
     expect((await corpo(res)).error).toBe("O motivo pode ter até 2000 caracteres.");
   });
 
-  it("sem motivo, não devolve", async () => {
-    const id = await novaTarefa("entregue");
-    como(CHEFE);
-    for (const motivo of ["", "  ", "ok"]) {
-      expect((await devolver(id, { motivo })).status, JSON.stringify(motivo)).toBe(422);
+  it("sem motivo, devolve do mesmo jeito: registro nos comentários e aviso", async () => {
+    // O motivo é opcional (decisão do dono), mas a devolução nunca é muda:
+    // o histórico mostra quem devolveu e quando, e o responsável é avisado.
+    for (const corpoDaDevolucao of [{ motivo: "" }, { motivo: "   " }, {}, undefined]) {
+      const id = await novaTarefa("entregue");
+      como(CHEFE);
+      h.avisos.length = 0;
+      const res = await devolver(id, corpoDaDevolucao);
+      const rotulo = JSON.stringify(corpoDaDevolucao) ?? "sem corpo";
+      expect(res.status, rotulo).toBe(200);
+      const t = (await corpo(res)).task;
+      expect(t.status, rotulo).toBe("andamento");
+      expect(t.comentarios.map((c) => c.texto), rotulo).toEqual(["Devolvida para ajuste."]);
+      expect(h.avisos.map((a) => [a.paraEmail, a.tipo, a.mensagem]), rotulo).toEqual([
+        [RESP.email, "tarefa_devolvida", `${CHEFE.name} devolveu a tarefa para ajuste.`],
+      ]);
     }
-    expect((await gravada(id)).status).toBe("entregue");
-    expect((await gravada(id)).comentarios).toEqual([]);
   });
 
   it("sem a permissão, não devolve", async () => {

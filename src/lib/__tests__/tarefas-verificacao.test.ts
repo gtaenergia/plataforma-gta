@@ -9,7 +9,7 @@ import type { Cargo } from "@/lib/cargos/types";
  * Regras da verificação de tarefas, sem banco.
  *
  * Decisões do dono (23/11/2026): verifica quem é administrador ou tem a
- * permissão `tarefas.verificar`; quem verifica pode devolver, com motivo; o
+ * permissão `tarefas.verificar`; quem verifica pode devolver (motivo opcional); o
  * prazo para de correr na entrega.
  */
 
@@ -91,7 +91,7 @@ describe("bloqueioDaTransicao", () => {
     expect(bloqueioDaTransicao(tarefa("andamento"), "entregue", BRUNO)).toBeNull();
   });
 
-  it("devolver pelo seletor é recusado: passa pela rota com motivo", () => {
+  it("devolver pelo seletor é recusado: passa pela rota que avisa o responsável", () => {
     expect(bloqueioDaTransicao(tarefa("entregue"), "andamento", CHEFE)).toMatch(/Devolver ao responsável/);
     expect(bloqueioDaTransicao(tarefa("entregue"), "andamento", BRUNO)).toMatch(/Só o responsável/);
   });

@@ -11,16 +11,19 @@ export const runtime = "nodejs";
 type Ctx = { params: Promise<{ id: string }> };
 
 const devolverSchema = z.object({
-  motivo: z.string().trim().min(3, "Escreva o motivo da devolução.").max(2000, "O motivo pode ter até 2000 caracteres."),
+  // Opcional por decisão do dono (23/11/2026). Sem motivo, a devolução segue
+  // registrada nos comentários — quem devolveu e quando — e o responsável
+  // continua sendo avisado.
+  motivo: z.string().trim().max(2000, "O motivo pode ter até 2000 caracteres.").default(""),
 });
 
 /**
  * Devolve ao responsável uma tarefa marcada como "Concluída".
  *
  * Rota própria, e não um PATCH de status, porque devolver é mais que mudar o
- * status: o motivo é obrigatório, fica nos comentários e vai no aviso ao
- * responsável. Pelo PATCH, a tarefa voltaria para a fila dele sem nenhuma
- * explicação — e sem ele saber que voltou.
+ * status: a devolução fica nos comentários (com o motivo, quando informado) e
+ * o responsável é avisado. Pelo PATCH, a tarefa voltaria para a fila dele sem
+ * registro — e sem ele saber que voltou.
  */
 export async function POST(req: Request, ctx: Ctx) {
   const user = await getCurrentUser();
@@ -36,7 +39,8 @@ export async function POST(req: Request, ctx: Ctx) {
 
   let body: unknown;
   try {
-    body = await req.json();
+    const texto = await req.text();
+    body = texto.trim() ? JSON.parse(texto) : {};
   } catch {
     return NextResponse.json({ error: "Corpo inválido." }, { status: 400 });
   }
@@ -63,8 +67,8 @@ export async function POST(req: Request, ctx: Ctx) {
 
   const quem = user.name || user.email;
   // O comentário vai antes da mudança de status: se a segunda gravação falhar,
-  // sobra um motivo registrado a mais — e não uma tarefa devolvida sem motivo.
-  await store.addComment(id, { autor: quem, texto: `Devolvida para ajuste: ${motivo}` });
+  // sobra um registro a mais — e não uma tarefa devolvida sem registro.
+  await store.addComment(id, { autor: quem, texto: motivo ? `Devolvida para ajuste: ${motivo}` : "Devolvida para ajuste." });
   const task = await store.update(id, {
     status: "andamento",
     ...carimbosDaTransicao(antes.status, "andamento", user.email, new Date().toISOString()),
@@ -77,7 +81,7 @@ export async function POST(req: Request, ctx: Ctx) {
         paraEmail: antes.responsavel,
         tipo: "tarefa_devolvida",
         titulo: `Tarefa devolvida: ${task.titulo}`,
-        mensagem: `${quem} devolveu a tarefa para ajuste: ${motivo}`,
+        mensagem: motivo ? `${quem} devolveu a tarefa para ajuste: ${motivo}` : `${quem} devolveu a tarefa para ajuste.`,
         link: `/tarefas/${task.id}`,
       }),
     );

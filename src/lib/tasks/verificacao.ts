@@ -6,7 +6,8 @@ import type { CamposDoServidor, StatusTarefa, Task } from "./types";
  *
  * Decisões do dono (23/11/2026):
  * - verifica quem é administrador ou tem a permissão `tarefas.verificar`, e só;
- * - quem verifica pode DEVOLVER a tarefa entregue ao responsável, com motivo;
+ * - quem verifica pode DEVOLVER a tarefa entregue ao responsável; o motivo é
+ *   opcional, mas a devolução sempre fica nos comentários e avisa o responsável;
  * - o prazo para de correr na entrega (ver `trabalhoEntregue` em types.ts).
  */
 
@@ -61,12 +62,12 @@ export function bloqueioDaTransicao(
   if (para === "concluida" && !quem.podeVerificar) {
     return "Marcar como Concluída (verificada) cabe a administradores e a quem tem a permissão de verificar tarefas.";
   }
-  // Devolver passa pela rota própria, que exige o motivo e avisa o responsável.
+  // Devolver passa pela rota própria, que registra a devolução e avisa o responsável.
   // O próprio responsável pode reabrir a tarefa que ele entregou: é ele quem
   // sabe que faltou algo, e não há a quem avisar.
   if (ehDevolucao(tarefa.status, para) && !mesmoEmail(tarefa.responsavel, quem.email)) {
     return quem.podeVerificar
-      ? "Para devolver a tarefa, use “Devolver ao responsável” na página dela e informe o motivo."
+      ? "Para devolver a tarefa, use “Devolver ao responsável” na página dela: assim o responsável é avisado."
       : "Só o responsável reabre uma tarefa entregue; quem verifica pode devolvê-la pela página da tarefa.";
   }
   return null;

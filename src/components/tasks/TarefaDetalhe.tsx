@@ -197,7 +197,6 @@ export function TarefaDetalhe({
 
   async function devolver() {
     const motivo = (motivoDevolucao ?? "").trim();
-    if (motivo.length < 3) return;
     setSalvando(true);
     setErro(null);
     try {
@@ -283,7 +282,7 @@ export function TarefaDetalhe({
             "Marcada como Concluída. "
           )}
           {usuario.podeVerificar
-            ? "Confira a entrega: verifique para encerrar a tarefa, ou devolva ao responsável com o motivo."
+            ? "Confira a entrega: verifique para encerrar a tarefa, ou devolva ao responsável."
             : "Ela continua nas ativas até um administrador ou quem tem a permissão de verificar encerrá-la."}
           {usuario.podeVerificar && motivoDevolucao === null && (
             <div className="mt-3 flex flex-wrap gap-2">
@@ -304,21 +303,22 @@ export function TarefaDetalhe({
               }}
             >
               <label className="field-label" htmlFor="motivo-devolucao">
-                Motivo da devolução *
+                Motivo da devolução (opcional)
               </label>
               <textarea
                 id="motivo-devolucao"
                 className="field-input min-h-[80px]"
-                required
                 autoFocus
                 maxLength={2000}
                 placeholder="O que falta ou precisa ser ajustado"
                 value={motivoDevolucao}
                 onChange={(e) => setMotivoDevolucao(e.target.value)}
               />
-              <p className="hint">O motivo fica nos comentários e vai no aviso ao responsável. A tarefa volta para Em Andamento.</p>
+              <p className="hint">
+                A tarefa volta para Em Andamento e o responsável é avisado. Se preenchido, o motivo fica nos comentários e vai no aviso.
+              </p>
               <div className="flex flex-wrap gap-2">
-                <button type="submit" className="btn-primary" disabled={salvando || motivoDevolucao.trim().length < 3}>
+                <button type="submit" className="btn-primary" disabled={salvando}>
                   Devolver
                 </button>
                 <button type="button" className="btn-secondary" disabled={salvando} onClick={() => setMotivoDevolucao(null)}>
