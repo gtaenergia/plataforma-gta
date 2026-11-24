@@ -19,6 +19,12 @@ export interface User {
    * engenheiro de campo como dono de uma venda.
    */
   comercial?: boolean;
+  /**
+   * Acessa a área Financeira (caixa, lançamentos e DRE). Não vem de cargo nem
+   * do papel de administrador: é dinheiro da empresa e da retirada dos sócios,
+   * e quem vê é decisão explícita, pessoa por pessoa, em Gerenciar usuários.
+   */
+  financeiro?: boolean;
   /** Se true, é obrigado a definir nova senha no próximo acesso. */
   mustChangePassword: boolean;
   active: boolean;
@@ -70,6 +76,7 @@ export const createUserSchema = z.object({
   role: z.enum(["admin", "member"]).default("member"),
   cargoId: cargoIdCreate,
   comercial: z.boolean().default(false),
+  financeiro: z.boolean().default(false),
   senhaProvisoria: senha.optional(),
 });
 
@@ -79,6 +86,7 @@ export const updateUserSchema = z.object({
   role: z.enum(["admin", "member"]).optional(),
   cargoId: cargoIdUpdate,
   comercial: z.boolean().optional(),
+  financeiro: z.boolean().optional(),
   active: z.boolean().optional(),
 });
 

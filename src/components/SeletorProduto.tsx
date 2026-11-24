@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { PRODUTOS, type Produto } from "@/lib/produtos/registry";
+import type { Produto } from "@/lib/produtos/registry";
 
 /**
- * Alternador entre as duas ferramentas da conta (Operações e CRM) — versão da
+ * Alternador entre as ferramentas da conta (Operações, CRM e Financeiro) — versão da
  * GAVETA do celular. No dedo, esconder as ferramentas atrás de um segundo
  * toque num menu que já é suspenso seria um menu dentro de outro; aqui as
  * duas ficam à vista, no topo da gaveta.
@@ -14,12 +14,12 @@ import { PRODUTOS, type Produto } from "@/lib/produtos/registry";
  * carrega engrenagem, sino e perfil. O produto ativo chega por prop: quem o
  * calcula é o cabeçalho, a partir da rota, e assim os dois lugares concordam.
  */
-export function SeletorProdutoLista({ ativo, onNavigate }: { ativo: Produto; onNavigate: () => void }) {
+export function SeletorProdutoLista({ ativo, produtos, onNavigate }: { ativo: Produto; produtos: Produto[]; onNavigate: () => void }) {
   return (
     <div className="border-b border-white/10 pb-2">
       <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Ferramentas</div>
-      <div className="flex gap-2">
-        {PRODUTOS.map((p) => {
+      <div className="flex flex-wrap gap-2">
+        {produtos.map((p) => {
           const IconeItem = p.icone;
           const atual = p.key === ativo.key;
           return (

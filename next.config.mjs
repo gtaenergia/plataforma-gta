@@ -21,6 +21,30 @@ const nextConfig = {
    */
   async headers() {
     return [
+      // Financeiro: nenhuma página nem resposta vai para cache de navegador,
+      // proxy ou botão "voltar" de um computador compartilhado, e nada é
+      // indexado — pró-labore e cartões dos sócios não ficam em disco alheio.
+      {
+        source: "/financeiro/:path*",
+        headers: [
+          { key: "Cache-Control", value: "no-store, private, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+      {
+        source: "/financeiro",
+        headers: [
+          { key: "Cache-Control", value: "no-store, private, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+      {
+        source: "/api/financeiro/:path*",
+        headers: [
+          { key: "Cache-Control", value: "no-store, private, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
       {
         source: "/:path*",
         headers: [

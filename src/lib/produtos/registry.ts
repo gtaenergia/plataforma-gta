@@ -1,19 +1,20 @@
 import type { LucideIcon } from "lucide-react";
-import { Handshake, Wrench } from "lucide-react";
+import { Handshake, Wallet, Wrench } from "lucide-react";
 
 /**
  * Registro central das ferramentas da plataforma.
  *
- * A conta é uma só, a marca é uma só, mas o trabalho é de dois tipos: Operações
- * (configurar, precificar, aprovar e executar) e CRM (prospectar, negociar e
- * fechar). Cada ferramenta tem sua própria navegação, e o cabeçalho monta o
- * menu a partir daqui — acrescentar um item é editar este arquivo, e só.
+ * A conta é uma só, a marca é uma só, mas o trabalho é de três tipos: Operações
+ * (configurar, precificar, aprovar e executar), CRM (prospectar, negociar e
+ * fechar) e Financeiro (caixa, lançamentos e DRE). Cada ferramenta tem sua
+ * própria navegação, e o cabeçalho monta o menu a partir daqui — acrescentar
+ * um item é editar este arquivo, e só.
  *
  * Mesmo espírito do registro de serviços (src/services/registry.ts): um array
  * tipado que a interface consome automaticamente.
  */
 
-export type ProdutoKey = "operacoes" | "crm";
+export type ProdutoKey = "operacoes" | "crm" | "financeiro";
 
 export interface ItemNav {
   href: string;
@@ -37,6 +38,17 @@ export interface Produto {
   nav: ItemNav[];
   /** Item de engrenagem, fora do menu principal. */
   config?: ItemNav;
+  /**
+   * Só aparece para quem tem a marca correspondente no cadastro. O Financeiro
+   * mostra caixa e retirada dos sócios: quem não tem acesso nem vê o atalho.
+   */
+  restrito?: "financeiro";
+  /**
+   * As abas moram na própria página (a faixa do artefato do Financeiro), e o
+   * cabeçalho não repete o menu no desktop. A gaveta do celular continua
+   * listando os itens.
+   */
+  navNaPagina?: boolean;
 }
 
 export const PRODUTOS: Produto[] = [
@@ -73,7 +85,31 @@ export const PRODUTOS: Produto[] = [
     ],
     config: { href: "/crm/configuracoes", label: "Configurações" },
   },
+  {
+    key: "financeiro",
+    label: "Financeiro",
+    descricao: "Fluxo de caixa, contas a pagar e receber, e DRE",
+    home: "/financeiro",
+    icone: Wallet,
+    // As mesmas abas do artefato "GTA Controle Financeiro", mais o DRE.
+    nav: [
+      { href: "/financeiro", label: "Visão geral", exato: true },
+      { href: "/financeiro/contas", label: "Contas fixas e a pagar" },
+      { href: "/financeiro/dia-a-dia", label: "Dia a dia" },
+      { href: "/financeiro/lancamentos", label: "Lançamentos" },
+      { href: "/financeiro/graficos", label: "Gráficos" },
+      { href: "/financeiro/dre", label: "DRE" },
+    ],
+    config: { href: "/financeiro/configuracoes", label: "Configurações" },
+    restrito: "financeiro",
+    navNaPagina: true,
+  },
 ];
+
+/** As ferramentas que esta pessoa enxerga no seletor. */
+export function produtosVisiveis(acesso: { financeiro?: boolean }): Produto[] {
+  return PRODUTOS.filter((p) => !p.restrito || acesso[p.restrito] === true);
+}
 
 /**
  * `true` se a rota está dentro do prefixo. Compara o segmento inteiro, e não o
@@ -97,8 +133,8 @@ export function itemAtivo(pathname: string, item: ItemNav): boolean {
  * para dessincronizar.
  */
 export function produtoDaRota(pathname: string): Produto {
-  const crm = PRODUTOS.find((p) => p.key === "crm")!;
-  if (rotaSob(pathname, "/crm")) return crm;
+  if (rotaSob(pathname, "/crm")) return PRODUTOS.find((p) => p.key === "crm")!;
+  if (rotaSob(pathname, "/financeiro")) return PRODUTOS.find((p) => p.key === "financeiro")!;
   return PRODUTOS.find((p) => p.key === "operacoes")!;
 }
 

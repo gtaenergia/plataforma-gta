@@ -16,7 +16,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
 
   // criação
   const [novoAberto, setNovoAberto] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", role: "member" as Role, cargoId: "", comercial: false, senhaProvisoria: "" });
+  const [form, setForm] = useState({ name: "", email: "", role: "member" as Role, cargoId: "", comercial: false, financeiro: false, senhaProvisoria: "" });
   const [salvando, setSalvando] = useState(false);
 
   // senha provisória a exibir (após criar ou resetar)
@@ -54,7 +54,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
       if (!res.ok) throw new Error(data.error ?? "Falha ao criar usuário.");
       setUsuarios((prev) => [...prev, data.user]);
       setCredencial({ email: data.user.email, senha: data.senhaProvisoria });
-      setForm({ name: "", email: "", role: "member", cargoId: "", comercial: false, senhaProvisoria: "" });
+      setForm({ name: "", email: "", role: "member", cargoId: "", comercial: false, financeiro: false, senhaProvisoria: "" });
       setNovoAberto(false);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro ao criar.");
@@ -172,6 +172,10 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
               <input type="checkbox" checked={form.comercial} onChange={(e) => setForm({ ...form, comercial: e.target.checked })} />
               Equipe comercial — aparece como responsável no CRM
             </label>
+            <label className="toque flex items-center gap-2 text-sm text-slate-700 sm:col-span-6 dark:text-slate-300">
+              <input type="checkbox" checked={form.financeiro} onChange={(e) => setForm({ ...form, financeiro: e.target.checked })} />
+              Acesso ao Financeiro — vê caixa, lançamentos, DRE e retiradas dos sócios
+            </label>
           </div>
           <div className="mt-3">
             <button type="submit" className="btn-primary" disabled={salvando}>
@@ -224,6 +228,10 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
                 <input type="checkbox" checked={!!u.comercial} onChange={(e) => patch(u.id, { comercial: e.target.checked })} />
                 Equipe comercial
               </label>
+              <label className="toque flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                <input type="checkbox" checked={!!u.financeiro} onChange={(e) => patch(u.id, { financeiro: e.target.checked })} />
+                Acesso ao Financeiro
+              </label>
               <div className="mt-3 flex flex-wrap gap-2 text-xs">
                 <button className={`text-gta-indigo dark:text-indigo-300 ${acaoCls}`} onClick={() => resetar(u)}>Resetar senha</button>
                 <button className={`text-slate-600 dark:text-slate-300 ${acaoCls}`} disabled={eu} onClick={() => patch(u.id, { role: u.role === "admin" ? "member" : "admin" })}>
@@ -249,6 +257,7 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
               <th>Perfil</th>
               <th>Cargo</th>
               <th>Comercial</th>
+              <th>Financeiro</th>
               <th>Status</th>
               <th>Ações</th>
             </tr>
@@ -288,6 +297,15 @@ export function UsersAdmin({ currentUserId }: { currentUserId: string }) {
                       checked={!!u.comercial}
                       onChange={(e) => patch(u.id, { comercial: e.target.checked })}
                       aria-label={`${u.name} faz parte da equipe comercial`}
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      type="checkbox"
+                      className="toque"
+                      checked={!!u.financeiro}
+                      onChange={(e) => patch(u.id, { financeiro: e.target.checked })}
+                      aria-label={`${u.name} acessa o Financeiro`}
                     />
                   </td>
                   <td className="px-4 py-2">

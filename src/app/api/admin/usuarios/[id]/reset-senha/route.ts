@@ -3,6 +3,9 @@ import { getCurrentUser } from "@/lib/session";
 import { users } from "@/lib/users/store";
 import { resetPasswordSchema } from "@/lib/users/types";
 import { hashPassword, gerarSenhaProvisoria } from "@/lib/users/password";
+import { decidirMudancaDeAcesso } from "@/lib/financeiro/acesso-regras";
+import { alertarSocios } from "@/lib/financeiro/alertas";
+import { auditar, auditarSemFalhar } from "@/lib/financeiro/auditoria";
 
 export const runtime = "nodejs";
 
@@ -31,7 +34,25 @@ export async function POST(req: Request, ctx: Ctx) {
   const alvo = await store.getById(id);
   if (!alvo) return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
 
+  // Redefinir a senha de quem tem acesso ao Financeiro é o jeito de entrar
+  // como essa pessoa: só quem já tem acesso pode, e todos ficam sabendo.
+  if (alvo.financeiro === true) {
+    const decisao = decidirMudancaDeAcesso(me, await store.list(), alvo, "senha");
+    if (!decisao.ok) {
+      await auditarSemFalhar(me, req, { acao: "acesso.negado", alvo: alvo.email, resumo: `redefinir senha · ${alvo.name}`, antes: undefined, depois: undefined });
+      return NextResponse.json({ error: decisao.erro }, { status: 403 });
+    }
+    await auditar(me, req, { acao: "senha.redefinida", alvo: alvo.email, resumo: `redefiniu a senha de ${alvo.name}`, antes: undefined, depois: undefined });
+  }
+
   const senhaProvisoria = parsed.data.novaSenha?.trim() || gerarSenhaProvisoria();
   await store.setPassword(id, hashPassword(senhaProvisoria), true);
+  if (alvo.financeiro === true) {
+    await alertarSocios(
+      "Financeiro: senha redefinida",
+      `${me.name || me.email} redefiniu a senha de ${alvo.name}, que tem acesso ao Financeiro. Se ${alvo.name} não pediu, verifique.`,
+      [alvo.email],
+    );
+  }
   return NextResponse.json({ ok: true, senhaProvisoria });
 }

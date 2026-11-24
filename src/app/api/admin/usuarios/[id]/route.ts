@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
 import { users, type UserPatch } from "@/lib/users/store";
 import { updateUserSchema, toPublicUser } from "@/lib/users/types";
+import { decidirMudancaDeAcesso, temAcessoFinanceiro } from "@/lib/financeiro/acesso-regras";
+import { alertarSocios } from "@/lib/financeiro/alertas";
+import { auditar, auditarSemFalhar } from "@/lib/financeiro/auditoria";
 
 export const runtime = "nodejs";
 
@@ -48,6 +51,36 @@ export async function PATCH(req: Request, ctx: Ctx) {
     }
   }
 
+  // Porta do Financeiro: dar/tirar o acesso, ou desativar/reativar quem o tem,
+  // só por quem já tem acesso (ver decidirMudancaDeAcesso).
+  const todos = await store.list();
+  const querFin = parsed.data.financeiro;
+  const mudancaFin =
+    querFin !== undefined && querFin !== (alvo.financeiro === true)
+      ? querFin
+        ? "conceder"
+        : "revogar"
+      : parsed.data.active === false && temAcessoFinanceiro(alvo)
+        ? "desativar"
+        : parsed.data.active === true && !alvo.active && alvo.financeiro === true
+          ? "conceder"
+          : null;
+  if (mudancaFin) {
+    const decisao = decidirMudancaDeAcesso(me!, todos, alvo, mudancaFin);
+    if (!decisao.ok) {
+      await auditarSemFalhar(me!, req, { acao: "acesso.negado", alvo: alvo.email, resumo: `${mudancaFin} · ${alvo.name}`, antes: undefined, depois: undefined });
+      return NextResponse.json({ error: decisao.erro }, { status: 403 });
+    }
+    // Rastro antes da mudança: sem auditoria, sem porta aberta.
+    await auditar(me!, req, {
+      acao: mudancaFin === "conceder" ? "acesso.concedido" : "acesso.revogado",
+      alvo: alvo.email,
+      resumo: `${mudancaFin === "desativar" ? "desativou a conta de" : mudancaFin === "conceder" ? "acesso para" : "tirou o acesso de"} ${alvo.name}`,
+      antes: { financeiro: alvo.financeiro === true, active: alvo.active },
+      depois: { financeiro: querFin ?? alvo.financeiro === true, active: parsed.data.active ?? alvo.active },
+    });
+  }
+
   // Repassa só o que veio: undefined = não altera; cargoId null = limpar o cargo.
   const patch: UserPatch = {};
   if (parsed.data.name !== undefined) patch.name = parsed.data.name;
@@ -55,13 +88,26 @@ export async function PATCH(req: Request, ctx: Ctx) {
   if (parsed.data.active !== undefined) patch.active = parsed.data.active;
   if (parsed.data.cargoId !== undefined) patch.cargoId = parsed.data.cargoId;
   if (parsed.data.comercial !== undefined) patch.comercial = parsed.data.comercial;
+  if (parsed.data.financeiro !== undefined) patch.financeiro = parsed.data.financeiro;
 
   const atualizado = await store.update(id, patch);
+  if (mudancaFin) {
+    const quem = me!.name || me!.email;
+    await alertarSocios(
+      mudancaFin === "conceder" ? "Financeiro: novo acesso" : "Financeiro: acesso retirado",
+      mudancaFin === "conceder"
+        ? `${quem} deu acesso ao Financeiro para ${alvo.name}.`
+        : mudancaFin === "desativar"
+          ? `${quem} desativou a conta de ${alvo.name}, que tinha acesso ao Financeiro.`
+          : `${quem} tirou o acesso de ${alvo.name} ao Financeiro.`,
+      [alvo.email],
+    );
+  }
   return NextResponse.json({ user: atualizado ? toPublicUser(atualizado) : null });
 }
 
 /** Remove um usuário (não permite remover a si mesmo nem o último admin). */
-export async function DELETE(_req: Request, ctx: Ctx) {
+export async function DELETE(req: Request, ctx: Ctx) {
   const { me, error } = await requireAdmin();
   if (error) return error;
   const { id } = await ctx.params;
@@ -81,6 +127,18 @@ export async function DELETE(_req: Request, ctx: Ctx) {
     }
   }
 
+  if (alvo.financeiro === true) {
+    const decisao = decidirMudancaDeAcesso(me!, await store.list(), alvo, "excluir");
+    if (!decisao.ok) {
+      await auditarSemFalhar(me!, req, { acao: "acesso.negado", alvo: alvo.email, resumo: `excluir · ${alvo.name}`, antes: undefined, depois: undefined });
+      return NextResponse.json({ error: decisao.erro }, { status: 403 });
+    }
+    await auditar(me!, req, { acao: "acesso.revogado", alvo: alvo.email, resumo: `excluiu a conta de ${alvo.name}`, antes: toPublicUser(alvo), depois: undefined });
+  }
+
   await store.remove(id);
+  if (alvo.financeiro === true) {
+    await alertarSocios("Financeiro: conta excluída", `${me!.name || me!.email} excluiu a conta de ${alvo.name}, que tinha acesso ao Financeiro.`);
+  }
   return NextResponse.json({ ok: true });
 }

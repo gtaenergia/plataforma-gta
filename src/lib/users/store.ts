@@ -5,6 +5,7 @@ import { createPool, type VercelPool } from "@vercel/postgres";
 import type { Role, User } from "./types";
 import { hashPassword } from "./password";
 import { getDbUrl } from "../tasks/postgres-store";
+import { ehSocioComAcessoInicial } from "../financeiro/acesso-inicial";
 
 /**
  * Camada de dados de Usuários. Mesma estratégia das Tarefas:
@@ -28,12 +29,13 @@ export interface NewUser {
   role: Role;
   cargoId?: string;
   comercial?: boolean;
+  financeiro?: boolean;
   mustChangePassword: boolean;
   active: boolean;
 }
 
 /** `cargoId: null` limpa o cargo; ausente = não altera. */
-export type UserPatch = Partial<Pick<User, "name" | "role" | "active" | "avatarUrl" | "comercial">> & { cargoId?: string | null };
+export type UserPatch = Partial<Pick<User, "name" | "role" | "active" | "avatarUrl" | "comercial" | "financeiro">> & { cargoId?: string | null };
 
 export interface UserStore {
   list(): Promise<User[]>;
@@ -139,6 +141,7 @@ interface Row {
   role: string;
   cargo_id: string | null;
   comercial: boolean | null;
+  financeiro: boolean | null;
   must_change_password: boolean;
   active: boolean;
   avatar_url: string | null;
@@ -153,6 +156,7 @@ const rowToUser = (r: Row): User => ({
   role: r.role as Role,
   cargoId: r.cargo_id ?? undefined,
   comercial: r.comercial ?? false,
+  financeiro: r.financeiro ?? false,
   mustChangePassword: r.must_change_password,
   active: r.active,
   avatarUrl: r.avatar_url ?? undefined,
@@ -188,9 +192,27 @@ class PostgresUserStore implements UserStore {
         // Quem já existia nasce fora do time comercial: marcar é decisão do
         // administrador, não palpite da migração.
         .then(() => this.pool.sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS comercial boolean NOT NULL DEFAULT false`)
+        .then(() => this.migrarFinanceiro())
         .then(() => undefined);
     }
     return this.ready;
+  }
+  /**
+   * Cria a coluna `financeiro` e, SÓ na criação, dá o acesso aos três sócios
+   * que já usavam o controle financeiro (Tito, Paulo Vitor e Gabriel). Depois
+   * disso, quem acessa é decidido em Gerenciar usuários — a migração não
+   * volta a mexer, nem se alguém desmarcar um deles.
+   */
+  private async migrarFinanceiro(): Promise<void> {
+    const { rows: existe } = await this.pool.sql`
+      SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'financeiro'
+    `;
+    if (existe.length) return;
+    await this.pool.sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS financeiro boolean NOT NULL DEFAULT false`;
+    const { rows } = await this.pool.sql<{ id: string; name: string }>`SELECT id, name FROM users WHERE active`;
+    for (const u of rows.filter((r) => ehSocioComAcessoInicial(r.name))) {
+      await this.pool.sql`UPDATE users SET financeiro = true WHERE id = ${u.id}`;
+    }
   }
   async list() {
     await this.ensureSchema();
@@ -218,8 +240,8 @@ class PostgresUserStore implements UserStore {
     const now = new Date().toISOString();
     try {
       const { rows } = await this.pool.sql<Row>`
-        INSERT INTO users (id, email, name, password_hash, role, cargo_id, comercial, must_change_password, active, criado_em, atualizado_em)
-        VALUES (${id}, ${norm(u.email)}, ${u.name}, ${u.passwordHash}, ${u.role}, ${u.cargoId ?? null}, ${u.comercial ?? false}, ${u.mustChangePassword}, ${u.active}, ${now}, ${now})
+        INSERT INTO users (id, email, name, password_hash, role, cargo_id, comercial, financeiro, must_change_password, active, criado_em, atualizado_em)
+        VALUES (${id}, ${norm(u.email)}, ${u.name}, ${u.passwordHash}, ${u.role}, ${u.cargoId ?? null}, ${u.comercial ?? false}, ${u.financeiro ?? false}, ${u.mustChangePassword}, ${u.active}, ${now}, ${now})
         RETURNING *
       `;
       return rowToUser(rows[0]);
@@ -237,7 +259,7 @@ class PostgresUserStore implements UserStore {
     const atualizadoEm = new Date().toISOString();
     await this.pool.sql`
       UPDATE users SET name = ${merged.name}, role = ${merged.role}, cargo_id = ${cargoId},
-        comercial = ${merged.comercial ?? false}, active = ${merged.active}, avatar_url = ${merged.avatarUrl ?? null},
+        comercial = ${merged.comercial ?? false}, financeiro = ${merged.financeiro ?? false}, active = ${merged.active}, avatar_url = ${merged.avatarUrl ?? null},
         atualizado_em = ${atualizadoEm}
       WHERE id = ${id}
     `;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PRODUTOS, itemAtivo, produtoDaRota, rotaSob } from "@/lib/produtos/registry";
+import { PRODUTOS, itemAtivo, produtoDaRota, produtosVisiveis, rotaSob } from "@/lib/produtos/registry";
 
 /**
  * A rota é a única fonte da ferramenta ativa e do item aceso no menu. Os casos
@@ -27,6 +27,24 @@ describe("produtoDaRota", () => {
 
   it("não confunde um prefixo de texto com um segmento de rota", () => {
     expect(produtoDaRota("/crmx").key).toBe("operacoes");
+    expect(produtoDaRota("/financeirox").key).toBe("operacoes");
+  });
+
+  it("manda as rotas do Financeiro para o Financeiro", () => {
+    for (const p of ["/financeiro", "/financeiro/dre", "/financeiro/lancamentos", "/financeiro/configuracoes"]) {
+      expect(produtoDaRota(p).key).toBe("financeiro");
+    }
+  });
+});
+
+describe("produtosVisiveis", () => {
+  it("esconde o Financeiro de quem não tem acesso", () => {
+    expect(produtosVisiveis({}).map((p) => p.key)).toEqual(["operacoes", "crm"]);
+    expect(produtosVisiveis({ financeiro: false }).map((p) => p.key)).toEqual(["operacoes", "crm"]);
+  });
+
+  it("mostra o Financeiro a quem tem a marca no cadastro", () => {
+    expect(produtosVisiveis({ financeiro: true }).map((p) => p.key)).toEqual(["operacoes", "crm", "financeiro"]);
   });
 });
 
@@ -61,6 +79,13 @@ describe("itemAtivo", () => {
     expect(itemAtivo("/crm/tarefas", item(operacoes, "/tarefas"))).toBe(false);
     expect(itemAtivo("/tarefas", item(crm, "/crm/tarefas"))).toBe(false);
     expect(itemAtivo("/crm/tarefas", item(crm, "/crm/tarefas"))).toBe(true);
+  });
+
+  it("acende a Visão geral do Financeiro só na própria rota", () => {
+    const fin = PRODUTOS.find((p) => p.key === "financeiro")!;
+    const visao = fin.nav.find((i) => i.href === "/financeiro")!;
+    expect(itemAtivo("/financeiro", visao)).toBe(true);
+    expect(itemAtivo("/financeiro/dre", visao)).toBe(false);
   });
 
   it("acende a tela de detalhe junto com a listagem", () => {

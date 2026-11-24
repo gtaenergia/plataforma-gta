@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SESSION_COOKIE, verifySession, passwordFingerprint, type SessionPayload } from "./auth";
@@ -17,7 +18,7 @@ export async function getSessionUser(): Promise<SessionPayload | null> {
  * troca-de-senha-obrigatória). Retorna null se a sessão for inválida ou o
  * usuário não existir/estiver inativo.
  */
-export async function getCurrentUser(): Promise<User | null> {
+export const getCurrentUser = cache(async function getCurrentUser(): Promise<User | null> {
   const session = await getSessionUser();
   if (!session) return null;
   const store = await users();
@@ -28,7 +29,10 @@ export async function getCurrentUser(): Promise<User | null> {
   // revogação de fato acontece, em toda página e rota protegida.
   if (session.pv !== (await passwordFingerprint(u.passwordHash))) return null;
   return u;
-}
+});
+// `cache`: uma consulta por requisição. A página chama `requirePageUser()` e o
+// cabeçalho (componente de servidor) pergunta de novo para saber se mostra o
+// Financeiro — sem o cache, seria uma ida ao banco a mais em toda página.
 
 interface RequireOptions {
   requireAdmin?: boolean;

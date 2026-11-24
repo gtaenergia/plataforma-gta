@@ -3,6 +3,9 @@ import { getCurrentUser } from "@/lib/session";
 import { users, EmailEmUsoError } from "@/lib/users/store";
 import { createUserSchema, toPublicUser } from "@/lib/users/types";
 import { hashPassword, gerarSenhaProvisoria } from "@/lib/users/password";
+import { decidirMudancaDeAcesso } from "@/lib/financeiro/acesso-regras";
+import { alertarSocios } from "@/lib/financeiro/alertas";
+import { auditar, auditarSemFalhar } from "@/lib/financeiro/auditoria";
 
 export const runtime = "nodejs";
 
@@ -24,7 +27,7 @@ export async function GET() {
 
 /** Cria um usuário com senha provisória e troca obrigatória no 1º acesso. */
 export async function POST(req: Request) {
-  const { error } = await requireAdminApi();
+  const { me, error } = await requireAdminApi();
   if (error) return error;
 
   let body: unknown;
@@ -41,6 +44,15 @@ export async function POST(req: Request) {
 
   const senhaProvisoria = parsed.data.senhaProvisoria?.trim() || gerarSenhaProvisoria();
   const store = await users();
+  // Criar alguém JÁ com acesso ao Financeiro é dar acesso: mesma regra.
+  if (parsed.data.financeiro) {
+    const decisao = decidirMudancaDeAcesso(me!, await store.list(), null, "conceder");
+    if (!decisao.ok) {
+      await auditarSemFalhar(me!, req, { acao: "acesso.negado", alvo: parsed.data.email, resumo: `criar com acesso · ${parsed.data.name}`, antes: undefined, depois: undefined });
+      return NextResponse.json({ error: decisao.erro }, { status: 403 });
+    }
+    await auditar(me!, req, { acao: "acesso.concedido", alvo: parsed.data.email, resumo: `criou ${parsed.data.name} já com acesso`, antes: undefined, depois: { financeiro: true } });
+  }
   try {
     const novo = await store.create({
       email: parsed.data.email,
@@ -48,10 +60,14 @@ export async function POST(req: Request) {
       role: parsed.data.role,
       cargoId: parsed.data.cargoId,
       comercial: parsed.data.comercial,
+      financeiro: parsed.data.financeiro,
       passwordHash: hashPassword(senhaProvisoria),
       mustChangePassword: true,
       active: true,
     });
+    if (parsed.data.financeiro) {
+      await alertarSocios("Financeiro: novo acesso", `${me!.name || me!.email} criou a conta de ${novo.name} já com acesso ao Financeiro.`);
+    }
     // Retorna a senha provisória UMA vez, para o admin entregar ao usuário.
     return NextResponse.json({ user: toPublicUser(novo), senhaProvisoria }, { status: 201 });
   } catch (e) {

@@ -30,6 +30,13 @@ e controle de acesso por usuário.
 - **Tarefas** (`/tarefas`) — lista com filtros por status/responsável, busca,
   prioridade, prazo com alerta de atraso e comentários. Opcionalmente envia
   **e-mail ao responsável** na criação (dormente; ative com o Resend).
+- **Financeiro** (`/financeiro`) — fluxo de caixa dos sócios (visão geral, contas a
+  pagar, dia a dia, lançamentos, gráficos) e **DRE** mês a mês na sequência da planilha
+  de Gestão Financeira. Negociação ganha no CRM entra no DRE no mês do fechamento e no
+  caixa como recebimento previsto. Acesso só com a marca "Acesso ao Financeiro" no
+  cadastro, **cadeado com a senha** (fecha com 30 min sem uso e a cada 12 h),
+  **auditoria só-inclusão** (gatilho no Postgres recusa UPDATE/DELETE) e alertas aos
+  sócios em mudanças de acesso, senha redefinida e senhas erradas em sequência.
 - **Conta e usuários** — "Minha conta", troca de senha, tema claro/escuro e, para
   administradores, gerenciamento de usuários (`/admin/usuarios`) e cargos.
 
