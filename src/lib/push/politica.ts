@@ -45,6 +45,13 @@ export const TIPOS_COM_PUSH: readonly string[] = [
   "crm_pedido_proposta",
   "crm_proposta_aprovada",
   "crm_cobranca_diaria",
+  /*
+   * Segurança do Financeiro: alguém ganhou acesso ao caixa, teve a senha
+   * redefinida, ou errou a senha do cadeado em sequência. É raro e exige que
+   * um sócio olhe AGORA — esperar a pessoa abrir o sino seria tarde. O texto
+   * nunca leva valor em dinheiro (ver lib/financeiro/alertas.ts).
+   */
+  "financeiro_seguranca",
 ];
 
 export function merecePush(tipo: string): boolean {
