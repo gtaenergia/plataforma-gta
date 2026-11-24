@@ -38,7 +38,8 @@ describe("aviso de alterações não salvas", () => {
 
   it.each(telasComSalvar())("%s avisa antes de perder a edição", (arquivo) => {
     const src = readFileSync(arquivo, "utf8");
-    const temAviso = src.includes("useAvisoNaoSalvo") || src.includes("useEdicaoPendente");
+    // `useFerramenta` (engenharia) chama `useAvisoNaoSalvo` por dentro.
+    const temAviso = src.includes("useAvisoNaoSalvo") || src.includes("useEdicaoPendente") || src.includes("useFerramenta");
     expect(temAviso, "tela com Salvar sem aviso de saída").toBe(true);
   });
 

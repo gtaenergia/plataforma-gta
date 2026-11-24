@@ -30,6 +30,20 @@ e controle de acesso por usuário.
 - **Tarefas** (`/tarefas`) — lista com filtros por status/responsável, busca,
   prioridade, prazo com alerta de atraso e comentários. Opcionalmente envia
   **e-mail ao responsável** na criação (dormente; ative com o Resend).
+- **Engenharia** (`/engenharia`) — projetos de engenharia (obra + responsável técnico)
+  com duas ferramentas em assistente por etapas, salvamento automático e laudos com a
+  logo em **PDF e Word**:
+  - **Análise de Risco — NBR 5419-2:2026**: estrutura (NG da Tabela F.1 por município,
+    5.570 cidades), linhas, zonas e parâmetros; R1/R3/R4 e frequência de danos F ao vivo,
+    análise preliminar × com medidas, requisitos de SPDA (NBR 5419-3) e DPS (NBR 5419-4).
+    O motor reproduz o laudo de referência (teste em `eng-risco-motor.test.ts`).
+  - **Quadro de Cargas — NBR 5410:2004**: configuração (tensão, TN-S/TT, Ik informado ou
+    calculado pelo transformador), tabela de circuitos com colunas configuráveis, ficha do
+    circuito, fatores de demanda, balanceamento de fases, proteção contra choques e
+    resultados (diagramas de painéis e de impedâncias). Saídas: memorial de cálculo
+    (PDF/Word), planilha Excel, unifilar DXF e diagramas em PDF A3.
+  Motores puros em `src/lib/engenharia/{risco,quadro}`; laudos montados uma vez
+  (`laudos/modelo.ts`) e renderizados por `laudos/pdf.ts` (pdfmake) e `laudos/docx.ts` (docx).
 - **Financeiro** (`/financeiro`) — fluxo de caixa dos sócios (visão geral, contas a
   pagar, dia a dia, lançamentos, gráficos) e **DRE** mês a mês na sequência da planilha
   de Gestão Financeira. Negociação ganha no CRM entra no DRE no mês do fechamento e no

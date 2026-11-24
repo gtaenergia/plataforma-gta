@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SERVICES } from "@/services/registry";
 import { AppHeader } from "@/components/AppHeader";
 import { ServiceIcon } from "@/components/ServiceIcon";
-import { Calculator, Wrench } from "lucide-react";
+import { Calculator, CloudLightning, Wrench } from "lucide-react";
 import { PageHeader, Badge } from "@/components/ui";
 import { requirePageUser } from "@/lib/session";
 import { temPermissao } from "@/lib/rbac/resolve";
@@ -58,6 +58,26 @@ export default async function DashboardPage() {
         {/* Ferramentas — não geram proposta, ajudam a montar o preço. Ficam
             abaixo dos serviços, que é o que a maioria vem buscar. */}
         <h2 className="section-title mt-10">Ferramentas</h2>
+
+        <div className="mt-4">
+          <Link
+            href="/engenharia"
+            className="group flex items-start gap-4 card p-4 transition hover:-translate-y-0.5 hover:border-gta-indigo hover:shadow-md sm:p-5 dark:hover:border-gta-indigo"
+          >
+            <span className="inline-flex shrink-0 rounded-lg bg-gta-indigo/10 p-2.5 text-gta-indigo dark:bg-gta-indigo/20 dark:text-indigo-300">
+              <CloudLightning className="h-6 w-6" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <span className="font-semibold text-gta-navy group-hover:text-gta-indigo dark:text-slate-100">
+                Engenharia: análise de risco e quadro de cargas
+              </span>
+              <p className="mt-1 subtitle">
+                Gerenciamento de risco de descargas atmosféricas (NBR 5419-2) e dimensionamento de circuitos (NBR 5410),
+                com laudo e memorial em PDF e Word.
+              </p>
+            </div>
+          </Link>
+        </div>
 
         {podeVerFinanceiro && (
           <div className="mt-4">

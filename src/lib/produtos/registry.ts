@@ -55,7 +55,7 @@ export const PRODUTOS: Produto[] = [
   {
     key: "operacoes",
     label: "Operações",
-    descricao: "Propostas, aprovações, tarefas e apontamentos",
+    descricao: "Propostas, aprovações, tarefas, apontamentos e engenharia",
     home: "/",
     icone: Wrench,
     nav: [
@@ -64,6 +64,8 @@ export const PRODUTOS: Produto[] = [
       { href: "/aprovacoes", label: "Aprovações" },
       { href: "/tarefas", label: "Tarefas" },
       { href: "/apontamentos", label: "Apontamentos" },
+      // Análise de risco (NBR 5419-2) e quadro de cargas (NBR 5410), por projeto.
+      { href: "/engenharia", label: "Engenharia" },
     ],
   },
   {
