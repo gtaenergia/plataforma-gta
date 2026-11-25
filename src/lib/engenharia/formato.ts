@@ -24,6 +24,17 @@ export function fmtCient(v: number | null | undefined, casas = 3): string {
   return `${fmtFixo(mant, casas)}×10${sobrescrito(exp)}`;
 }
 
+/**
+ * Frequência de danos (eventos/ano): três casas a partir de 0,01; abaixo
+ * disso, notação científica — com casas fixas, 0,00004 viraria "0,000" e
+ * pareceria zero.
+ */
+export function fmtFreq(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  if (v === 0) return "0";
+  return Math.abs(v) >= 0.01 ? fmtFixo(v, 3) : fmtCient(v, 2);
+}
+
 /** Risco na escala do tolerável: 5,71e-6 com expoente −5 → "0,571 ×10⁻⁵". */
 export function fmtRisco(v: number | null | undefined, expoente: number, casas = 3): string {
   if (v == null || !Number.isFinite(v)) return "—";

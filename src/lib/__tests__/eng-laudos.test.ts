@@ -85,6 +85,15 @@ describe("laudo da análise de risco", () => {
     expect(celulas).toContain("−98,0%");
   });
 
+  it("com risco de explosão, a tabela de parâmetros mostra o rp adotado (C.3.4)", () => {
+    const d = risco();
+    d.zonas[0] = { ...d.zonas[0], rp: "automatica", rf: "explosao-z1" };
+    const l = montarLaudoRisco(projeto, d);
+    const linhasRp = l.blocos.flatMap((b) => (b.tipo === "tabela" ? b.linhas.filter((x) => Array.isArray(x) && textoPlano(x[0].t) === "rp") : [])) as { t: unknown }[][];
+    expect(textoPlano(linhasRp[0][2].t as never)).toBe("1");
+    expect(textoPlano(linhasRp[0][3].t as never)).toContain("C.3.4");
+  });
+
   it("gera a definição do PDF com sumário, cabeçalho e rodapé", () => {
     const def = definicaoPdf(laudo, LOGO) as { content: unknown[]; header: (...a: unknown[]) => unknown; footer: (...a: unknown[]) => unknown };
     expect(JSON.stringify(def.content)).toContain('"toc"');

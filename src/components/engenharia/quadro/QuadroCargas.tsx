@@ -169,7 +169,7 @@ export function QuadroCargas({ projetoId, dados, inicial, salvoEm }: { projetoId
       </div>
 
       <div className="mt-6">
-        {etapa === "config" && <EtapaConfig cfg={d.config} set={setConfig} origem={res.origem} />}
+        {etapa === "config" && <EtapaConfig cfg={d.config} set={setConfig} origem={res.origem} quedaOrigem={res.quedaOrigem} />}
         {etapa === "circuitos" && (
           <EtapaCircuitos
             quadros={d.quadros}

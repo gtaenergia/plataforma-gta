@@ -3,7 +3,7 @@
 import { Calculator, Zap } from "lucide-react";
 import { SectionCard, Segmented } from "@/components/ui";
 import { ORIGENS_QUEDA, LIMITE_TERMINAL, type CaboTrecho, type ConfigQuadro } from "@/lib/engenharia/quadro/tipos";
-import { tensoes, type ResultadoOrigem } from "@/lib/engenharia/quadro/motor";
+import { tensoes, type ResultadoOrigem, type ResultadoQuadros } from "@/lib/engenharia/quadro/motor";
 import { secoesDe } from "@/lib/engenharia/quadro/tabelas";
 import { fmtNum } from "@/lib/engenharia/formato";
 import { NumInput, Rotulo } from "../comum";
@@ -13,7 +13,17 @@ export const campoQuadro = {
   circ: (id: string, k: string) => `q-circ-${id}-${k}`,
 };
 
-export function EtapaConfig({ cfg, set, origem }: { cfg: ConfigQuadro; set: (p: Partial<ConfigQuadro>) => void; origem: ResultadoOrigem }) {
+export function EtapaConfig({
+  cfg,
+  set,
+  origem,
+  quedaOrigem,
+}: {
+  cfg: ConfigQuadro;
+  set: (p: Partial<ConfigQuadro>) => void;
+  origem: ResultadoOrigem;
+  quedaOrigem: ResultadoQuadros["quedaOrigem"];
+}) {
   const { U0, UL } = tensoes(cfg.tensao);
   const limite = ORIGENS_QUEDA.find((o) => o.id === cfg.origemQueda);
   const setCabo = (p: Partial<CaboTrecho>) => set({ caboOrigem: { ...cfg.caboOrigem, ...p } });
@@ -205,6 +215,11 @@ export function EtapaConfig({ cfg, set, origem }: { cfg: ConfigQuadro; set: (p: 
             </div>
           </div>
         </div>
+        {quedaOrigem && (
+          <p className="mt-3 hint">
+            Cabo do transformador até a origem: queda de {fmtNum(quedaOrigem.dv, 2)}% com a demanda de todos os quadros (Ib = {fmtNum(quedaOrigem.Ib, 1)} A), somada à de cada alimentador.
+          </p>
+        )}
       </SectionCard>
 
       <p className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800">

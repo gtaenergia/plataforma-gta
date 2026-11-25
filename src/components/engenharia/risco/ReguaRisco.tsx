@@ -2,7 +2,7 @@
 
 import { CheckCircle2, XCircle } from "lucide-react";
 import { META_RISCO, type ResultadoRisco } from "@/lib/engenharia/risco/motor";
-import { fmtNum, fmtRisco } from "@/lib/engenharia/formato";
+import { fmtFreq, fmtNum, fmtRisco } from "@/lib/engenharia/formato";
 
 /**
  * Régua do rodapé: metade esquerda verde (tolerável), metade direita vermelha
@@ -62,7 +62,7 @@ export function ReguaRisco({ resultado, pendencias }: { resultado: ResultadoRisc
               <span className="font-mono text-xs font-bold">F·{z.nome}</span>
               <Regua valor={z.F!.total} limite={z.F!.FT} rotulo={`Frequência de danos — ${z.nome}`} />
               <span className={`font-mono text-xs ${z.F!.excede ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400"}`}>
-                {fmtNum(z.F!.total, 3)} <span className="text-slate-500">/ {fmtNum(z.F!.FT)}</span>
+                {fmtFreq(z.F!.total)} <span className="text-slate-500">/ {fmtNum(z.F!.FT)}</span>
               </span>
             </div>
           ))}

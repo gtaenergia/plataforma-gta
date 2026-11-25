@@ -115,6 +115,8 @@ export interface ResultadoFrequencia {
 export interface ResultadoZona {
   id: string;
   nome: string;
+  /** rp usado no cálculo: o escolhido, ou 1 em estrutura com risco de explosão (C.3.4). */
+  rp: number;
   /** nz/nt × tz/8760 × rS (fator comum das perdas L1). */
   fatorPessoas: number;
   prob: {
@@ -190,6 +192,20 @@ export function estruturaEfetiva(pbId: string, ptaId: string): boolean {
   return pbId !== "sem-spda" || ptaId === "descida-natural";
 }
 
+/**
+ * Estrutura com risco de explosão: alguma zona com rf de explosão (Tabela C.5)
+ * ou com LF/LO de "risco de explosão" nas perdas avaliadas (Tabelas C.2 e D.2).
+ * Nesse caso rp = 1 em todos os casos (C.3.4 e Tabela C.4).
+ */
+export function estruturaComExplosao(entrada: EntradaRisco): boolean {
+  return entrada.zonas.some(
+    (z) =>
+      z.rf.startsWith("explosao") ||
+      (z.perdas.L1 && (z.L1.LF === "explosao" || z.L1.LO === "explosao")) ||
+      (z.perdas.L4 && (z.L4.LF === "explosao" || z.L4.LO === "explosao")),
+  );
+}
+
 /** A.1 — área de exposição equivalente de uma estrutura retangular isolada. */
 export function areaExposicao(L: number, W: number, H: number): number {
   return L * W + 2 * (3 * H) * (L + W) + Math.PI * (3 * H) ** 2;
@@ -263,6 +279,7 @@ export function calcularRisco(entrada: EntradaRisco): ResultadoRisco {
   const rS = valor(RS_ESTRUTURA, e.rS);
   const KS1 = e.semBlindagemKs1 ? 1 : limita(num(e.KS1) || 1, 1e-4, 1);
   const nt = num(e.nt);
+  const explosao = estruturaComExplosao(entrada);
 
   // Totais da estrutura que as razões cz/ct (L3) e c/ct (L4) usam.
   const ct3 = entrada.zonas.filter((z) => z.perdas.L3).reduce((s, z) => s + num(z.L3.cz), 0);
@@ -320,7 +337,7 @@ export function calcularRisco(entrada: EntradaRisco): ResultadoRisco {
     const PM = 1 - Object.values(porTipo).reduce((acc, t) => acc * (1 - (t?.PM ?? 0)), 1);
 
     const rt = valor(RT_PISO, z.rt);
-    const rp = valor(RP, z.rp);
+    const rp = explosao ? 1 : valor(RP, z.rp);
     const rf = valor(RF, z.rf);
     const hz = valor(HZ, z.hz);
     const fatorPessoas = nt > 0 ? (num(z.nz) / nt) * (num(z.tz) / 8760) * rS : 0;
@@ -411,6 +428,7 @@ export function calcularRisco(entrada: EntradaRisco): ResultadoRisco {
     return {
       id: z.id,
       nome: z.nome,
+      rp,
       fatorPessoas,
       prob: { PA, PB: pb, PEB: peb, PC, PM, KS1, KS2, porTipo, linhas: probLinhas },
       perdas: { L1, L3, L4 },

@@ -13,7 +13,7 @@ import {
 } from "@/lib/engenharia/risco/motor";
 import { observacoesNorma, requisitosDps, requisitosSpda } from "@/lib/engenharia/risco/requisitos";
 import type { DadosRisco } from "@/lib/engenharia/risco/tipos";
-import { fmtDataHora, fmtFixo, fmtNum, fmtPct, fmtRisco } from "@/lib/engenharia/formato";
+import { fmtCient, fmtDataHora, fmtFixo, fmtFreq, fmtNum, fmtPct, fmtRisco } from "@/lib/engenharia/formato";
 import { formatBRL } from "@/lib/format";
 
 export function EtapaResultados({
@@ -137,8 +137,8 @@ export function EtapaResultados({
                     return (
                       <tr key={z.id}>
                         <td className="py-2 pr-3 font-semibold">F — {z.nome}</td>
-                        <td className="py-2 pr-3 text-right font-mono">{fmtFixo(a, 3)}</td>
-                        <td className="py-2 pr-3 text-right font-mono font-semibold">{fmtFixo(z.F!.total, 3)}</td>
+                        <td className="py-2 pr-3 text-right font-mono">{fmtFreq(a)}</td>
+                        <td className="py-2 pr-3 text-right font-mono font-semibold">{fmtFreq(z.F!.total)}</td>
                         <td className="py-2 pr-3 text-right font-mono">{fmtFixo(z.F!.FT, 3)}</td>
                         <td className="py-2 pr-3 text-right font-mono">{a != null ? fmtPct(reducao(a, z.F!.total)) : "—"}</td>
                         <td className="py-2">
@@ -272,10 +272,10 @@ export function EtapaResultados({
                       <td className="py-2 pr-3 font-semibold">{z.nome}</td>
                       {(["FB", "FC", "FM", "FV", "FW", "FZ"] as const).map((c) => (
                         <td key={c} className="py-2 pr-3 text-right font-mono text-xs">
-                          {fmtFixo(z.F![c], 4)}
+                          {fmtCient(z.F![c], 2)}
                         </td>
                       ))}
-                      <td className="py-2 pr-3 text-right font-mono font-semibold">{fmtFixo(z.F!.total, 3)}</td>
+                      <td className="py-2 pr-3 text-right font-mono font-semibold">{fmtFreq(z.F!.total)}</td>
                       <td className="py-2 pr-3 text-right font-mono">{fmtFixo(z.F!.FT, 3)}</td>
                       <td className="py-2">
                         <Parecer ok={!z.F!.excede} f />

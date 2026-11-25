@@ -153,13 +153,16 @@ export function montarMemorialQuadro(projeto: DadosProjeto, dados: DadosQuadro, 
   b.push({
     tipo: "tabela",
     colunas: [{ titulo: "Seção da fase S (mm²)", peso: 1 }, { titulo: "Seção mínima do PE (mm²)", peso: 1 }],
-    linhas: [[c("S ≤ 16"), c("S")], [c("16 < S ≤ 35"), c("16")], [c("S > 35"), c("S/2 (padronizada para cima)")]],
+    linhas: [[c("S ≤ 16"), c("S")], [c("16 < S ≤ 35"), c("16")], [c("S > 35"), c("S/2 (seção padronizada mais próxima)")]],
     legenda: "Tabela 58 — Seção mínima do condutor de proteção (6.4.3.1.3).",
   });
 
   b.push(h2("5.7 Queda de tensão"));
   b.push(eq("ΔV% = b · I_b · L · (R·cos φ + X·sen φ) / (n · U) · 100", [["b", "2 (F+N, referida a U0; 2F, referida a UL); 1,5 (2F+N equilibrado, referida a U0); √3 (trifásico, referida a UL)"], ["L", "Comprimento do circuito (km)"], ["R, X", "Resistência na temperatura de serviço e reatância do condutor (Ω/km)"], ["n", "Condutores em paralelo por fase"]], "ABNT NBR 5410:2004, 6.2.7"));
-  b.push(p(`Limites adotados: ${origem.limite}% da origem até qualquer ponto de utilização (${origem.rotulo.toLowerCase()}, ${origem.ref}) e ${LIMITE_TERMINAL}% no circuito terminal (6.2.7.2). O alimentador é limitado a ${Math.max(1, origem.limite - LIMITE_TERMINAL)}% para que a soma com o circuito terminal fique dentro do global.`));
+  b.push(p(`Limites adotados: ${origem.limite}% da origem até qualquer ponto de utilização (${origem.rotulo.toLowerCase()}, ${origem.ref}) e ${LIMITE_TERMINAL}% no circuito terminal (6.2.7.2). Na seção automática, o alimentador é dimensionado para até ${Math.max(1, origem.limite - LIMITE_TERMINAL)}% acumulados, deixando os ${LIMITE_TERMINAL}% para os circuitos terminais; quando isso não é possível, vale só o limite global.`));
+  if (res.quedaOrigem) {
+    b.push(p(`Cabo do transformador até a origem: ${fmtNum(cfg.caboOrigem.comprimento)} m, ${fmtNum(cfg.caboOrigem.secao)} mm²${cfg.caboOrigem.condutoresPorFase > 1 ? ` × ${cfg.caboOrigem.condutoresPorFase} por fase` : ""}, com a demanda de todos os quadros (Ib = ${fmtNum(res.quedaOrigem.Ib, 1)} A, cos φ = ${fmtNum(res.quedaOrigem.fp, 2)}): queda de ${fmtNum(res.quedaOrigem.dv, 2)}%, somada à queda de cada alimentador.`));
+  }
 
   b.push(h2("5.8 Curto-circuito máximo"));
   b.push(eq(`c_{máx} = ${fmtNum(C_MAX, 2)} ;  c_{mín} = ${fmtNum(C_MIN, 2)}`, [["c", "Fator de tensão para redes de baixa tensão"]], "IEC 60909-0, Tabela 1"));

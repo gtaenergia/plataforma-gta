@@ -363,17 +363,27 @@ export function neutroReduzido(secaoFase: number): number {
   if (secaoFase <= 25) return secaoFase;
   const l = T48.find(([f]) => f === secaoFase);
   if (l) return l[1];
-  return secaoFase > 400 ? Math.round(secaoFase / 2) : secaoFase;
+  // Acima de 400 mm² a Tabela 48 não dá valor: sem redução.
+  return secaoFase;
 }
 
-/** Tabela 58 — seção mínima do condutor de proteção, padronizada para cima. */
+/**
+ * Tabela 58 — seção mínima do condutor de proteção. Resultado fora da série vai
+ * para a seção padronizada mais próxima (6.4.3.1.3); no empate, a maior.
+ */
 export function secaoPE(secaoFase: number, material: Material): number {
   let s: number;
   if (secaoFase <= 16) s = secaoFase;
   else if (secaoFase <= 35) s = 16;
   else s = secaoFase / 2;
   const lista = secoesDe(material);
-  return lista.find((x) => x >= s - 1e-9) ?? lista[lista.length - 1];
+  let melhor = lista[lista.length - 1];
+  for (const x of lista) {
+    const d = Math.abs(x - s);
+    const dm = Math.abs(melhor - s);
+    if (d < dm - 1e-9 || (Math.abs(d - dm) <= 1e-9 && x > melhor)) melhor = x;
+  }
+  return melhor;
 }
 
 // ------------------------------------------------- Tabela 30 — fator k
@@ -489,9 +499,17 @@ export function energiaPassante(In: number, curva: "B" | "C" | "D", ikA: number)
       const f = (ikA - ZA_PONTOS[j]) / (ZA_PONTOS[j + 1] - ZA_PONTOS[j]);
       i2t = serie[j] + f * (serie[j + 1] - serie[j]);
     }
-    return { i2t, origem: "Classe 3 de limitação (NBR NM 60898, Anexo ZA)" };
+    return {
+      i2t,
+      origem:
+        curva === "D"
+          ? "Classe 3 de limitação, limites da curva C (NBR NM 60898, Anexo ZA, não tabela a curva D): confirmar no catálogo"
+          : "Classe 3 de limitação (NBR NM 60898, Anexo ZA)",
+    };
   }
-  return { i2t: ikA * ikA * 0.01, origem: "Disjuntor não limitador: Ik² × 0,01 s" };
+  // Sem tabela normativa: um ciclo de 60 Hz, tempo típico de abertura de um
+  // disjuntor não limitador. O I²t do catálogo, se informado, prevalece.
+  return { i2t: (ikA * ikA) / 60, origem: "Estimativa: Ik² × 1 ciclo (16,7 ms em 60 Hz), disjuntor não limitador; usar o I²t do catálogo" };
 }
 
 // ------------------------------------------------- grupos de demanda

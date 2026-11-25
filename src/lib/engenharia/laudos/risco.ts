@@ -46,7 +46,7 @@ import {
 } from "../risco/tabelas";
 import { IIMP_PREFERENCIAIS, observacoesNorma, requisitosDps, requisitosSpda } from "../risco/requisitos";
 import { formatBRL } from "../../format";
-import { fmtCient, fmtData, fmtFixo, fmtNum, fmtParam, fmtPct, fmtRisco } from "../formato";
+import { fmtCient, fmtData, fmtFixo, fmtFreq, fmtNum, fmtParam, fmtPct, fmtRisco } from "../formato";
 import { CORES_COMPONENTE, posicaoLog, svgBarraEmpilhada, svgMedidores, type Medidor } from "./graficos";
 import { c, cr, type Bloco, type Celula, type Laudo, type LinhaTabela } from "./modelo";
 
@@ -115,12 +115,12 @@ export function montarLaudoRisco(projeto: DadosProjeto, d: DadosRisco): Laudo {
     medidores.push({
       sobrescrito: `F · ${z.nome}`,
       titulo: "Frequência de danos",
-      valor: fmtFixo(z.F.total, 3),
+      valor: fmtFreq(z.F.total),
       ok: !z.F.excede,
       limite: `tolerável FT = ${fmtFixo(z.F.FT, 3)}`,
       posicao: posicaoLog(z.F.total, z.F.FT),
       posicaoSem: antes != null ? posicaoLog(antes, z.F.FT) : null,
-      rodape: antes != null ? `sem medidas ${fmtFixo(antes, 3)}${red != null ? ` · redução ${fmtPct(red)}` : ""}` : undefined,
+      rodape: antes != null ? `sem medidas ${fmtFreq(antes)}${red != null ? ` · redução ${fmtPct(red)}` : ""}` : undefined,
     });
   }
   for (let i = 0; i < medidores.length; i += 2) {
@@ -239,7 +239,9 @@ export function montarLaudoRisco(projeto: DadosProjeto, d: DadosRisco): Laudo {
       [sym("PTA"), c(PTA.nome), cr(fmtParam(valor(PTA, z.PTA))), c(rotulo(PTA, z.PTA))],
       [sym("PTU"), c(PTU.nome), cr(fmtParam(valor(PTU, z.PTU))), c(rotulo(PTU, z.PTU))],
       [sym("rf"), c(RF.nome), cr(fmtParam(valor(RF, z.rf))), c(rotulo(RF, z.rf))],
-      [sym("rp"), c(RP.nome), cr(fmtParam(valor(RP, z.rp))), c(rotulo(RP, z.rp))],
+      rz.rp !== valor(RP, z.rp)
+        ? [sym("rp"), c(RP.nome), cr(fmtParam(rz.rp)), c(`Estrutura com risco de explosão: rp = 1 (C.3.4). Indicado: ${rotulo(RP, z.rp)}`)]
+        : [sym("rp"), c(RP.nome), cr(fmtParam(valor(RP, z.rp))), c(rotulo(RP, z.rp))],
       [sym("hz"), c(HZ.nome), cr(fmtParam(valor(HZ, z.hz))), c(rotulo(HZ, z.hz))],
       [sym("rs"), c(RS_ESTRUTURA.nome), cr(fmtParam(valor(RS_ESTRUTURA, e.rS))), c(rotulo(RS_ESTRUTURA, e.rS))],
       [sym("KS2"), c("Fator blindagem interna"), cr(fmtParam(rz.prob.KS2)), c(z.semBlindagemKs2 ? "Sem blindagem interna em malha" : "Blindagem interna em malha (B.4.12)")],
@@ -371,8 +373,8 @@ export function montarLaudoRisco(projeto: DadosProjeto, d: DadosRisco): Laudo {
       const red = a != null ? reducao(a, z.F!.total) : null;
       linhas.push([
         c(`F — ${z.nome}`, { b: true, cor: z.F!.excede ? "C62828" : undefined }),
-        cr(fmtFixo(a, 3), { cor: "64748B" }),
-        cr(fmtFixo(z.F!.total, 3), { b: true }),
+        cr(fmtFreq(a), { cor: "64748B" }),
+        cr(fmtFreq(z.F!.total), { b: true }),
         cr(fmtFixo(z.F!.FT, 3)),
         c(red != null ? fmtPct(red) : "—", { selo: red != null && red < 0 ? "ok" : "neutro" }),
         c(z.F!.excede ? "F > FT — Medidas necessárias" : "F ≤ FT — Adequado", { selo: z.F!.excede ? "falha" : "ok" }),
@@ -396,7 +398,7 @@ export function montarLaudoRisco(projeto: DadosProjeto, d: DadosRisco): Laudo {
     finais.push([c(`${k} — ${META_RISCO[k].nome}`, { b: true }), cr(fmtRisco(t.total, exp)), cr(fmtRisco(t.RT, exp)), c(t.excede ? "Sim" : "Não"), c(t.excede ? "R > RT — Proteção necessária" : "R ≤ RT — Risco tolerável", { selo: t.excede ? "falha" : "ok" })]);
   }
   for (const z of zonasF) {
-    finais.push([c(`F — ${z.nome}`, { b: true }), cr(fmtFixo(z.F!.total, 3)), cr(fmtFixo(z.F!.FT, 3)), c(z.F!.excede ? "Sim" : "Não"), c(z.F!.excede ? "F > FT — Medidas necessárias" : "F ≤ FT — Adequado", { selo: z.F!.excede ? "falha" : "ok" })]);
+    finais.push([c(`F — ${z.nome}`, { b: true }), cr(fmtFreq(z.F!.total)), cr(fmtFixo(z.F!.FT, 3)), c(z.F!.excede ? "Sim" : "Não"), c(z.F!.excede ? "F > FT — Medidas necessárias" : "F ≤ FT — Adequado", { selo: z.F!.excede ? "falha" : "ok" })]);
   }
   blocos.push({
     tipo: "tabela",

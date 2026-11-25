@@ -332,10 +332,12 @@ export function FichaCircuito({
           <div>
             <label className="field-label" htmlFor={`${id}-temp`}>Temperatura ({r.metodoRef === "D" ? "solo" : "ambiente"})</label>
             <NumInput id={`${id}-temp`} value={cond.temperatura} min={10} max={80} sufixo="°C" onChange={(v) => setCond({ temperatura: v ?? 30 })} />
+            {r.metodoRef === "D" && <p className="mt-1 hint">Referência das tabelas: 20 °C no solo (Tabela 40).</p>}
           </div>
           <div>
             <label className="field-label" htmlFor={`${id}-agr`}>Circuitos agrupados</label>
             <NumInput id={`${id}-agr`} value={cond.agrupados} min={1} max={30} onChange={(v) => setCond({ agrupados: Math.max(1, Math.round(v ?? 1)) })} />
+            {cond.condutoresPorFase > 1 && <p className="mt-1 hint">Os {cond.condutoresPorFase} conjuntos em paralelo já entram na conta (Tabela 42, nota 3).</p>}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>

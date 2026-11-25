@@ -313,8 +313,14 @@ interface ContextoFonte {
   zLacoPE: Z | null;
   zLacoN: Z | null;
   dvMontante: number;
+  /** Limite da norma só para o trecho: 4% no terminal (6.2.7.2); o alimentador só tem o global. */
   limiteTrecho: number;
   limiteGlobal: number;
+  /**
+   * Alvo da seção automática para a queda acumulada. No alimentador, global − 4%,
+   * para deixar os 4% aos terminais; se nenhuma seção chegar lá, vale o limite da norma.
+   */
+  alvoAcumulado: number;
 }
 
 interface EntradaTrecho {
@@ -357,7 +363,8 @@ function calcularTrecho(t: EntradaTrecho, ctx: ContextoFonte): ResultadoCircuito
   const metodoRef = metodoReferencia(c.metodo, c.config);
   const enterrado = metodoRef === "D";
   const k1 = tem(c.k1Manual) ? c.k1Manual : fatorTemperatura(c.temperatura || 30, c.isolacao, enterrado);
-  const k2 = tem(c.k2Manual) ? c.k2Manual : fatorAgrupamento(c.agrupados || 1, metodoInstalacao(c.metodo).agrupamento);
+  // Tabela 42, nota 3: cada conjunto de condutores em paralelo conta como um circuito no agrupamento.
+  const k2 = tem(c.k2Manual) ? c.k2Manual : fatorAgrupamento((c.agrupados || 1) + (n - 1), metodoInstalacao(c.metodo).agrupamento);
   const thServ = temperaturaServico(c.isolacao);
 
   // Disjuntor: Ib ≤ In.
@@ -412,6 +419,10 @@ function calcularTrecho(t: EntradaTrecho, ctx: ContextoFonte): ResultadoCircuito
 
     const k = fatorK(c.material, c.isolacao, secao);
     const k2s2 = k * k * secao * secao * n * n;
+    // Neutro reduzido sem detecção de sobrecorrente própria: precisa estar protegido
+    // contra curtos pelo disjuntor das fases (5.3.2.2.1.2 a).
+    const kN = secaoN != null && secaoN < secao ? fatorK(c.material, c.isolacao, secaoN) : null;
+    const k2s2N = kN != null && secaoN != null ? kN * kN * secaoN * secaoN * n * n : null;
     let i2t: number | null = null;
     let i2tOrigem = "";
     if (tem(t.protecao.i2tManual)) {
@@ -422,15 +433,16 @@ function calcularTrecho(t: EntradaTrecho, ctx: ContextoFonte): ResultadoCircuito
       i2t = e.i2t;
       i2tOrigem = e.origem;
     }
-    return { secao, izTab, iz, rKm, xKm, secaoN, sPE, dvTrecho, ikMaxFim, ikMinFim, zs, zFimMax, zFimLaco, k, k2s2, i2t, i2tOrigem };
+    return { secao, izTab, iz, rKm, xKm, secaoN, sPE, dvTrecho, ikMaxFim, ikMinFim, zs, zFimMax, zFimLaco, k, k2s2, k2s2N, i2t, i2tOrigem };
   };
 
   type Aval = ReturnType<typeof avaliar>;
-  const atende = (a: Aval) => {
+  const suportaCurto = (a: Aval) => a.i2t == null || (a.i2t <= a.k2s2 && (a.k2s2N == null || a.i2t <= a.k2s2N));
+  const atende = (a: Aval, alvo: number) => {
     if (In > a.iz + 1e-9) return false;
-    if (a.dvTrecho != null && (a.dvTrecho > limiteTrecho + 1e-9 || ctx.dvMontante + a.dvTrecho > ctx.limiteGlobal + 1e-9)) return false;
+    if (a.dvTrecho != null && (a.dvTrecho > limiteTrecho + 1e-9 || ctx.dvMontante + a.dvTrecho > alvo + 1e-9)) return false;
     if (a.ikMinFim != null && a.ikMinFim * 1000 < Im) return false;
-    if (a.i2t != null && a.i2t > a.k2s2) return false;
+    if (!suportaCurto(a)) return false;
     return true;
   };
 
@@ -440,14 +452,10 @@ function calcularTrecho(t: EntradaTrecho, ctx: ContextoFonte): ResultadoCircuito
   let av: Aval;
   if (secaoAuto) {
     const candidatas = secoes.filter((s) => s >= smin - 1e-9);
-    av = avaliar(candidatas[candidatas.length - 1]);
-    for (const s of candidatas) {
-      const a = avaliar(s);
-      if (atende(a)) {
-        av = a;
-        break;
-      }
-    }
+    const avaliadas = candidatas.map(avaliar);
+    // Primeiro o alvo de projeto; se nenhuma seção chega lá, o limite da norma.
+    const alvos = Array.from(new Set([Math.min(ctx.alvoAcumulado, ctx.limiteGlobal), ctx.limiteGlobal]));
+    av = alvos.map((alvo) => avaliadas.find((a) => atende(a, alvo))).find((a) => a != null) ?? avaliadas[avaliadas.length - 1];
   } else {
     av = avaliar(c.secao as number);
     if ((c.secao as number) < smin) avisos.push(`Seção abaixo do mínimo da Tabela 47 (${fmtSecao(smin)} mm²).`);
@@ -467,7 +475,10 @@ function calcularTrecho(t: EntradaTrecho, ctx: ContextoFonte): ResultadoCircuito
   const sobrecarga: Verif = Ib <= In + 1e-9 && In <= av.iz + 1e-9 ? "ok" : "falha";
   const queda: Verif = av.dvTrecho == null ? "sem-dados" : av.dvTrecho <= limiteTrecho + 1e-9 && ctx.dvMontante + av.dvTrecho <= ctx.limiteGlobal + 1e-9 ? "ok" : "falha";
   const icuV: Verif = ctx.ikInicio == null || icu == null ? "sem-dados" : icu + 1e-9 >= ctx.ikInicio ? "ok" : "falha";
-  const termica: Verif = av.i2t == null ? "sem-dados" : av.i2t <= av.k2s2 ? "ok" : "falha";
+  const termica: Verif = av.i2t == null ? "sem-dados" : suportaCurto(av) ? "ok" : "falha";
+  if (av.i2t != null && av.i2t <= av.k2s2 && av.k2s2N != null && av.i2t > av.k2s2N) {
+    avisos.push("Neutro reduzido não fica protegido contra curto-circuito pelo disjuntor das fases (I²t > k²·SN²): aumente o neutro ou preveja detecção de sobrecorrente nele (5.3.2.2.1.2).");
+  }
   const magnetica: Verif = av.ikMinFim == null ? "sem-dados" : av.ikMinFim * 1000 >= Im ? "ok" : "falha";
 
   const tmax = tempoSeccionamento(U0, ctx.situacao);
@@ -608,6 +619,12 @@ export interface ResultadoQuadros {
   UL: number;
   origem: ResultadoOrigem;
   limiteGlobal: number;
+  /**
+   * Queda no cabo do transformador até a origem, com a soma das demandas de
+   * todos os quadros. Só entra quando o limite é contado a partir dos terminais
+   * do transformador ou do gerador (6.2.7.1 a, b, d).
+   */
+  quedaOrigem: { Ib: number; fp: number; dv: number } | null;
   quadros: ResultadoQuadro[];
 }
 
@@ -628,20 +645,56 @@ export function calcularQuadros(d: DadosQuadro): ResultadoQuadros {
   const { U0, UL } = tensoes(d.config.tensao);
   const origem = calcularOrigem(d.config);
   const limiteGlobal = ORIGENS_QUEDA.find((o) => o.id === d.config.origemQueda)?.limite ?? 5;
-  const quadros = d.quadros.map((q) => calcularQuadro(q, d.config, origem, U0, UL, limiteGlobal));
-  return { U0, UL, origem, limiteGlobal, quadros };
+  const quedaOrigem = calcularQuedaOrigem(d, U0, UL);
+  const quadros = d.quadros.map((q) => calcularQuadro(q, d.config, origem, U0, UL, limiteGlobal, quedaOrigem?.dv ?? 0));
+  return { U0, UL, origem, limiteGlobal, quedaOrigem, quadros };
 }
 
-function calcularQuadro(q: Quadro, cfg: ConfigQuadro, origem: ResultadoOrigem, U0: number, UL: number, limiteGlobal: number): ResultadoQuadro {
-  // 1. cargas
+/** Cargas do quadro e correntes por fase com os fatores de demanda. */
+function demandaPorFase(q: Quadro, U0: number, UL: number) {
   const cargas = q.circuitos.map((c) => {
     const { P, especial } = potenciaCircuito(c, q);
     const fp = Math.min(1, Math.max(0.1, c.fp || 1));
     return { c, P, especial, S: P / fp, Q: Math.sqrt(Math.max(0, (P / fp) ** 2 - P * P)) };
   });
-
-  // 2. demanda
   const fd = (g: string) => (q.fatoresDemanda[g] ?? 100) / 100;
+  const fases = { A: { I: 0, kVA: 0 }, B: { I: 0, kVA: 0 }, C: { I: 0, kVA: 0 } };
+  for (const x of cargas) {
+    const f = cargaNasFases(x.S * fd(x.c.grupo), x.c.esquema, x.c.fase, U0, UL);
+    for (const l of ["A", "B", "C"] as const) {
+      fases[l].I += f[l].I;
+      fases[l].kVA += f[l].kVA;
+    }
+  }
+  const Pdem = cargas.reduce((s, x) => s + x.P * fd(x.c.grupo), 0);
+  const Qdem = cargas.reduce((s, x) => s + x.Q * fd(x.c.grupo), 0);
+  return { cargas, fd, fases, Pdem, Qdem };
+}
+
+function calcularQuedaOrigem(d: DadosQuadro, U0: number, UL: number): ResultadoQuadros["quedaOrigem"] {
+  const cfg = d.config;
+  const c = cfg.caboOrigem;
+  if (cfg.ikModo !== "calculado" || cfg.origemQueda === "ponto-entrega-bt" || !tem(c.comprimento) || !tem(c.secao)) return null;
+  const I = { A: 0, B: 0, C: 0 };
+  let P = 0;
+  let Q = 0;
+  for (const q of d.quadros) {
+    const dem = demandaPorFase(q, U0, UL);
+    for (const l of ["A", "B", "C"] as const) I[l] += dem.fases[l].I;
+    P += dem.Pdem;
+    Q += dem.Qdem;
+  }
+  const Ib = Math.max(I.A, I.B, I.C);
+  const S = Math.hypot(P, Q);
+  const fp = S > 0 ? P / S : 1;
+  const rKm = resistenciaA(c.material, c.classe, c.secao, temperaturaServico(c.isolacao));
+  const dv = quedaPercentual("3F+N+PE", U0, UL, Ib, c.comprimento, rKm, reatancia(c.config), Math.max(1, c.condutoresPorFase), fp);
+  return { Ib, fp, dv };
+}
+
+function calcularQuadro(q: Quadro, cfg: ConfigQuadro, origem: ResultadoOrigem, U0: number, UL: number, limiteGlobal: number, dvOrigem: number): ResultadoQuadro {
+  // 1. cargas e 2. demanda
+  const { cargas, fd, fases } = demandaPorFase(q, U0, UL);
   const gruposUsados = Array.from(new Set(cargas.map((x) => x.c.grupo)));
   const grupos = gruposUsados.map((g) => {
     const Pinst = cargas.filter((x) => x.c.grupo === g).reduce((s, x) => s + x.P, 0);
@@ -653,15 +706,6 @@ function calcularQuadro(q: Quadro, cfg: ConfigQuadro, origem: ResultadoOrigem, U
   const Qdem = cargas.reduce((s, x) => s + x.Q * fd(x.c.grupo), 0);
   const Sdem = Math.hypot(Pdem, Qdem);
   const especial = cargas.reduce((s, x) => s + x.especial, 0);
-
-  const fases = { A: { I: 0, kVA: 0 }, B: { I: 0, kVA: 0 }, C: { I: 0, kVA: 0 } };
-  for (const x of cargas) {
-    const f = cargaNasFases(x.S * fd(x.c.grupo), x.c.esquema, x.c.fase, U0, UL);
-    for (const l of ["A", "B", "C"] as const) {
-      fases[l].I += f[l].I;
-      fases[l].kVA += f[l].kVA;
-    }
-  }
   const correntes = [fases.A.I, fases.B.I, fases.C.I];
   const maxI = Math.max(...correntes);
   const minI = Math.min(...correntes);
@@ -671,7 +715,6 @@ function calcularQuadro(q: Quadro, cfg: ConfigQuadro, origem: ResultadoOrigem, U
   const g = q.geral;
   const esquemaGeral: EsquemaCondutores = g.tipo === "mono" ? "F+N+PE" : g.tipo === "bi" ? "2F+N+PE" : "3F+N+PE";
   const ibGeral = g.tipo === "mono" ? Sdem / U0 : g.tipo === "bi" ? Math.max(fases.A.I, fases.B.I) : maxI;
-  const limiteAlimentador = Math.max(1, limiteGlobal - LIMITE_TERMINAL);
   const ctxGeral: ContextoFonte = {
     U0,
     UL,
@@ -683,9 +726,12 @@ function calcularQuadro(q: Quadro, cfg: ConfigQuadro, origem: ResultadoOrigem, U
     z1Min: origem.completo ? origem.z1Min : null,
     zLacoPE: origem.completo ? origem.zLacoPE : null,
     zLacoN: origem.completo ? origem.zLacoN : null,
-    dvMontante: 0,
-    limiteTrecho: limiteAlimentador,
+    // 6.2.7.1: o alimentador só tem o limite global, contado desde os terminais
+    // do transformador/gerador ou do ponto de entrega.
+    dvMontante: dvOrigem,
+    limiteTrecho: limiteGlobal,
     limiteGlobal,
+    alvoAcumulado: limiteGlobal - LIMITE_TERMINAL,
   };
   const geral = calcularTrecho(
     {
@@ -746,8 +792,9 @@ function calcularQuadro(q: Quadro, cfg: ConfigQuadro, origem: ResultadoOrigem, U
     z1Min,
     zLacoPE,
     zLacoN,
-    dvMontante: geral.dvTrecho ?? 0,
+    dvMontante: dvOrigem + (geral.dvTrecho ?? 0),
     limiteTrecho: LIMITE_TERMINAL,
+    alvoAcumulado: limiteGlobal,
   };
   const circuitos = cargas.map(({ c, P, especial: esp }) =>
     calcularTrecho(

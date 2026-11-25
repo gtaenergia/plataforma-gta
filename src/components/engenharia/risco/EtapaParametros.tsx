@@ -18,11 +18,12 @@ import {
   RF,
   RP,
   RT_PISO,
+  valor,
 } from "@/lib/engenharia/risco/tabelas";
 import type { LinhaRisco, TipoLinha, ZonaRisco } from "@/lib/engenharia/risco/tipos";
 import { META_RISCO, type ResultadoRisco } from "@/lib/engenharia/risco/motor";
 import { campoRisco } from "@/lib/engenharia/risco/pendencias";
-import { fmtCient, fmtNum, fmtRisco } from "@/lib/engenharia/formato";
+import { fmtCient, fmtFreq, fmtNum, fmtRisco } from "@/lib/engenharia/formato";
 import { CampoParametro, NumInput, Rotulo } from "../comum";
 
 export function EtapaParametros({
@@ -52,7 +53,12 @@ export function EtapaParametros({
               <CampoParametro param={PTA} value={z.PTA} onChange={(v) => set(z.id, { PTA: v })} />
               <CampoParametro param={PTU} value={z.PTU} onChange={(v) => set(z.id, { PTU: v })} />
               <CampoParametro param={RF} value={z.rf} onChange={(v) => set(z.id, { rf: v })} />
-              <CampoParametro param={RP} value={z.rp} onChange={(v) => set(z.id, { rp: v })} />
+              <div>
+                <CampoParametro param={RP} value={z.rp} onChange={(v) => set(z.id, { rp: v })} />
+                {r && r.rp !== valor(RP, z.rp) && (
+                  <p className="mt-1 hint text-amber-700 dark:text-amber-400">Estrutura com risco de explosão: o cálculo adota rp = 1 (C.3.4 e Tabela C.4).</p>
+                )}
+              </div>
               <CampoParametro param={HZ} value={z.hz} onChange={(v) => set(z.id, { hz: v })} />
               <div>
                 <span className="field-label">
@@ -191,7 +197,7 @@ export function EtapaParametros({
                 {r.F && (
                   <div>
                     <div className="hint">F da zona (FT = {fmtNum(r.F.FT)})</div>
-                    <div className={`font-mono font-semibold ${r.F.excede ? "text-red-600" : "text-green-700 dark:text-green-400"}`}>{fmtNum(r.F.total, 3)}</div>
+                    <div className={`font-mono font-semibold ${r.F.excede ? "text-red-600" : "text-green-700 dark:text-green-400"}`}>{fmtFreq(r.F.total)}</div>
                   </div>
                 )}
               </div>

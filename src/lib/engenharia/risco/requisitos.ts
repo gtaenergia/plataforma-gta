@@ -7,7 +7,7 @@
 
 import { PB, PEB, rotulo, valor } from "./tabelas";
 import type { EntradaRisco } from "./tipos";
-import { estruturaEfetiva, type ResultadoRisco } from "./motor";
+import { estruturaComExplosao, estruturaEfetiva, type ResultadoRisco } from "./motor";
 
 export type NivelSpda = "I" | "II" | "III" | "IV";
 
@@ -203,6 +203,10 @@ export function observacoesNorma(entrada: EntradaRisco, r: ResultadoRisco): stri
     obs.push(`${dpsIgnorado.join(", ")}: sem SPDA nem estrutura como descida natural, o DPS coordenado não reduz PC — adotado PSPD = 1 no PC (Tabela B.3, nota 1); continua valendo em PM, PW e PZ.`);
   }
   const explosao = entrada.zonas.some((z) => z.rf.startsWith("explosao"));
+  const rpForcado = estruturaComExplosao(entrada) ? entrada.zonas.filter((z) => z.rp !== "nenhuma").map((z) => z.nome) : [];
+  if (rpForcado.length) {
+    obs.push(`${rpForcado.join(", ")}: estrutura com risco de explosão — adotado rp = 1, qualquer que seja a providência contra incêndio (C.3.4 e Tabela C.4).`);
+  }
   const nivel = nivelDoPb(e.PB);
   if (explosao && nivel !== "I" && nivel !== "II") {
     obs.push("Zona com risco de explosão: se a proteção for exigida pela autoridade competente, deve ser adotado no mínimo SPDA nível II (5.4.7).");
