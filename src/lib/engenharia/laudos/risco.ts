@@ -44,7 +44,7 @@ import {
   rotulo,
   valor,
 } from "../risco/tabelas";
-import { IIMP_PREFERENCIAIS, observacoesNorma, requisitosDps, requisitosSpda } from "../risco/requisitos";
+import { IIMP_PREFERENCIAIS, observacoesNorma, requisitosDps, requisitosSpda, textoIimp } from "../risco/requisitos";
 import { formatBRL } from "../../format";
 import { fmtCient, fmtData, fmtFixo, fmtFreq, fmtNum, fmtParam, fmtPct, fmtRisco } from "../formato";
 import { CORES_COMPONENTE, posicaoLog, svgBarraEmpilhada, svgMedidores, type Medidor } from "./graficos";
@@ -441,6 +441,7 @@ export function montarLaudoRisco(projeto: DadosProjeto, d: DadosRisco): Laudo {
     blocos.push({ tipo: "lista", titulo: "Subsistema de captação", itens: spda.captacao, colunas: 2 });
     blocos.push({ tipo: "lista", titulo: "Subsistema de descida", itens: spda.descida, colunas: 2 });
     blocos.push({ tipo: "lista", titulo: "Subsistema de aterramento", itens: spda.aterramento, colunas: 2 });
+    blocos.push({ tipo: "lista", titulo: "Equipotencialização, isolação e inspeção", itens: spda.equipotencializacao, colunas: 2 });
     blocos.push({ tipo: "nota", tom: "info", titulo: "Nota", texto: spda.nota });
   }
   if (dps) {
@@ -453,17 +454,17 @@ export function montarLaudoRisco(projeto: DadosProjeto, d: DadosRisco): Laudo {
     });
     blocos.push({ tipo: "lista", titulo: "Requisitos de instalação e coordenação", itens: dps.instalacao, colunas: 2 });
     const dm = dps.dimensionamento;
-    blocos.push({ tipo: "titulo", nivel: 3, texto: `Dimensionamento da corrente de impulso Iimp — NP ${dm.npCorrente} (NBR 5419-1 / NBR 5419-4, Anexo D)` });
+    blocos.push({ tipo: "titulo", nivel: 3, texto: `Dimensionamento da corrente de impulso Iimp — NP ${dm.npCorrente} (NBR 5419-1, Anexo E / NBR 5419-4, Anexo D)` });
     blocos.push({
       tipo: "lista",
       marcador: "ponto",
       itens: [
-        `Corrente total de impulso do NP ${dm.npCorrente} (${dm.origemNp}): I = ${dm.total} kA (10/350 µs)`,
-        `Parcela escoada pelo aterramento (50%): ${dm.aterramento} kA`,
+        `Corrente total de impulso do NP ${dm.npCorrente} (${dm.origemNp}): I = ${dm.total} kA (10/350 µs, NBR 5419-1, Tabela 3)`,
+        `Parcela escoada pelo aterramento (50%, ke = 0,5 — E.2.1.4): ${dm.aterramento} kA`,
         `Parcela distribuída pelas linhas entrantes (50%): ${dm.linhas} kA`,
         `Linhas metálicas entrantes consideradas: ${dm.nLinhas}`,
         [{ t: `Parcela por linha entrante: ${dm.linhas} kA / ${dm.nLinhas} = ${fmtNum(dm.porLinha, 1)} kA`, b: true }],
-        ...dm.porCondutor.map((p) => `${p.linha}: ${fmtNum(dm.porLinha, 1)} kA / ${p.condutores} condutores = ${fmtNum(p.kA, 2)} kA por condutor → Iimp ≥ ${p.adotado != null ? `${fmtNum(p.adotado, 1)} kA` : "25 kA (consultar o fabricante)"}`),
+        ...dm.porCondutor.map((p) => `${p.linha}: ${p.criterio} → ${textoIimp(p)}`),
       ],
     });
     const adotados = new Set(dm.porCondutor.map((p) => p.adotado));
@@ -523,7 +524,7 @@ export function montarLaudoRisco(projeto: DadosProjeto, d: DadosRisco): Laudo {
         [c(`KS3 — linhas de ${t === "energia" ? "energia" : "sinal/telecom"}`), cr(fmtParam(rz.prob.porTipo[t]?.KS3 ?? 1), { b: true }), c(rotulo(KS3, z[t].KS3))],
         [c(`PSPD — linhas de ${t === "energia" ? "energia" : "sinal/telecom"}`), cr(fmtParam(valor(PSPD, z[t].PSPD)), { b: true }), c(rotulo(PSPD, z[t].PSPD))],
       ]),
-      [c("rp (proteção contra incêndio)"), cr(fmtParam(valor(RP, z.rp)), { b: true }), c(rotulo(RP, z.rp))],
+      [c("rp (proteção contra incêndio)"), cr(fmtParam(rz.rp), { b: true }), c(rz.rp !== valor(RP, z.rp) ? "Estrutura com risco de explosão: rp = 1 (C.3.4)" : rotulo(RP, z.rp))],
       [c("rf (risco de incêndio)"), cr(fmtParam(valor(RF, z.rf)), { b: true }), c(rotulo(RF, z.rf))],
       [c("hz (perigo especial)"), cr(fmtParam(valor(HZ, z.hz)), { b: true }), c(rotulo(HZ, z.hz))],
     ];

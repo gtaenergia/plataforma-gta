@@ -11,7 +11,7 @@ import {
   type ChaveRisco,
   type ResultadoRisco,
 } from "@/lib/engenharia/risco/motor";
-import { observacoesNorma, requisitosDps, requisitosSpda } from "@/lib/engenharia/risco/requisitos";
+import { observacoesNorma, requisitosDps, requisitosSpda, textoIimp } from "@/lib/engenharia/risco/requisitos";
 import type { DadosRisco } from "@/lib/engenharia/risco/tipos";
 import { fmtCient, fmtDataHora, fmtFixo, fmtFreq, fmtNum, fmtPct, fmtRisco } from "@/lib/engenharia/formato";
 import { formatBRL } from "@/lib/format";
@@ -299,10 +299,11 @@ export function EtapaResultados({
               </div>
             ))}
           </div>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
             <Lista titulo="Subsistema de captação" itens={spda.captacao} />
             <Lista titulo="Subsistema de descida" itens={spda.descida} />
             <Lista titulo="Subsistema de aterramento" itens={spda.aterramento} />
+            <Lista titulo="Equipotencialização, isolação e inspeção" itens={spda.equipotencializacao} />
           </div>
           <Alert tone="indigo" className="mt-4">
             {spda.nota}
@@ -339,8 +340,7 @@ export function EtapaResultados({
                 </li>
                 {dps.dimensionamento.porCondutor.map((p) => (
                   <li key={p.linha}>
-                    {p.linha}: {fmtNum(dps.dimensionamento.porLinha, 1)} ÷ {p.condutores} condutores = {fmtNum(p.kA, 2)} kA →{" "}
-                    <strong>{p.adotado != null ? `Iimp ≥ ${fmtNum(p.adotado, 1)} kA` : "acima de 25 kA — consultar fabricante"}</strong>
+                    {p.linha}: {p.criterio} → <strong>{textoIimp(p)}</strong>
                   </li>
                 ))}
               </ul>
