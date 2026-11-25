@@ -139,6 +139,16 @@ export function requisitosSpda(entrada: EntradaRisco): RequisitosSpda | null {
 /** Tabela D.1 da NBR 5419-4 — valores preferenciais de Iimp (kA) com carga Q (C) e energia específica W/R (kJ/Ω). */
 export const IIMP_PREFERENCIAIS = [1, 2, 5, 10, 12.5, 20, 25].map((kA) => ({ kA, Q: kA * 0.5, WR: kA * kA * 0.25 }));
 
+/** W/R como impresso na Tabela D.1: inteiro a partir de 10 kJ/Ω (39 e 156, não 39,06 e 156,25). */
+export function fmtWR(v: number): string {
+  return v.toLocaleString("pt-BR", { maximumFractionDigits: v >= 10 ? 0 : 2 });
+}
+
+/** Valores da Tabela D.1 adotados no dimensionamento (linhas de energia). */
+export function iimpAdotados(d: RequisitosDps): Set<number> {
+  return new Set(d.dimensionamento.porCondutor.flatMap((p) => (p.adotado != null ? [p.adotado] : [])));
+}
+
 /** Valores por condutor das Tabelas E.1 (energia em BT) e E.2 (sinal) da NBR 5419-1:2026, em kA, 10/350 µs. */
 const TABELA_E: Record<"energia" | "sinal", Record<"I" | "II" | "III-IV", { S3: number; S1: number }>> = {
   energia: { "III-IV": { S3: 5, S1: 12.5 }, II: { S3: 7.5, S1: 18.75 }, I: { S3: 10, S1: 25 } },

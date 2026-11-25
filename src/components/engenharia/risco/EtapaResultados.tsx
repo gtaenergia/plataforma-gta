@@ -11,7 +11,7 @@ import {
   type ChaveRisco,
   type ResultadoRisco,
 } from "@/lib/engenharia/risco/motor";
-import { observacoesNorma, requisitosDps, requisitosSpda, textoIimp } from "@/lib/engenharia/risco/requisitos";
+import { IIMP_PREFERENCIAIS, fmtWR, iimpAdotados, observacoesNorma, requisitosDps, requisitosSpda, textoIimp } from "@/lib/engenharia/risco/requisitos";
 import type { DadosRisco } from "@/lib/engenharia/risco/tipos";
 import { fmtCient, fmtDataHora, fmtFixo, fmtFreq, fmtNum, fmtPct, fmtRisco } from "@/lib/engenharia/formato";
 import { formatBRL } from "@/lib/format";
@@ -346,11 +346,58 @@ export function EtapaResultados({
               </ul>
             </div>
           </div>
+          <TabelaIimp adotados={iimpAdotados(dps)} />
           <Alert tone="indigo" className="mt-4">
             {dps.nota}
           </Alert>
         </SectionCard>
       )}
+    </div>
+  );
+}
+
+/** Tabela D.1 da NBR 5419-4, com a coluna do Iimp adotado em destaque. */
+function TabelaIimp({ adotados }: { adotados: Set<number> }) {
+  const destaque = (kA: number) => (adotados.has(kA) ? "bg-indigo-50 font-semibold text-gta-indigo dark:bg-indigo-950/60 dark:text-indigo-200" : "");
+  const linhas: { rotulo: React.ReactNode; valor: (v: (typeof IIMP_PREFERENCIAIS)[number]) => string }[] = [
+    { rotulo: "Q (C)", valor: (v) => fmtNum(v.Q, 2) },
+    { rotulo: "W/R (kJ/Ω)", valor: (v) => fmtWR(v.WR) },
+  ];
+  return (
+    <div className="mt-6">
+      <h3 className="text-sm font-semibold">
+        Tabela D.1 — Valores preferenciais para I<sub>imp</sub> (NBR 5419-4, Anexo D)
+      </h3>
+      <div className="mt-2 overflow-x-auto">
+        <table className="table-compacta">
+          <thead>
+            <tr>
+              <th className="py-2 pr-3">
+                I<sub>imp</sub> (kA)
+              </th>
+              {IIMP_PREFERENCIAIS.map((v) => (
+                <th key={v.kA} className={`px-3 py-2 text-center ${destaque(v.kA)}`}>
+                  {fmtNum(v.kA, 1)}
+                  {adotados.has(v.kA) && <span className="block text-[10px] font-normal uppercase tracking-wide">adotado</span>}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {linhas.map((l, i) => (
+              <tr key={i}>
+                <td className="py-2 pr-3 font-semibold">{l.rotulo}</td>
+                {IIMP_PREFERENCIAIS.map((v) => (
+                  <td key={v.kA} className={`px-3 py-2 text-center font-mono ${destaque(v.kA)}`}>
+                    {l.valor(v)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-1 hint">A Tabela D.1 refere-se aos DPS ligados entre fase e neutro (conexão CT1). Em destaque, o valor adotado para as linhas de energia.</p>
     </div>
   );
 }

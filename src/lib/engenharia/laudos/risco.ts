@@ -44,7 +44,7 @@ import {
   rotulo,
   valor,
 } from "../risco/tabelas";
-import { IIMP_PREFERENCIAIS, observacoesNorma, requisitosDps, requisitosSpda, textoIimp } from "../risco/requisitos";
+import { IIMP_PREFERENCIAIS, fmtWR, iimpAdotados, observacoesNorma, requisitosDps, requisitosSpda, textoIimp } from "../risco/requisitos";
 import { formatBRL } from "../../format";
 import { fmtCient, fmtData, fmtFixo, fmtFreq, fmtNum, fmtParam, fmtPct, fmtRisco } from "../formato";
 import { CORES_COMPONENTE, posicaoLog, svgBarraEmpilhada, svgMedidores, type Medidor } from "./graficos";
@@ -467,14 +467,14 @@ export function montarLaudoRisco(projeto: DadosProjeto, d: DadosRisco): Laudo {
         ...dm.porCondutor.map((p) => `${p.linha}: ${p.criterio} → ${textoIimp(p)}`),
       ],
     });
-    const adotados = new Set(dm.porCondutor.map((p) => p.adotado));
+    const adotados = iimpAdotados(dps);
     blocos.push({
       tipo: "tabela",
       colunas: [{ titulo: "Iimp (kA)", peso: 1, align: "center" }, { titulo: "Carga Q (C)", peso: 1, align: "center" }, { titulo: "W/R (kJ/Ω)", peso: 1, align: "center" }, { titulo: "Situação", peso: 1.2 }],
       linhas: IIMP_PREFERENCIAIS.map((v) => [
         c(fmtNum(v.kA, 1), { b: true }),
         c(fmtNum(v.Q, 2)),
-        c(fmtNum(v.WR, 2)),
+        c(fmtWR(v.WR)),
         adotados.has(v.kA) ? c("adotado", { selo: "info" }) : c("—", { cor: "94A3B8" }),
       ]),
       legenda: "Tabela D.1 — Valores preferenciais para Iimp (NBR 5419-4, Anexo D).",
