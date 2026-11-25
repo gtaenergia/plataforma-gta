@@ -306,13 +306,22 @@ export function SeloSalvo({ estado, salvoEm, onSalvar }: { estado: EstadoSalvo; 
 /** Diálogo simples (sem dependências): fundo escurecido + cartão. */
 export function Dialogo({ aberto, titulo, onFechar, children, largura = "max-w-lg" }: { aberto: boolean; titulo: ReactNode; onFechar: () => void; children: ReactNode; largura?: string }) {
   const ref = useRef<HTMLDivElement>(null);
+  // `onFechar` chega como função nova a cada render (arrow inline em quem usa).
+  // Se ela fosse dependência do efeito que dá o foco, cada tecla digitada num
+  // campo do diálogo re-renderizaria, re-rodaria o efeito e devolveria o foco
+  // para a caixa — a pessoa só conseguia digitar uma letra. Por isso a função
+  // vai num ref, e o foco só acontece quando o diálogo ABRE.
+  const fechar = useRef(onFechar);
+  fechar.current = onFechar;
   useEffect(() => {
     if (!aberto) return;
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && onFechar();
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && fechar.current();
     document.addEventListener("keydown", esc);
-    ref.current?.focus();
     return () => document.removeEventListener("keydown", esc);
-  }, [aberto, onFechar]);
+  }, [aberto]);
+  useEffect(() => {
+    if (aberto) ref.current?.focus();
+  }, [aberto]);
   if (!aberto) return null;
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/50 p-4" onMouseDown={(e) => e.target === e.currentTarget && onFechar()}>
